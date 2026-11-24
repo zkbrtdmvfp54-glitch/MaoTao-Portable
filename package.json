@@ -1,0 +1,57 @@
+{
+  "name": "maotao-desktop-pet",
+  "version": "1.0.0",
+  "private": true,
+  "description": "毛桃桌面宠物",
+  "author": "MAOTAO Desktop Pet",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test scripts/*.test.cjs",
+    "dist": "npm run dist:win:x64",
+    "dist:win:x64": "electron-builder --win --x64",
+    "dist:mac": "electron-builder --mac --x64 --arm64",
+    "dist:kylin": "electron-builder --linux --x64 --arm64"
+  },
+  "dependencies": {"uiohook-napi": "1.5.5"},
+  "devDependencies": {"electron": "45.4.1", "electron-builder": "26.18.0"},
+  "build": {
+    "appId": "studio.maotao.desktop.pet",
+    "productName": "MAOTAO Desktop Pet",
+    "executableName": "MAOTAO",
+    "compression": "maximum",
+    "electronLanguages": ["zh-CN", "zh_CN", "en-US", "en"],
+    "directories": {"output": "dist"},
+    "files": ["src/**/*", "assets/pet/manifest.json", "assets/pet/processed/**/*", "assets/pet/animations/**/*", "assets/pet/third-party/7paws/**/*"],
+    "asarUnpack": ["node_modules/uiohook-napi/prebuilds/**"],
+    "npmRebuild": false,
+    "toolsets": {"nsis": "1.2.1"},
+    "win": {
+      "icon": "assets/pet/processed/app.ico",
+      "signExecutable": false,
+      "target": [{"target":"portable","arch":["x64"]},{"target":"nsis","arch":["x64"]}]
+    },
+    "mac": {
+      "icon": "assets/pet/processed/app.icns",
+      "category": "public.app-category.utilities",
+      "target": [
+        {"target":"dmg","arch":["x64","arm64"]},
+        {"target":"zip","arch":["x64","arm64"]}
+      ],
+      "artifactName": "MAOTAO-macOS-${version}-${arch}.${ext}"
+    },
+    "linux": {
+      "icon": "assets/pet/processed/linux.png",
+      "category": "Utility",
+      "target": [
+        {"target":"AppImage","arch":["x64"]},
+        {"target":"deb","arch":["x64","arm64"]}
+      ],
+      "artifactName": "MAOTAO-Kylin-${version}-${arch}.${ext}"
+    },
+    "portable": {"artifactName": "MAOTAO-Portable-${version}-x64.exe"},
+    "nsis": {"artifactName": "MAOTAO-Setup-${version}-x64.exe", "oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": false}
+  }
+}
+
+

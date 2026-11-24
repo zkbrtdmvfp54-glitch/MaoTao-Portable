@@ -1,0 +1,7 @@
+* { box-sizing: border-box; }
+body { background: #fbf5ec; color: #47382f; margin: 18px 21px; font: 14px "Microsoft YaHei UI", "Segoe UI", sans-serif; }
+label { display: block; font-weight: 700; margin-bottom: 8px; }
+input { width: 100%; display: block; border: 1px solid #ae998a; border-radius: 9px; padding: 8px 10px;
+  background: #fffdf9; color: #33271f; font: inherit; }
+input:focus-visible { outline: 2px solid #97502c; outline-offset: 2px; }
+p { font-size: 12px; margin: 9px 0 0; color: #63534a; }

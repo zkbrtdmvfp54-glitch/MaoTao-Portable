@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "canvas": [420, 340],
+  "layers": {
+    "cat": {"src":"processed/cat.svg","box":[95,18,230,230],"anchor":[210,248],"z":10},
+    "tail": {"src":"processed/tail.svg","box":[245,110,90,145],"anchor":[249,221],"z":9},
+    "keyboard": {"src":"processed/keyboard.png","box":[105,248,292,81.7],"center":[248,292],"size":[255,288,62],"z":30},
+    "mouse": {"src":"processed/mouse.png","box":[34,259,71,56],"anchor":[70,287],"z":20},
+    "left": {"src":"processed/paw-left.png","box":[168,234,35,40],"anchor":[185,263],"z":40},
+    "right": {"src":"processed/paw-right.png","box":[196,235,36,40],"anchor":[214,264],"z":40}
+  },
+  "hotspots": {
+    "nose": [210,117,2.5],
+    "headMaxY": 148,
+    "eyes": [[180,100,13,13,0],[240,100,13,13,0]]
+  },
+  "states": {
+    "idle":{"frames":[],"fps":20,"loop":true,"method":"breathing"},
+    "blink":{"frames":[],"fps":60,"loop":false,"method":"lid-overlay"},
+    "type_left":{"frames":[],"fps":60,"loop":false,"method":"original-paw-layer", "duration":0.25},
+    "type_right":{"frames":[],"fps":60,"loop":false,"method":"original-paw-layer", "duration":0.25},
+    "mouse":{"frames":[],"fps":60,"loop":false,"method":"original-paw-layer"},
+    "pet":{"frames":[],"fps":60,"loop":false,"method":"slight-pose-shift"},
+    "poke":{"frames":[],"fps":60,"loop":false,"method":"slight-pose-shift"},
+    "sleep":{"frames":[],"fps":20,"loop":true,"method":"breath-and-lid-overlay"},
+    "wake":{"frames":[],"fps":60,"loop":false,"method":"slight-pose-shift"},
+    "tail":{"frames":[],"fps":20,"loop":true,"method":"local-image-deformation"}
+  }
+}
+

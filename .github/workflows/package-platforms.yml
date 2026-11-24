@@ -1,0 +1,67 @@
+name: Package desktop pet
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run dist:win:x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MAOTAO-Windows-x64
+          path: |
+            dist/MAOTAO-Portable-*-x64.exe
+            dist/MAOTAO-Setup-*-x64.exe
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: bash scripts/build-macos.sh
+        env:
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          CSC_NAME: ${{ secrets.MAC_CSC_NAME }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MAOTAO-macOS-x64-arm64
+          path: |
+            dist/MAOTAO-macOS-*.dmg
+            dist/MAOTAO-macOS-*.zip
+
+  kylin-linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: sudo apt-get update && sudo apt-get install -y libopenjp2-tools
+      - run: npm ci
+      - run: npm run dist:kylin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MAOTAO-Kylin-Linux-x64-arm64
+          path: |
+            dist/MAOTAO-Kylin-*.AppImage
+            dist/MAOTAO-Kylin-*.deb

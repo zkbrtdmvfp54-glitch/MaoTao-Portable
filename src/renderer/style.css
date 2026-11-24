@@ -1,0 +1,30 @@
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+body { font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif; user-select: none; }
+#pet-scene { position: relative; width: 100%; height: 100%; overflow: hidden; }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+#pet-scene > canvas:not(#pet) { position: absolute; inset: 0; z-index: 0; opacity: 0; pointer-events: none; }
+#pet { position: absolute; inset: 0; z-index: 1; }
+#status { display: none; }
+.zzz { display: none; position: absolute; z-index: 3; top: 8%; right: 25%; color: #8495a5;
+  font: 700 clamp(12px, 6.3vw, 28px)/1 "Segoe UI", sans-serif; pointer-events: none; }
+.zzz.visible { display: block; }
+.zzz span { position: absolute; animation: maotao-zzz 1.6s ease-in-out infinite; }
+.zzz span:nth-child(2) { animation-delay: .35s; }
+.zzz span:nth-child(3) { animation-delay: .7s; }
+@keyframes maotao-zzz { 0% { opacity: 0; transform: translate(0, 8px) scale(.7); } 30%, 70% { opacity: .8; } 100% { opacity: 0; transform: translate(8px, -10px) scale(1.05); } }
+.anger-mark { position: absolute; z-index: 4; width: clamp(16px, 5vw, 24px); aspect-ratio: 1;
+  color: #bd302e; opacity: 0; transform: translate(-50%, -50%) scale(.72); transform-origin: 50% 50%; pointer-events: none; }
+.anger-mark svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 1px 1px #19161666); }
+.anger-mark path { fill: none; stroke: currentColor; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
+.anger-mark.visible { opacity: 1; animation: maotao-anger .38s ease-in-out infinite alternate; }
+@keyframes maotao-anger { from { transform: translate(-50%, -50%) rotate(-5deg) scale(.9); } to { transform: translate(-50%, -50%) rotate(5deg) scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .anger-mark.visible { animation: none; transform: translate(-50%, -50%) scale(1); } }
+.tail-impact { position: absolute; z-index: 4; width: clamp(19px, 6vw, 30px); aspect-ratio: 1;
+  opacity: 0; transform: translate(-50%, -50%) scale(.62); transform-origin: center; pointer-events: none; }
+.tail-impact svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.tail-impact path { fill: none; stroke: #eee8df; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.tail-impact.hit { animation: maotao-tail-impact .24s cubic-bezier(.2,.7,.3,1) both; }
+@keyframes maotao-tail-impact { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.55); }
+  28% { opacity: .95; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.3); } }

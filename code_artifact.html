@@ -1,0 +1,2776 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>绘本风暹罗猫桌面宠物 · Siamese Bongo Cat</title>
+  <!-- 引入 Tailwind CSS 打造轻盈柔和的绘本风悬浮控件 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Fredoka', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+      transition: background-color 0.4s ease, color 0.35s ease;
+    }
+
+    input, textarea {
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    /* 4 套儿童绘本主题背景 */
+    body.theme-cream {
+      background-color: #fbf4e6;
+      color: #4a352a;
+    }
+    body.theme-mint {
+      background-color: #eaf4ec;
+      color: #36493e;
+    }
+    body.theme-night {
+      background-color: #212942;
+      color: #f3ead8;
+    }
+    body.theme-green {
+      background-color: #00b140;
+      color: #ffffff;
+    }
+
+    /* 全屏互动 Canvas */
+    #pet-canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      touch-action: none;
+    }
+
+    /* 柔和绘本纸感悬浮胶囊 */
+    .storybook-pill {
+      background: rgba(255, 251, 243, 0.86);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1.5px solid rgba(62, 43, 35, 0.14);
+      box-shadow: 0 8px 24px rgba(74, 53, 42, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      color: #4a352a;
+    }
+
+    body.theme-night .storybook-pill {
+      background: rgba(39, 48, 76, 0.84);
+      border: 1.5px solid rgba(246, 235, 216, 0.18);
+      box-shadow: 0 10px 26px rgba(10, 14, 28, 0.45);
+      color: #f6ebd8;
+    }
+
+    body.theme-green .storybook-pill {
+      background: rgba(42, 32, 27, 0.84);
+      border: 1.5px solid rgba(255, 251, 243, 0.22);
+      color: #fffbf3;
+    }
+
+    .soft-btn {
+      transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .soft-btn:hover {
+      transform: translateY(-1px);
+    }
+    .soft-btn:active {
+      transform: scale(0.94);
+    }
+
+    /* 温柔入场淡出 */
+    @keyframes gentleFloatIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-soft-in {
+      animation: gentleFloatIn 0.45s ease forwards;
+    }
+  </style>
+</head>
+<body class="theme-cream">
+
+  <!-- 全屏高分屏绘本画布 -->
+  <canvas id="pet-canvas"></canvas>
+
+  <!-- 右上角极简绘本风圆角悬浮控制条 -->
+  <div id="top-ui" class="fixed top-3.5 right-3.5 z-30 flex flex-col items-end gap-2 max-w-[calc(100vw-24px)]">
+    <div class="storybook-pill rounded-full px-2.5 py-1.5 flex items-center gap-1.5 flex-wrap justify-end text-xs font-medium animate-soft-in">
+      <!-- 音效开关 -->
+      <button
+        id="btn-sound"
+        title="开启或关闭柔和合成音效"
+        class="soft-btn px-2.5 py-1.5 rounded-full flex items-center gap-1 bg-amber-900/5 hover:bg-amber-900/10 cursor-pointer"
+      >
+        <span id="sound-icon">🔊</span>
+        <span id="sound-text" class="hidden sm:inline">音效开</span>
+      </button>
+
+      <!-- 视角模式切换（猫咪视角 180° / 镜像左右；两种模式空格键均面向猫咪在最上排） -->
+      <button
+        id="btn-view-mode"
+        title="切换猫咪视角（真实180°键位）与镜像左右键位，空格键始终面向猫咪"
+        class="soft-btn px-2.5 py-1.5 rounded-full flex items-center gap-1 bg-amber-500/15 hover:bg-amber-500/25 cursor-pointer"
+      >
+        <span>🐾</span>
+        <span id="view-mode-text">猫咪视角</span>
+      </button>
+
+      <!-- 分隔点 -->
+      <span class="opacity-25 hidden sm:inline">|</span>
+
+      <!-- 4 套绘本背景主题色点 -->
+      <div class="flex items-center gap-1.5 px-1" role="group" aria-label="背景主题切换">
+        <button data-theme="cream" title="暖米水彩纸" class="theme-dot soft-btn w-5 h-5 rounded-full bg-[#FBF4E6] border-2 border-[#3E2B23]/40 ring-2 ring-[#E89B72] cursor-pointer"></button>
+        <button data-theme="mint" title="薄荷手账绿" class="theme-dot soft-btn w-5 h-5 rounded-full bg-[#DCEEE0] border-2 border-[#3E2B23]/30 cursor-pointer"></button>
+        <button data-theme="night" title="晚安星夜蓝" class="theme-dot soft-btn w-5 h-5 rounded-full bg-[#263152] border-2 border-[#F6EBD8]/50 cursor-pointer"></button>
+        <button data-theme="green" title="OBS 绿幕抠图" class="theme-dot soft-btn w-5 h-5 rounded-full bg-[#00B140] border-2 border-white/60 cursor-pointer"></button>
+      </div>
+
+      <!-- 分隔点 -->
+      <span class="opacity-25">|</span>
+
+      <!-- 今日敲击与点击计数器 -->
+      <div class="flex items-center gap-2 px-1.5 text-[11px] tabular-nums opacity-85" title="今日键盘敲击 / 鼠标点击次数">
+        <span>⌨️ <b id="stat-keys">0</b></span>
+        <span>🖱️ <b id="stat-clicks">0</b></span>
+      </div>
+
+      <!-- 展开更多互动按钮 / 折叠按钮 -->
+      <button
+        id="btn-toggle-more"
+        title="展开或收起快捷互动小菜单"
+        class="soft-btn w-7 h-7 rounded-full flex items-center justify-center bg-amber-900/5 hover:bg-amber-900/12 cursor-pointer text-xs"
+      >✨</button>
+    </div>
+
+    <!-- 可折叠迷你互动菜单 -->
+    <div id="more-menu" class="hidden storybook-pill rounded-2xl p-2.5 flex items-center gap-1.5 text-xs font-medium">
+      <button id="act-pet" class="soft-btn px-2.5 py-1.5 rounded-xl bg-rose-400/15 hover:bg-rose-400/25 cursor-pointer">✋ 摸摸头</button>
+      <button id="act-poke" class="soft-btn px-2.5 py-1.5 rounded-xl bg-sky-400/15 hover:bg-sky-400/25 cursor-pointer">👆 戳鼻子</button>
+      <button id="act-sleep" class="soft-btn px-2.5 py-1.5 rounded-xl bg-indigo-400/15 hover:bg-indigo-400/25 cursor-pointer">💤 打瞌睡</button>
+      <button id="act-reset" class="soft-btn px-2.5 py-1.5 rounded-xl bg-amber-900/8 hover:bg-amber-900/15 cursor-pointer">📍 居中</button>
+    </div>
+  </div>
+
+  <!-- 画面底部极简透明提示与便携输入胶囊（支持中文与移动端，可收起） -->
+  <div id="bottom-ui" class="fixed bottom-3.5 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-1.5 w-[92vw] max-w-md pointer-events-none">
+    <!-- 初次引导与温和状态提示 -->
+    <div id="guide-pill" class="pointer-events-auto storybook-pill rounded-full px-3.5 py-1 text-[11px] opacity-85 flex items-center gap-2 transition-opacity duration-300">
+      <span id="status-dot" class="w-2 h-2 rounded-full bg-[#69B8F8] shadow-[0_0_6px_#69B8F8]"></span>
+      <span id="guide-text" class="truncate">试着在键盘上敲打字母、移动鼠标或摸摸猫头</span>
+    </div>
+
+    <!-- 极简中文/便携输入胶囊 -->
+    <div id="input-capsule-wrap" class="pointer-events-auto flex items-center gap-1.5 w-full justify-center">
+      <div id="input-capsule" class="storybook-pill rounded-full pl-3.5 pr-1.5 py-1 flex items-center gap-2 w-full max-w-sm transition-all duration-200">
+        <span class="text-xs opacity-60">✎</span>
+        <input
+          id="ime-input"
+          type="text"
+          autocomplete="off"
+          placeholder="全局可直接打字 · 在此可输入中文或手机点按..."
+          class="flex-1 bg-transparent text-xs outline-none placeholder:opacity-55 min-w-0 py-1"
+        />
+        <button
+          id="btn-hide-input"
+          title="收起输入小条"
+          class="soft-btn w-6 h-6 rounded-full flex items-center justify-center text-[11px] opacity-60 hover:opacity-100 hover:bg-black/5 cursor-pointer"
+        >✕</button>
+      </div>
+
+      <!-- 收起后的极简唤醒按钮 -->
+      <button
+        id="btn-show-input"
+        title="展开中文输入小条"
+        class="hidden soft-btn storybook-pill rounded-full px-3 py-1.5 text-[11px] font-medium cursor-pointer opacity-80 hover:opacity-100"
+      >✎ 输入条</button>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * ============================================================================
+     * 0. 通用绘本几何辅助函数（透视圆角四边形、缓动函数、纸张纹理生成）
+     * ============================================================================
+     */
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function smoothstep(edge0, edge1, x) {
+      const t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
+      return t * t * (3 - 2 * t);
+    }
+
+    /**
+     * 在任意凸四边形（用于透视键盘底座与键帽）上绘制柔和圆角路径
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {Array<{x:number, y:number}>} pts 顺时针4个顶点 [tl, tr, br, bl]
+     * @param {number} radius 圆角半径
+     */
+    function traceRoundedQuad(ctx, pts, radius) {
+      ctx.beginPath();
+      for (let i = 0; i < 4; i++) {
+        const prev = pts[(i + 3) % 4];
+        const curr = pts[i];
+        const next = pts[(i + 1) % 4];
+
+        const v1x = prev.x - curr.x;
+        const v1y = prev.y - curr.y;
+        const len1 = Math.hypot(v1x, v1y) || 1;
+
+        const v2x = next.x - curr.x;
+        const v2y = next.y - curr.y;
+        const len2 = Math.hypot(v2x, v2y) || 1;
+
+        const r = Math.min(radius, len1 * 0.42, len2 * 0.42);
+        const startX = curr.x + (v1x / len1) * r;
+        const startY = curr.y + (v1y / len1) * r;
+        const endX = curr.x + (v2x / len2) * r;
+        const endY = curr.y + (v2y / len2) * r;
+
+        if (i === 0) {
+          ctx.moveTo(startX, startY);
+        } else {
+          ctx.lineTo(startX, startY);
+        }
+        ctx.quadraticCurveTo(curr.x, curr.y, endX, endY);
+      }
+      ctx.closePath();
+    }
+
+    /**
+     * 使用离屏 Canvas 程序化生成细腻水彩纸纤维纹理（Seamless Paper Grain）
+     */
+    function createWatercolorPaperPattern(ctx) {
+      const size = 240;
+      const off = document.createElement('canvas');
+      off.width = size;
+      off.height = size;
+      const octx = off.getContext('2d');
+
+      // 基础中性浅暖底，方便 multiply / soft-light 叠加
+      octx.fillStyle = '#faf6ee';
+      octx.fillRect(0, 0, size, size);
+
+      // 细腻纸张凹凸颗粒
+      const img = octx.getImageData(0, 0, size, size);
+      const data = img.data;
+      let seed = 1337;
+      const rand = () => {
+        seed = (seed * 16807) % 2147483647;
+        return (seed - 1) / 2147483646;
+      };
+
+      for (let i = 0; i < data.length; i += 4) {
+        const n = (rand() - 0.5) * 18;
+        const warm = (rand() - 0.5) * 6;
+        data[i] = clamp(248 + n + warm, 0, 255);
+        data[i + 1] = clamp(243 + n, 0, 255);
+        data[i + 2] = clamp(234 + n - warm, 0, 255);
+        data[i + 3] = 255;
+      }
+      octx.putImageData(img, 0, 0);
+
+      // 极淡手绘水彩纸纤维丝
+      octx.strokeStyle = 'rgba(130, 100, 74, 0.045)';
+      octx.lineWidth = 0.8;
+      for (let i = 0; i < 90; i++) {
+        const x = rand() * size;
+        const y = rand() * size;
+        const len = 5 + rand() * 14;
+        const ang = rand() * Math.PI * 2;
+        octx.beginPath();
+        octx.moveTo(x, y);
+        octx.lineTo(x + Math.cos(ang) * len, y + Math.sin(ang) * len);
+        octx.stroke();
+      }
+
+      // 柔和微弱水彩晕染云斑
+      for (let i = 0; i < 12; i++) {
+        const cx = rand() * size;
+        const cy = rand() * size;
+        const r = 18 + rand() * 34;
+        const grad = octx.createRadialGradient(cx, cy, 2, cx, cy, r);
+        grad.addColorStop(0, 'rgba(186, 152, 118, 0.035)');
+        grad.addColorStop(1, 'rgba(186, 152, 118, 0)');
+        octx.fillStyle = grad;
+        octx.beginPath();
+        octx.arc(cx, cy, r, 0, Math.PI * 2);
+        octx.fill();
+      }
+
+      return ctx.createPattern(off, 'repeat');
+    }
+
+    /**
+     * ============================================================================
+     * 1. Web Audio API 柔和木质/奶油轴与暹罗猫合成音效引擎
+     * ============================================================================
+     */
+    class StorybookSound {
+      constructor() {
+        this.enabled = true;
+        this.ctx = null;
+        this.lastPurr = 0;
+      }
+
+      ensure() {
+        if (!this.ctx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (AC) this.ctx = new AC();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+      }
+
+      setEnabled(val) {
+        this.enabled = val;
+        if (val) {
+          this.ensure();
+          this.playKeyClick(0, 2, false);
+        }
+      }
+
+      /**
+       * 柔和奶油木轴机械键盘音：根据按键左右位置(normX)与行号微调温润音高
+       */
+      playKeyClick(normX = 0, row = 2, isSpace = false) {
+        if (!this.enabled) return;
+        this.ensure();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        // 左低右高微调，配合轻微自然音高抖动，敲字更有音乐律动感
+        const baseFreq = isSpace ? 205 : (265 + normX * 42 + (2 - row) * 14);
+        const jitter = 0.96 + Math.random() * 0.08;
+
+        // 1) 温润木质低频 "Thock" 敲击体
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(baseFreq * jitter, now);
+        osc.frequency.exponentialRampToValueAtTime(isSpace ? 78 : 112, now + 0.042);
+
+        gain.gain.setValueAtTime(isSpace ? 0.17 : 0.13, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.048);
+
+        osc.connect(gain).connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.052);
+
+        // 2) 奶油轴体轻脆木片高音点缀
+        const bufLen = Math.floor(this.ctx.sampleRate * 0.018);
+        const buf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+        const ch = buf.getChannelData(0);
+        for (let i = 0; i < bufLen; i++) {
+          ch[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufLen * 0.25));
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buf;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime((isSpace ? 1350 : 1950) * jitter, now);
+        filter.Q.setValueAtTime(1.9, now);
+
+        const nGain = this.ctx.createGain();
+        nGain.gain.setValueAtTime(0.09, now);
+        nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+
+        noise.connect(filter).connect(nGain).connect(this.ctx.destination);
+        noise.start(now);
+      }
+
+      /** 轻柔鼠标微动点击声 */
+      playMouseClick() {
+        if (!this.enabled) return;
+        this.ensure();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1180, now);
+        osc.frequency.exponentialRampToValueAtTime(380, now + 0.018);
+        gain.gain.setValueAtTime(0.09, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+
+        osc.connect(gain).connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.024);
+      }
+
+      /** 软萌暹罗猫喵叫声 */
+      playMeow(style = 'cute') {
+        if (!this.enabled) return;
+        this.ensure();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const filter = this.ctx.createBiquadFilter();
+        const gain = this.ctx.createGain();
+
+        osc1.type = 'triangle';
+        osc2.type = 'sine';
+        filter.type = 'bandpass';
+        filter.Q.setValueAtTime(2.4, now);
+
+        if (style === 'surprised') {
+          // 戳鼻子/肚子时的俏皮短促 "喵~!"
+          osc1.frequency.setValueAtTime(540, now);
+          osc1.frequency.exponentialRampToValueAtTime(980, now + 0.085);
+          osc1.frequency.exponentialRampToValueAtTime(720, now + 0.19);
+          osc2.frequency.setValueAtTime(1080, now);
+          osc2.frequency.exponentialRampToValueAtTime(1480, now + 0.09);
+
+          filter.frequency.setValueAtTime(1300, now);
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(0.12, now + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.21);
+
+          osc1.connect(filter);
+          osc2.connect(filter);
+          filter.connect(gain).connect(this.ctx.destination);
+          osc1.start(now);
+          osc2.start(now);
+          osc1.stop(now + 0.22);
+          osc2.stop(now + 0.22);
+        } else {
+          // 温柔撒娇长喵
+          osc1.frequency.setValueAtTime(560, now);
+          osc1.frequency.exponentialRampToValueAtTime(840, now + 0.11);
+          osc1.frequency.exponentialRampToValueAtTime(520, now + 0.34);
+          osc2.frequency.setValueAtTime(1120, now);
+          osc2.frequency.exponentialRampToValueAtTime(1260, now + 0.11);
+          osc2.frequency.exponentialRampToValueAtTime(960, now + 0.34);
+
+          filter.frequency.setValueAtTime(1050, now);
+          filter.frequency.linearRampToValueAtTime(1600, now + 0.12);
+          filter.frequency.linearRampToValueAtTime(900, now + 0.34);
+
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(0.11, now + 0.045);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+
+          osc1.connect(filter);
+          osc2.connect(filter);
+          filter.connect(gain).connect(this.ctx.destination);
+          osc1.start(now);
+          osc2.start(now);
+          osc1.stop(now + 0.38);
+          osc2.stop(now + 0.38);
+        }
+      }
+
+      /** 抚摸时的轻柔呼噜声 */
+      playPurr() {
+        if (!this.enabled) return;
+        const t = performance.now();
+        if (t - this.lastPurr < 360) return;
+        this.lastPurr = t;
+
+        this.ensure();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const lfo = this.ctx.createOscillator();
+        const lfoGain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+        const master = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(58, now);
+
+        lfo.type = 'sine';
+        lfo.frequency.setValueAtTime(23, now);
+        lfoGain.gain.setValueAtTime(0.036, now);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(190, now);
+
+        master.gain.setValueAtTime(0.001, now);
+        master.gain.linearRampToValueAtTime(0.052, now + 0.07);
+        master.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+
+        lfo.connect(lfoGain).connect(master.gain);
+        osc.connect(filter).connect(master).connect(this.ctx.destination);
+
+        osc.start(now);
+        lfo.start(now);
+        osc.stop(now + 0.36);
+        lfo.stop(now + 0.36);
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 2. 面向猫咪的 5 排透视键盘模型（空格键始终在面向猫咪的最上排！）
+     * ============================================================================
+     */
+    class CatFacingKeyboard {
+      constructor() {
+        // 两种模式：'cat'（默认：真实180°面向猫咪，QWER在画面右侧/猫左手，UIOP在画面左侧/猫右手）
+        //         'mirror'（镜像左右：视觉从左到右排列，空格键依然稳居面向猫咪的最上排）
+        this.mode = 'cat';
+
+        // 透视桌面尺寸（围绕键盘中心点 centerX, centerY）
+        this.centerX = 24;
+        this.centerY = 104;
+        this.topWidth = 282;     // 紧贴猫咪胸前的上边宽
+        this.bottomWidth = 324;  // 靠近观看者的下边宽（柔和2.5D透视）
+        this.height = 116;
+
+        this.keys = [];
+        this.codeMap = new Map();
+        this.buildLayout();
+      }
+
+      setMode(mode) {
+        this.mode = mode;
+        this.buildLayout();
+      }
+
+      /**
+       * 将键盘内部归一化坐标 u∈[-1, 1], v∈[0, 1] 投影为宠物局部坐标 (x, y)
+       * v = 0 为紧贴猫咪的空格键一侧，v = 1 为靠近观看者的数字行一侧
+       */
+      project(u, v) {
+        const halfW = lerp(this.topWidth, this.bottomWidth, v) * 0.5;
+        return {
+          x: this.centerX + u * halfW,
+          y: this.centerY - this.height * 0.5 + v * this.height
+        };
+      }
+
+      /** 构建完整 5 排键盘：最上排(row 0)=空格行，向下依次 Z-M、A-L、Q-P、数字行 */
+      buildLayout() {
+        this.keys = [];
+        this.codeMap.clear();
+
+        // 标准顺序（从左到右，空格行已置于最上排 row 0）
+        const mirrorRows = [
+          // Row 0（最上方，面向猫咪）：空格键居中！
+          [
+            { id: 'ControlLeft', label: 'Ctrl', w: 1.45, type: 'mod', codes: ['ControlLeft'] },
+            { id: 'MetaLeft', label: '⌘', w: 1.25, type: 'mod', codes: ['MetaLeft'] },
+            { id: 'AltLeft', label: 'Alt', w: 1.25, type: 'mod', codes: ['AltLeft'] },
+            { id: 'Space', label: 'SPACE', w: 5.8, type: 'space', codes: ['Space'] },
+            { id: 'AltRight', label: 'Alt', w: 1.25, type: 'mod', codes: ['AltRight', 'MetaRight'] },
+            { id: 'Fn', label: 'Fn', w: 1.25, type: 'mod', codes: ['ContextMenu', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'ArrowRight'] },
+            { id: 'ControlRight', label: 'Ctrl', w: 1.45, type: 'mod', codes: ['ControlRight'] }
+          ],
+          // Row 1：Z - M 行
+          [
+            { id: 'ShiftLeft', label: 'Shift', w: 2.15, type: 'mod', codes: ['ShiftLeft'] },
+            { id: 'KeyZ', label: 'Z', w: 1, codes: ['KeyZ'] },
+            { id: 'KeyX', label: 'X', w: 1, codes: ['KeyX'] },
+            { id: 'KeyC', label: 'C', w: 1, codes: ['KeyC'] },
+            { id: 'KeyV', label: 'V', w: 1, codes: ['KeyV'] },
+            { id: 'KeyB', label: 'B', w: 1, codes: ['KeyB'] },
+            { id: 'KeyN', label: 'N', w: 1, codes: ['KeyN'] },
+            { id: 'KeyM', label: 'M', w: 1, codes: ['KeyM'] },
+            { id: 'Comma', label: ',', w: 1, codes: ['Comma'] },
+            { id: 'Period', label: '.', w: 1, codes: ['Period'] },
+            { id: 'Slash', label: '/', w: 1, codes: ['Slash'] },
+            { id: 'ShiftRight', label: 'Shift', w: 2.15, type: 'mod', codes: ['ShiftRight'] }
+          ],
+          // Row 2：A - L 行
+          [
+            { id: 'CapsLock', label: 'Caps', w: 1.75, type: 'mod', codes: ['CapsLock'] },
+            { id: 'KeyA', label: 'A', w: 1, codes: ['KeyA'] },
+            { id: 'KeyS', label: 'S', w: 1, codes: ['KeyS'] },
+            { id: 'KeyD', label: 'D', w: 1, codes: ['KeyD'] },
+            { id: 'KeyF', label: 'F', w: 1, codes: ['KeyF'] },
+            { id: 'KeyG', label: 'G', w: 1, codes: ['KeyG'] },
+            { id: 'KeyH', label: 'H', w: 1, codes: ['KeyH'] },
+            { id: 'KeyJ', label: 'J', w: 1, codes: ['KeyJ'] },
+            { id: 'KeyK', label: 'K', w: 1, codes: ['KeyK'] },
+            { id: 'KeyL', label: 'L', w: 1, codes: ['KeyL'] },
+            { id: 'Semicolon', label: ';', w: 1, codes: ['Semicolon'] },
+            { id: 'Quote', label: "'", w: 1, codes: ['Quote'] },
+            { id: 'Enter', label: '↵', w: 2.05, type: 'accent', codes: ['Enter'] }
+          ],
+          // Row 3：Q - P 行
+          [
+            { id: 'Tab', label: 'Tab', w: 1.5, type: 'mod', codes: ['Tab'] },
+            { id: 'KeyQ', label: 'Q', w: 1, codes: ['KeyQ'] },
+            { id: 'KeyW', label: 'W', w: 1, codes: ['KeyW'] },
+            { id: 'KeyE', label: 'E', w: 1, codes: ['KeyE'] },
+            { id: 'KeyR', label: 'R', w: 1, codes: ['KeyR'] },
+            { id: 'KeyT', label: 'T', w: 1, codes: ['KeyT'] },
+            { id: 'KeyY', label: 'Y', w: 1, codes: ['KeyY'] },
+            { id: 'KeyU', label: 'U', w: 1, codes: ['KeyU'] },
+            { id: 'KeyI', label: 'I', w: 1, codes: ['KeyI'] },
+            { id: 'KeyO', label: 'O', w: 1, codes: ['KeyO'] },
+            { id: 'KeyP', label: 'P', w: 1, codes: ['KeyP'] },
+            { id: 'BracketLeft', label: '[', w: 1, codes: ['BracketLeft'] },
+            { id: 'BracketRight', label: ']', w: 1, codes: ['BracketRight'] },
+            { id: 'Backslash', label: '\\', w: 1.3, type: 'mod', codes: ['Backslash'] }
+          ],
+          // Row 4（最下方，靠近观看者）：数字行
+          [
+            { id: 'Escape', label: 'Esc', w: 1.25, type: 'accent', codes: ['Escape', 'Backquote'] },
+            { id: 'Digit1', label: '1', w: 1, codes: ['Digit1', 'F1'] },
+            { id: 'Digit2', label: '2', w: 1, codes: ['Digit2', 'F2'] },
+            { id: 'Digit3', label: '3', w: 1, codes: ['Digit3', 'F3'] },
+            { id: 'Digit4', label: '4', w: 1, codes: ['Digit4', 'F4'] },
+            { id: 'Digit5', label: '5', w: 1, codes: ['Digit5', 'F5'] },
+            { id: 'Digit6', label: '6', w: 1, codes: ['Digit6', 'F6'] },
+            { id: 'Digit7', label: '7', w: 1, codes: ['Digit7', 'F7'] },
+            { id: 'Digit8', label: '8', w: 1, codes: ['Digit8', 'F8'] },
+            { id: 'Digit9', label: '9', w: 1, codes: ['Digit9', 'F9'] },
+            { id: 'Digit0', label: '0', w: 1, codes: ['Digit0', 'F10'] },
+            { id: 'Minus', label: '-', w: 1, codes: ['Minus', 'F11'] },
+            { id: 'Equal', label: '=', w: 1, codes: ['Equal', 'F12'] },
+            { id: 'Backspace', label: '⌫', w: 1.55, type: 'mod', codes: ['Backspace', 'Delete'] }
+          ]
+        ];
+
+        // 如果是「猫咪视角（默认）」，每行左右 180° 翻转，使猫咪左手对应 QWER/ASDF/ZXCV，右手对应 UIOP/HJKL/NM 与鼠标
+        const activeRows = this.mode === 'cat'
+          ? mirrorRows.map((row) => [...row].reverse())
+          : mirrorRows;
+
+        const padU = 0.055;
+        const padV = 0.075;
+        const usableU = 2 - padU * 2;
+        const usableV = 1 - padV * 2;
+        const rowV = usableV / activeRows.length;
+        const gapU = 0.014;
+        const gapV = 0.022;
+
+        activeRows.forEach((row, rIdx) => {
+          const totalUnits = row.reduce((s, k) => s + k.w, 0);
+          let curU = -1 + padU;
+          const v0 = padV + rIdx * rowV + gapV * 0.5;
+          const v1 = padV + (rIdx + 1) * rowV - gapV * 0.5;
+
+          row.forEach((k) => {
+            const du = (k.w / totalUnits) * usableU;
+            const u0 = curU + gapU * 0.5;
+            const u1 = curU + du - gapU * 0.5;
+            const uCenter = (u0 + u1) * 0.5;
+            const vCenter = (v0 + v1) * 0.5;
+            const centerPt = this.project(uCenter, vCenter);
+
+            const keyObj = {
+              id: k.id,
+              label: k.label,
+              row: rIdx,
+              type: k.type || 'normal',
+              u0, u1, v0, v1,
+              uCenter, vCenter,
+              cx: centerPt.x,
+              cy: centerPt.y,
+              press: 0,    // 实时下压量 0..1
+              glow: 0,     // 暖水彩高亮 0..1
+              quad: [
+                this.project(u0, v0),
+                this.project(u1, v0),
+                this.project(u1, v1),
+                this.project(u0, v1)
+              ]
+            };
+
+            this.keys.push(keyObj);
+            k.codes.forEach((c) => this.codeMap.set(c, keyObj));
+            curU += du;
+          });
+        });
+      }
+
+      /** 根据按键 code 或字符精确找到对应键帽 */
+      resolveKey(code, charText = '') {
+        if (code && this.codeMap.has(code)) {
+          return this.codeMap.get(code);
+        }
+        if (charText) {
+          const ch = charText.slice(-1);
+          const upper = ch.toUpperCase();
+          if (/^[A-Z]$/.test(upper) && this.codeMap.has('Key' + upper)) {
+            return this.codeMap.get('Key' + upper);
+          }
+          if (/^[0-9]$/.test(upper) && this.codeMap.has('Digit' + upper)) {
+            return this.codeMap.get('Digit' + upper);
+          }
+          if (ch === ' ') return this.codeMap.get('Space');
+
+          // 中文或其他符号：稳定映射到字母主键区（row 1~3）
+          const letterKeys = this.keys.filter((k) => k.row >= 1 && k.row <= 3 && k.type === 'normal');
+          if (letterKeys.length > 0) {
+            return letterKeys[ch.charCodeAt(0) % letterKeys.length];
+          }
+        }
+        return this.codeMap.get('Space') || this.keys[0];
+      }
+
+      pressKey(keyObj) {
+        if (!keyObj) return;
+        keyObj.press = 1.0;
+        keyObj.glow = 1.0;
+      }
+
+      update(dt) {
+        for (const k of this.keys) {
+          if (k.press > 0) k.press = Math.max(0, k.press - dt * 7.2);
+          if (k.glow > 0) k.glow = Math.max(0, k.glow - dt * 3.1);
+        }
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 3. 儿童绘本插画风暹罗猫桌面宠物核心类
+     * ============================================================================
+     */
+    class SiameseCatPet {
+      constructor(canvas, sound, callbacks) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.sound = sound;
+        this.callbacks = callbacks;
+
+        this.keyboard = new CatFacingKeyboard();
+        this.paperPattern = createWatercolorPaperPattern(this.ctx);
+
+        // 视口与缩放
+        this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+        this.viewW = window.innerWidth;
+        this.viewH = window.innerHeight;
+        this.scale = 1;
+        this.theme = 'cream';
+
+        // 宠物锚点位置（默认居中舒适构图）
+        this.x = this.viewW * 0.5;
+        this.y = this.viewH * 0.52;
+
+        // 鼠标与毛毡鼠标垫局部坐标（位于画面左侧，对应猫咪右手边）
+        this.padCenter = { x: -176, y: 102 };
+        this.mousePos = { x: -176, y: 100 };
+        this.mouseTarget = { x: -176, y: 100 };
+        this.mouseClickPress = 0;
+
+        // 指针追踪与闲置状态
+        this.pointer = { x: this.viewW * 0.5, y: this.viewH * 0.32 };
+        this.lastActivity = performance.now();
+        this.lastMouseMove = 0;
+        this.lastKeyTime = 0;
+        this.isMouseDown = false;
+
+        // 暹罗猫骨骼与表情状态
+        this.lean = 0;             // 0=端坐打字，1=自然左倾扶鼠标
+        this.headTilt = 0;
+        this.pupilOffset = { x: 0, y: 0 };
+        this.pupilScale = 1;       // 惊吓放大蓝眼与瞳孔
+        this.blink = 0;
+        this.nextBlink = performance.now() + 2800;
+        this.earTwitchL = 0;
+        this.earTwitchR = 0;
+        this.tailPhase = 0;
+        this.tailSpeed = 2.0;
+
+        // 情绪与互动状态
+        this.isSleeping = false;
+        this.sleepBlend = 0;
+        this.petEnergy = 0;        // 抚摸满足度（眯笑眼 ^ ^ + 加深腮红）
+        this.pokeTimer = 0;        // 戳鼻子/肚子受惊弹跳计时
+        this.typingEnergy = 0;
+        this.nextZzzTime = 0;
+        this.petRubDist = 0;
+        this.lastRubPt = null;
+
+        // 双爪弹性运动学状态
+        // screenLeftPaw = 猫咪的右手（在画面左侧，负责鼠标 + 左侧键位）
+        // screenRightPaw = 猫咪的左手（在画面右侧，负责右侧键位）
+        this.leftPaw = this.createPawState(-44, 48);
+        this.rightPaw = this.createPawState(56, 48);
+        this.spaceToggle = 0;
+
+        // 动态视觉特效集合
+        this.floatingLetters = []; // 原地升起的三段式敲击悬浮字母
+        this.keyRipples = [];      // 键帽水彩涟漪与手绘小星芒
+        this.particles = [];       // 彩铅星尘、水彩爱心、Zzz、喵叹号
+        this.nightStars = this.createNightStars();
+
+        // 拖拽定位状态
+        this.drag = {
+          active: false,
+          pendingBody: false,
+          startX: 0,
+          startY: 0,
+          originX: 0,
+          originY: 0,
+          moved: false
+        };
+
+        // 每日统计数据
+        this.stats = this.loadStats();
+        this.resize();
+      }
+
+      createPawState(restX, restY) {
+        return {
+          x: restX,
+          y: restY,
+          restX,
+          restY,
+          startX: restX,
+          startY: restY,
+          targetX: restX,
+          targetY: restY,
+          timer: 0,      // >0 表示正在执行三段式敲击动画（倒计时 1 -> 0）
+          duration: 0.24,
+          squashX: 1,
+          squashY: 1,
+          liftZ: 0
+        };
+      }
+
+      createNightStars() {
+        const stars = [];
+        for (let i = 0; i < 42; i++) {
+          stars.push({
+            rx: Math.random(),
+            ry: Math.random() * 0.72,
+            size: 1.5 + Math.random() * 2.5,
+            phase: Math.random() * Math.PI * 2,
+            speed: 0.0014 + Math.random() * 0.0022
+          });
+        }
+        return stars;
+      }
+
+      loadStats() {
+        const today = new Date().toISOString().slice(0, 10);
+        try {
+          const raw = localStorage.getItem('siamese_storybook_pet_stats_v1');
+          if (raw) {
+            const data = JSON.parse(raw);
+            if (data.date === today) return data;
+          }
+        } catch (_) {}
+        return { date: today, keys: 0, clicks: 0 };
+      }
+
+      saveStats() {
+        try {
+          localStorage.setItem('siamese_storybook_pet_stats_v1', JSON.stringify(this.stats));
+        } catch (_) {}
+        if (this.callbacks.onStats) this.callbacks.onStats(this.stats);
+      }
+
+      setTheme(theme) {
+        this.theme = theme;
+      }
+
+      toggleViewMode() {
+        const next = this.keyboard.mode === 'cat' ? 'mirror' : 'cat';
+        this.keyboard.setMode(next);
+        this.notifyStatus(
+          next === 'cat'
+            ? '已切换：猫咪视角（180°真实朝向，空格键面向猫咪）'
+            : '已切换：镜像左右（空格键依然面向猫咪）'
+        );
+        return next;
+      }
+
+      resize() {
+        this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+        this.viewW = window.innerWidth;
+        this.viewH = window.innerHeight;
+        this.canvas.width = Math.floor(this.viewW * this.dpr);
+        this.canvas.height = Math.floor(this.viewH * this.dpr);
+
+        // 结合宽高自适应缩放，手机竖屏与大屏桌面都保持舒适比例
+        const scaleByW = this.viewW / 470;
+        const scaleByH = this.viewH / 460;
+        this.scale = clamp(Math.min(scaleByW, scaleByH), 0.62, 1.24);
+        this.clampPos();
+      }
+
+      clampPos() {
+        const mx = 175 * this.scale;
+        const mTop = 185 * this.scale;
+        const mBot = 155 * this.scale;
+        this.x = clamp(this.x, Math.min(mx, this.viewW * 0.5), Math.max(this.viewW - mx, this.viewW * 0.5));
+        this.y = clamp(this.y, Math.min(mTop, this.viewH * 0.5), Math.max(this.viewH - mBot, this.viewH * 0.5));
+      }
+
+      resetPosition() {
+        this.x = this.viewW * 0.5;
+        this.y = this.viewH * 0.52;
+        this.clampPos();
+        this.notifyStatus('小猫已回到画布中央');
+      }
+
+      screenToLocal(sx, sy) {
+        return {
+          x: (sx - this.x) / this.scale,
+          y: (sy - this.y) / this.scale
+        };
+      }
+
+      notifyStatus(msg) {
+        if (this.callbacks.onStatus) this.callbacks.onStatus(msg, this.isSleeping);
+      }
+
+      /** 温和唤醒小猫 */
+      wakeUp() {
+        this.lastActivity = performance.now();
+        if (this.isSleeping) {
+          this.isSleeping = false;
+          this.earTwitchL = 1.0;
+          this.earTwitchR = 1.0;
+          this.notifyStatus('暹罗猫揉揉眼醒来啦 · 随时准备陪你打字');
+        }
+      }
+
+      /**
+       * 命中区域检测：
+       * - 'headTop': 抚摸猫头区（额头、双耳、脸颊上方）
+       * - 'nose': 小鼻子区域（戳一戳）
+       * - 'belly': 肚子区域（短点戳一戳 / 拖动可移动）
+       * - 'desk': 键盘底座与鼠标垫（按住直接拖拽定位）
+       */
+      hitTest(sx, sy) {
+        const p = this.screenToLocal(sx, sy);
+        const headCx = 2 - this.lean * 28;
+        const headCy = -96 + this.sleepBlend * 11;
+
+        // 1) 小鼻子热区
+        if (Math.hypot(p.x - headCx, p.y - (headCy + 10)) <= 16) {
+          return 'nose';
+        }
+        // 2) 猫头抚摸区
+        const dxH = (p.x - headCx) / 62;
+        const dyH = (p.y - (headCy - 4)) / 58;
+        if (dxH * dxH + dyH * dyH <= 1) {
+          return 'headTop';
+        }
+        // 3) 键盘底座与鼠标区（自由拖拽）
+        if (p.x >= -222 && p.x <= 198 && p.y >= 42 && p.y <= 174) {
+          return 'desk';
+        }
+        // 4) 肚子/胸口区
+        const bodyCx = 4 - this.lean * 18;
+        if (p.x >= bodyCx - 64 && p.x <= bodyCx + 68 && p.y >= -42 && p.y <= 46) {
+          return 'belly';
+        }
+        return 'none';
+      }
+
+      /** 生成通用漂浮粒子（爱心、彩铅星尘、Zzz、惊吓叹号） */
+      spawnParticle(type, x, y, opts = {}) {
+        this.particles.push({
+          type,
+          x,
+          y,
+          vx: opts.vx !== undefined ? opts.vx : (Math.random() - 0.5) * 26,
+          vy: opts.vy !== undefined ? opts.vy : (type === 'zzz' ? -22 : -40 - Math.random() * 18),
+          life: 1.0,
+          decay: opts.decay || (type === 'stardust' ? 1.55 : type === 'zzz' ? 0.52 : 0.85),
+          size: opts.size || (type === 'heart' ? 10 + Math.random() * 5 : type === 'stardust' ? 2.5 + Math.random() * 2.5 : 14),
+          color: opts.color || '#F4978E',
+          text: opts.text || '',
+          phase: Math.random() * Math.PI * 2,
+          rot: (Math.random() - 0.5) * 0.5
+        });
+      }
+
+      /**
+       * 在键帽实际 (x, y) 坐标位置弹出三段式「敲击 -> 悬浮 -> 渐变消散」字母！
+       */
+      spawnFloatingLetter(label, x, y, keyType) {
+        // 绘本粉彩主色调与渐隐水彩尾色
+        const palette = keyType === 'space'
+          ? { fg: '#8A5628', bg: '#FFF1C7', glow: 'rgba(252, 214, 128, 0.72)', fade: '#F4B886' }
+          : keyType === 'accent'
+            ? { fg: '#8F3E2E', bg: '#FFE4D8', glow: 'rgba(248, 178, 152, 0.72)', fade: '#F4A59E' }
+            : { fg: '#4A352A', bg: '#FFFBF2', glow: 'rgba(255, 226, 158, 0.72)', fade: '#9CC6E8' };
+
+        this.floatingLetters.push({
+          label,
+          x,
+          y: y - 6,
+          startX: x,
+          startY: y - 6,
+          age: 0,
+          duration: 1.48,
+          tilt: (Math.random() - 0.5) * 0.34,
+          swayPhase: Math.random() * Math.PI * 2,
+          swayAmp: 7 + Math.random() * 5.5,
+          swayFreq: 4.2 + Math.random() * 1.4,
+          riseDist: 78 + Math.random() * 20,
+          palette,
+          stardustSpawned: false
+        });
+      }
+
+      /** 在键帽敲击点绽放极细腻的手绘小星芒与水彩涟漪 */
+      spawnKeyRipple(x, y, keyType) {
+        const sparkCount = keyType === 'space' ? 5 : 4;
+        const sparks = [];
+        for (let i = 0; i < sparkCount; i++) {
+          const ang = (Math.PI * 2 * i) / sparkCount + (Math.random() - 0.5) * 0.55;
+          sparks.push({
+            ang,
+            dist: 11 + Math.random() * 10,
+            size: 3 + Math.random() * 2.5
+          });
+        }
+        this.keyRipples.push({
+          x,
+          y,
+          age: 0,
+          duration: 0.42,
+          color: keyType === 'accent' ? '#F4A59E' : '#F3C669',
+          sparks
+        });
+      }
+
+      /** 处理全局指针移动 */
+      handlePointerMove(clientX, clientY) {
+        this.pointer.x = clientX;
+        this.pointer.y = clientY;
+
+        if (this.drag.active || this.drag.pendingBody) {
+          const dx = clientX - this.drag.startX;
+          const dy = clientY - this.drag.startY;
+          if (!this.drag.active && Math.hypot(dx, dy) > 7) {
+            this.drag.active = true;
+            this.drag.moved = true;
+          }
+          if (this.drag.active) {
+            this.x = this.drag.originX + dx;
+            this.y = this.drag.originY + dy;
+            this.clampPos();
+            this.canvas.style.cursor = 'grabbing';
+            return;
+          }
+        }
+
+        const now = performance.now();
+        this.wakeUp();
+
+        const zone = this.hitTest(clientX, clientY);
+        if (zone === 'headTop') {
+          this.canvas.style.cursor = 'pointer';
+          if (this.lastRubPt) {
+            const dist = Math.hypot(clientX - this.lastRubPt.x, clientY - this.lastRubPt.y);
+            this.petRubDist += dist;
+            if (this.petRubDist > 26) {
+              this.petRubDist = 0;
+              this.triggerPet(false);
+            }
+          }
+          this.lastRubPt = { x: clientX, y: clientY };
+        } else {
+          this.lastRubPt = null;
+          this.petRubDist = 0;
+          if (zone === 'desk') this.canvas.style.cursor = 'grab';
+          else if (zone === 'nose' || zone === 'belly') this.canvas.style.cursor = 'pointer';
+          else this.canvas.style.cursor = 'default';
+        }
+
+        // 将桌面指针相对位置映射为左侧手绘鼠标在毛毡垫上的柔和移动
+        const nx = (clientX / Math.max(1, this.viewW)) * 2 - 1;
+        const ny = (clientY / Math.max(1, this.viewH)) * 2 - 1;
+        this.mouseTarget.x = this.padCenter.x + nx * 16;
+        this.mouseTarget.y = this.padCenter.y - 2 + ny * 12;
+        this.lastMouseMove = now;
+      }
+
+      /** 处理全局指针按下 */
+      handlePointerDown(clientX, clientY, targetEl) {
+        const inUI = targetEl && targetEl.closest && (targetEl.closest('#top-ui') || targetEl.closest('#bottom-ui'));
+        this.pointer.x = clientX;
+        this.pointer.y = clientY;
+        this.wakeUp();
+        this.isMouseDown = true;
+        this.mouseClickPress = 1.0;
+        this.lastMouseMove = performance.now();
+
+        this.stats.clicks++;
+        this.saveStats();
+        this.sound.playMouseClick();
+
+        if (inUI) return;
+
+        const zone = this.hitTest(clientX, clientY);
+        if (zone === 'desk') {
+          this.drag.active = true;
+          this.drag.moved = false;
+          this.drag.startX = clientX;
+          this.drag.startY = clientY;
+          this.drag.originX = this.x;
+          this.drag.originY = this.y;
+          this.canvas.style.cursor = 'grabbing';
+        } else if (zone === 'belly') {
+          this.drag.pendingBody = true;
+          this.drag.moved = false;
+          this.drag.startX = clientX;
+          this.drag.startY = clientY;
+          this.drag.originX = this.x;
+          this.drag.originY = this.y;
+        } else if (zone === 'nose') {
+          this.triggerPoke('nose');
+        } else if (zone === 'headTop') {
+          this.triggerPet(true);
+        }
+      }
+
+      handlePointerUp() {
+        this.isMouseDown = false;
+        if (this.drag.pendingBody && !this.drag.moved) {
+          this.triggerPoke('belly');
+        }
+        this.drag.active = false;
+        this.drag.pendingBody = false;
+        this.drag.moved = false;
+        this.canvas.style.cursor = 'default';
+      }
+
+      /** 格式化升起字母显示文本 */
+      formatDisplayLabel(key, code, customText) {
+        if (customText) return customText.slice(-2);
+        const map = {
+          ' ': 'Space',
+          'Space': 'Space',
+          'Enter': 'Enter',
+          'Backspace': '⌫',
+          'Delete': 'Del',
+          'Escape': 'Esc',
+          'Tab': 'Tab',
+          'Shift': 'Shift',
+          'Control': 'Ctrl',
+          'Alt': 'Alt',
+          'Meta': '⌘',
+          'CapsLock': 'Caps',
+          'ArrowUp': '↑',
+          'ArrowDown': '↓',
+          'ArrowLeft': '←',
+          'ArrowRight': '→'
+        };
+        if (map[key]) return map[key];
+        if (code && code.startsWith('Key')) return code.slice(3);
+        if (code && code.startsWith('Digit')) return code.slice(5);
+        if (key && key.length === 1) return key.toUpperCase();
+        return (key || '★').slice(0, 5);
+      }
+
+      /**
+       * 核心打字同步：精准敲击对应键帽 + 键帽按压发光涟漪 + 原地三段式字母升起
+       */
+      handleKeyPress(key, code, customText = null) {
+        const now = performance.now();
+        this.wakeUp();
+        this.lastKeyTime = now;
+        this.typingEnergy = Math.min(1.6, this.typingEnergy + 0.42);
+
+        this.stats.keys++;
+        this.saveStats();
+
+        // 1) 找到键盘上真实的对应键帽
+        const keyObj = this.keyboard.resolveKey(code, customText || key);
+        const isSpace = keyObj.id === 'Space';
+        this.keyboard.pressKey(keyObj);
+
+        // 2) 播放柔和奶油木轴音（按键区微调音高）
+        this.sound.playKeyClick(keyObj.uCenter, keyObj.row, isSpace);
+
+        // 3) 键帽敲击点手绘水彩涟漪 + 星芒
+        this.spawnKeyRipple(keyObj.cx, keyObj.cy, keyObj.type);
+
+        // 4) 从该键帽实际 (x, y) 坐标位置弹出三段式悬浮渐变字母
+        const displayLabel = this.formatDisplayLabel(key, code, customText);
+        this.spawnFloatingLetter(displayLabel, keyObj.cx, keyObj.cy, keyObj.type);
+
+        // 5) 调度更靠近该侧的猫爪（敲空格键灵活双爪交替或双爪轻拍）
+        const holdingMouse = (now - this.lastMouseMove < 950) || this.isMouseDown;
+
+        if (isSpace) {
+          if (holdingMouse) {
+            this.launchPawStrike(this.rightPaw, keyObj.cx + 16, keyObj.cy);
+          } else {
+            this.spaceToggle = (this.spaceToggle + 1) % 3;
+            if (this.spaceToggle === 2) {
+              // 每隔两次来一次超可爱的双爪同步轻拍空格键！
+              this.launchPawStrike(this.leftPaw, keyObj.cx - 24, keyObj.cy);
+              this.launchPawStrike(this.rightPaw, keyObj.cx + 24, keyObj.cy);
+            } else if (this.spaceToggle === 0) {
+              this.launchPawStrike(this.leftPaw, keyObj.cx - 14, keyObj.cy);
+            } else {
+              this.launchPawStrike(this.rightPaw, keyObj.cx + 14, keyObj.cy);
+            }
+          }
+        } else {
+          // 非空格键：判断键帽在画面左侧还是右侧，避免交叉
+          const preferLeftPaw = keyObj.uCenter < -0.02;
+          if (holdingMouse && !preferLeftPaw) {
+            this.launchPawStrike(this.rightPaw, keyObj.cx, keyObj.cy);
+          } else if (holdingMouse && keyObj.uCenter > -0.45) {
+            // 鼠标刚动过且按键靠近中间时，仍让右爪照顾，保持左爪稳稳扶鼠标
+            this.launchPawStrike(this.rightPaw, keyObj.cx, keyObj.cy);
+          } else if (preferLeftPaw) {
+            this.launchPawStrike(this.leftPaw, keyObj.cx, keyObj.cy);
+          } else {
+            this.launchPawStrike(this.rightPaw, keyObj.cx, keyObj.cy);
+          }
+        }
+
+        // 偶尔俏皮抖动耳尖
+        if (Math.random() < 0.3) {
+          if (keyObj.uCenter < 0) this.earTwitchL = 0.75;
+          else this.earTwitchR = 0.75;
+        }
+
+        this.notifyStatus(`正在敲击 [ ${displayLabel} ] · 字母已从对应键位升起`);
+      }
+
+      /** 启动单爪的三段式弹性敲击轨迹 */
+      launchPawStrike(paw, tx, ty) {
+        paw.startX = paw.x;
+        paw.startY = paw.y;
+        paw.targetX = tx;
+        paw.targetY = ty - 2;
+        paw.timer = 1.0;
+        paw.duration = 0.25;
+      }
+
+      /** 抚摸互动：弯弯笑眼 ^ ^ + 珊瑚腮红加深 + 水彩爱心 + 轻柔呼噜 */
+      triggerPet(withMeow = true) {
+        this.wakeUp();
+        this.petEnergy = clamp(Math.max(this.petEnergy + 1.05, 1.45), 0, 2.8);
+        this.earTwitchL = 0.6;
+        this.earTwitchR = 0.6;
+
+        const headCx = 2 - this.lean * 28;
+        this.spawnParticle('heart', headCx + (Math.random() - 0.5) * 66, -142, {
+          color: Math.random() < 0.5 ? '#F4978E' : '#F8B4A0'
+        });
+        if (Math.random() < 0.5) {
+          this.spawnParticle('bubble', headCx + (Math.random() - 0.5) * 50, -152, {
+            text: Math.random() < 0.6 ? '呼噜~' : '好舒服~'
+          });
+        }
+
+        if (withMeow) this.sound.playMeow('cute');
+        else this.sound.playPurr();
+        this.notifyStatus('被轻抚头顶中 · 暹罗猫眯起笑眼呼噜呼噜~');
+      }
+
+      /** 戳一戳互动（小鼻子或肚子）：受惊弹跳 + 竖耳 + 瞪大蓝眼 + 柔喵 + 叹号 */
+      triggerPoke(part = 'nose') {
+        this.wakeUp();
+        this.pokeTimer = 0.72;
+        this.pupilScale = 1.48;
+        this.earTwitchL = 1.2;
+        this.earTwitchR = 1.2;
+
+        const headCx = 2 - this.lean * 28;
+        this.spawnParticle('exclaim', headCx + 52, -138, { text: '!' });
+        this.spawnParticle('bubble', headCx - 48, -146, {
+          text: part === 'nose' ? '喵?!' : '痒呀!'
+        });
+        this.sound.playMeow('surprised');
+        this.notifyStatus(part === 'nose' ? '轻戳了一下小鼻子 · 喵?!' : '戳到软乎乎的肚子啦~');
+      }
+
+      /** 手动切换瞌睡 */
+      toggleSleep() {
+        if (this.isSleeping) {
+          this.wakeUp();
+        } else {
+          this.isSleeping = true;
+          this.petEnergy = 0;
+          this.notifyStatus('暹罗猫打瞌睡啦 Zzz · 动动鼠标或按键唤醒');
+        }
+      }
+
+      /**
+       * ========================================================================
+       * 每帧状态插值与动画更新（60fps）
+       * ========================================================================
+       */
+      update(dt, now) {
+        // 1) 连续 15 秒无操作自动进入温柔瞌睡状态
+        if (!this.isSleeping && now - this.lastActivity > 15000) {
+          this.isSleeping = true;
+          this.notifyStatus('15秒无操作 · 暹罗猫安心打瞌睡啦 Zzz');
+        }
+        this.sleepBlend += ((this.isSleeping ? 1 : 0) - this.sleepBlend) * Math.min(1, dt * 4.2);
+
+        if (this.isSleeping && now > this.nextZzzTime) {
+          this.nextZzzTime = now + 1450;
+          const headCx = 2 - this.lean * 28;
+          this.spawnParticle('zzz', headCx + 42, -138, { text: 'Zzz' });
+        }
+
+        // 2) 鼠标扶手与身体微倾插值
+        const wantsMouse = !this.isSleeping && ((now - this.lastMouseMove < 1300) || this.isMouseDown);
+        const activeTyping = (now - this.lastKeyTime < 650) && (now - this.lastMouseMove > 900);
+        const targetLean = (wantsMouse && !activeTyping) ? 1 : 0;
+        this.lean += (targetLean - this.lean) * Math.min(1, dt * 9.5);
+
+        // 3) 鼠标在毛毡垫上丝滑移动与点击回弹
+        this.mousePos.x += (this.mouseTarget.x - this.mousePos.x) * Math.min(1, dt * 18);
+        this.mousePos.y += (this.mouseTarget.y - this.mousePos.y) * Math.min(1, dt * 18);
+        if (!this.isMouseDown && this.mouseClickPress > 0) {
+          this.mouseClickPress = Math.max(0, this.mouseClickPress - dt * 10);
+        }
+
+        // 4) 蓝宝石眼睛与头部跟随桌面鼠标指针
+        const localPtr = this.screenToLocal(this.pointer.x, this.pointer.y);
+        const headCx = 2 - this.lean * 28;
+        const headCy = -96 + this.sleepBlend * 11;
+        const dx = localPtr.x - headCx;
+        const dy = localPtr.y - headCy;
+        const angle = Math.atan2(dy, dx);
+        const factor = Math.min(1, Math.hypot(dx, dy) / 230);
+
+        const targetPx = Math.cos(angle) * 5.6 * factor * (1 - this.sleepBlend);
+        const targetPy = Math.sin(angle) * 4.1 * factor * (1 - this.sleepBlend);
+        this.pupilOffset.x += (targetPx - this.pupilOffset.x) * Math.min(1, dt * 15);
+        this.pupilOffset.y += (targetPy - this.pupilOffset.y) * Math.min(1, dt * 15);
+
+        const ptrTilt = clamp(dx / 1700, -0.09, 0.09);
+        const petSway = this.petEnergy > 0 ? Math.sin(now * 0.01) * 0.065 : 0;
+        const sleepNod = this.sleepBlend * 0.09;
+        const targetTilt = ptrTilt - this.lean * 0.055 + petSway + sleepNod;
+        this.headTilt += (targetTilt - this.headTilt) * Math.min(1, dt * 8.5);
+
+        // 5) 自然眨眼
+        if (!this.isSleeping && this.petEnergy <= 0.1 && this.pokeTimer <= 0) {
+          if (now >= this.nextBlink) {
+            const elapsed = now - this.nextBlink;
+            if (elapsed < 80) this.blink = elapsed / 80;
+            else if (elapsed < 175) this.blink = 1 - (elapsed - 80) / 95;
+            else {
+              this.blink = 0;
+              this.nextBlink = now + 2600 + Math.random() * 3600;
+            }
+          }
+        } else {
+          this.blink = 0;
+        }
+
+        // 6) 互动衰减
+        this.petEnergy = Math.max(0, this.petEnergy - dt * 0.68);
+        this.pokeTimer = Math.max(0, this.pokeTimer - dt);
+        this.typingEnergy = Math.max(0, this.typingEnergy - dt * 1.35);
+        this.pupilScale += (1 - this.pupilScale) * Math.min(1, dt * 6.5);
+        this.earTwitchL = Math.max(0, this.earTwitchL - dt * 4.2);
+        this.earTwitchR = Math.max(0, this.earTwitchR - dt * 4.2);
+
+        // 7) 棕色长尾优雅摇摆（抚摸/打字更欢快）
+        const targetTailSpeed = this.isSleeping
+          ? 0.85
+          : 1.9 + this.typingEnergy * 3.4 + (this.petEnergy > 0 ? 4.4 : 0);
+        this.tailSpeed += (targetTailSpeed - this.tailSpeed) * Math.min(1, dt * 4.5);
+        this.tailPhase += dt * this.tailSpeed;
+
+        // 8) 双爪三段式弹性敲击（预备抬起 -> 精准砸落 -> 爪垫挤压弹性回弹）
+        this.updatePaw(this.leftPaw, dt, this.lean > 0.12 && this.leftPaw.timer <= 0 ? this.mousePos : null, true);
+        this.updatePaw(this.rightPaw, dt, null, false);
+
+        // 9) 更新键盘按压回弹
+        this.keyboard.update(dt);
+
+        // 10) 更新键帽水彩涟漪与手绘星芒
+        for (let i = this.keyRipples.length - 1; i >= 0; i--) {
+          const r = this.keyRipples[i];
+          r.age += dt;
+          if (r.age >= r.duration) this.keyRipples.splice(i, 1);
+        }
+
+        // 11) 更新三段式敲击悬浮字母（并在渐变消散期释放微小彩铅星尘）
+        for (let i = this.floatingLetters.length - 1; i >= 0; i--) {
+          const fl = this.floatingLetters[i];
+          fl.age += dt;
+          const p = fl.age / fl.duration;
+          if (p >= 1) {
+            this.floatingLetters.splice(i, 1);
+            continue;
+          }
+          // 进入渐变消散阶段（70%）时绽放 2~3 颗彩铅星尘粒子
+          if (p >= 0.70 && !fl.stardustSpawned) {
+            fl.stardustSpawned = true;
+            const cur = this.evaluateLetterTransform(fl);
+            const count = 2 + (Math.random() < 0.5 ? 1 : 0);
+            for (let s = 0; s < count; s++) {
+              this.spawnParticle('stardust', cur.x + (Math.random() - 0.5) * 18, cur.y + (Math.random() - 0.5) * 10, {
+                vx: (Math.random() - 0.5) * 34,
+                vy: -16 - Math.random() * 24,
+                color: s % 2 === 0 ? '#F3C669' : '#F4A59E'
+              });
+            }
+          }
+        }
+
+        // 12) 更新通用粒子
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          const pt = this.particles[i];
+          pt.x += pt.vx * dt + Math.sin(now * 0.005 + pt.phase) * 12 * dt;
+          pt.y += pt.vy * dt;
+          pt.life -= pt.decay * dt;
+          if (pt.life <= 0) this.particles.splice(i, 1);
+        }
+      }
+
+      /** 更新单只猫爪弹性轨迹（预备抬起 -> 快速砸落 -> 挤压回弹） */
+      updatePaw(paw, dt, mouseOverride, isScreenLeft) {
+        if (mouseOverride && isScreenLeft) {
+          const mx = mouseOverride.x + 2;
+          const my = mouseOverride.y - 6 + this.mouseClickPress * 4.5;
+          const gx = lerp(paw.restX, mx, this.lean);
+          const gy = lerp(paw.restY, my, this.lean);
+          paw.x += (gx - paw.x) * Math.min(1, dt * 22);
+          paw.y += (gy - paw.y) * Math.min(1, dt * 22);
+          paw.squashX = lerp(paw.squashX, 1 + this.mouseClickPress * 0.1, Math.min(1, dt * 22));
+          paw.squashY = lerp(paw.squashY, 1 - this.mouseClickPress * 0.1, Math.min(1, dt * 22));
+          paw.liftZ = 0;
+          return;
+        }
+
+        if (paw.timer > 0) {
+          paw.timer = Math.max(0, paw.timer - dt / paw.duration);
+          const p = 1 - paw.timer; // 0 -> 1
+
+          if (p < 0.22) {
+            // 阶段1：预备轻抬（anticipation）
+            const k = p / 0.22;
+            const ease = Math.sin(k * Math.PI * 0.5);
+            paw.x = lerp(paw.startX, lerp(paw.startX, paw.targetX, 0.45), ease);
+            paw.y = lerp(paw.startY, paw.targetY - 22, ease);
+            paw.liftZ = ease;
+            paw.squashX = lerp(1, 0.90, ease);
+            paw.squashY = lerp(1, 1.13, ease);
+          } else if (p < 0.48) {
+            // 阶段2：快速精准砸落到键帽 + 爪垫挤压（squash）
+            const k = (p - 0.22) / 0.26;
+            const ease = k * k * (3 - 2 * k);
+            paw.x = lerp(lerp(paw.startX, paw.targetX, 0.45), paw.targetX, ease);
+            paw.y = lerp(paw.targetY - 22, paw.targetY + 3.5, ease);
+            paw.liftZ = 1 - ease;
+            // 触键瞬间明显挤压弹性感
+            const impact = Math.sin(k * Math.PI);
+            paw.squashX = 1 + impact * 0.22;
+            paw.squashY = 1 - impact * 0.18;
+          } else {
+            // 阶段3：弹性回弹归位
+            const k = (p - 0.48) / 0.52;
+            const bounce = Math.sin(k * Math.PI) * 11;
+            const restX = paw.restX + (isScreenLeft ? 0 : -this.lean * 12);
+            const restY = paw.restY;
+            const ease = 1 - Math.pow(1 - k, 2.2);
+            paw.x = lerp(paw.targetX, restX, ease);
+            paw.y = lerp(paw.targetY + 3.5, restY, ease) - bounce;
+            paw.liftZ = bounce / 18;
+            paw.squashX = lerp(1.12, 1.0, ease);
+            paw.squashY = lerp(0.89, 1.0, ease);
+          }
+        } else {
+          const restX = paw.restX + (isScreenLeft ? 0 : -this.lean * 12);
+          const restY = paw.restY;
+          paw.x += (restX - paw.x) * Math.min(1, dt * 13);
+          paw.y += (restY - paw.y) * Math.min(1, dt * 13);
+          paw.squashX += (1 - paw.squashX) * Math.min(1, dt * 15);
+          paw.squashY += (1 - paw.squashY) * Math.min(1, dt * 15);
+          paw.liftZ += (0 - paw.liftZ) * Math.min(1, dt * 15);
+        }
+      }
+
+      /** 计算三段式悬浮字母在当前帧的坐标、缩放、旋转与透明度 */
+      evaluateLetterTransform(fl) {
+        const p = clamp(fl.age / fl.duration, 0, 1);
+        let yOffset = 0;
+        let xOffset = 0;
+        let scale = 1;
+        let alpha = 1;
+        let rot = fl.tilt;
+        let glowAlpha = 0;
+
+        if (p < 0.18) {
+          // 阶段1：敲击弹出（0%~18%）——向上冲击 + 弹性缩放过冲 0.4 -> 1.28 -> 1.0
+          const k = p / 0.18;
+          const easeOut = 1 - Math.pow(1 - k, 3);
+          yOffset = -easeOut * (fl.riseDist * 0.44);
+          if (k < 0.62) {
+            const sub = k / 0.62;
+            scale = lerp(0.4, 1.28, 1 - Math.pow(1 - sub, 2.5));
+          } else {
+            const sub = (k - 0.62) / 0.38;
+            scale = lerp(1.28, 1.0, smoothstep(0, 1, sub));
+          }
+          alpha = smoothstep(0, 0.25, k);
+          rot = fl.tilt * (1.25 - k * 0.45);
+          glowAlpha = Math.sin(k * Math.PI) * 0.95;
+        } else if (p < 0.70) {
+          // 阶段2：轻盈悬浮（18%~70%）——失重慢升 + 正弦波轻晃 + 呼吸微浮
+          const k = (p - 0.18) / 0.52;
+          const slowEase = 1 - Math.pow(1 - k, 1.45);
+          yOffset = -(fl.riseDist * 0.44) - slowEase * (fl.riseDist * 0.38) + Math.sin(fl.age * 5.2 + fl.swayPhase) * 2.2;
+          xOffset = Math.sin(fl.age * fl.swayFreq + fl.swayPhase) * fl.swayAmp * smoothstep(0, 0.2, k);
+          scale = 1.0 + Math.sin(fl.age * 6.0 + fl.swayPhase) * 0.045;
+          alpha = 1;
+          rot = fl.tilt * 0.75 * Math.cos(fl.age * 3.1 + fl.swayPhase);
+          glowAlpha = 0.28 * (1 - k * 0.5);
+        } else {
+          // 阶段3：渐变消散（70%~100%）——柔美渐隐 + 柔和淡出上飘
+          const k = (p - 0.70) / 0.30;
+          yOffset = -(fl.riseDist * 0.82) - k * (fl.riseDist * 0.22);
+          xOffset = Math.sin(fl.age * fl.swayFreq + fl.swayPhase) * fl.swayAmp * (1 + k * 0.25);
+          scale = lerp(1.0, 0.86, smoothstep(0, 1, k));
+          alpha = 1 - smoothstep(0, 1, k);
+          rot = fl.tilt * 0.5 * Math.cos(fl.age * 3.1 + fl.swayPhase);
+          glowAlpha = 0.14 * (1 - k);
+        }
+
+        return {
+          x: fl.startX + xOffset,
+          y: fl.startY + yOffset,
+          scale,
+          alpha,
+          rot,
+          glowAlpha,
+          fadeMix: smoothstep(0.68, 1.0, p)
+        };
+      }
+
+      /**
+       * ========================================================================
+       * 主绘本渲染入口
+       * ========================================================================
+       */
+      render(now) {
+        const ctx = this.ctx;
+        ctx.save();
+        ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        ctx.clearRect(0, 0, this.viewW, this.viewH);
+
+        // 0. 绘本主题柔和背景氛围（暖水彩晕染 / 星夜微光）
+        this.drawStorybookBackdrop(ctx, now);
+
+        // 切换到暹罗猫中心坐标系
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.scale(this.scale, this.scale);
+
+        // 呼吸感、受惊弹跳与轻微打字节奏起伏
+        const breathe = Math.sin(now * (this.isSleeping ? 0.0021 : 0.0034)) * (this.isSleeping ? 2.8 : 1.7);
+        const pokeJump = this.pokeTimer > 0 ? Math.sin((this.pokeTimer / 0.72) * Math.PI) * 14 : 0;
+        const pokeScale = this.pokeTimer > 0 ? Math.sin((this.pokeTimer / 0.72) * Math.PI) * 0.06 : 0;
+        const typeBounce = Math.min(2.0, this.typingEnergy * 1.1) * Math.abs(Math.sin(now * 0.024));
+
+        // 1. 桌面柔和接触水彩投影
+        this.drawDeskShadows(ctx);
+
+        // 2. 暹罗猫身体与头部（带受惊弹性形变）
+        ctx.save();
+        ctx.translate(0, -pokeJump - typeBounce);
+        if (pokeScale > 0) ctx.scale(1 - pokeScale * 0.45, 1 + pokeScale * 0.7);
+
+        // 2a. 优雅渐变棕色长尾巴（在身体后方）
+        this.drawTail(ctx, breathe);
+
+        // 2b. 海豹重点色奶油机身
+        this.drawBody(ctx, breathe);
+
+        // 2c. 暹罗猫头部（重点色面罩、大耳朵、水彩蓝宝石眼、珊瑚腮红、爱心鼻、w嘴与胡须）
+        this.drawHead(ctx, breathe, now);
+        ctx.restore();
+
+        // 3. 画面左侧（猫咪右手边）毛毡鼠标垫与手绘奶油鼠标
+        this.drawMousepadAndMouse(ctx);
+
+        // 4. 面向猫咪的 5 排透视绘本键盘（最上排空格键面向猫咪！）
+        this.drawKeyboard(ctx);
+
+        // 5. 键帽敲击点手绘水彩涟漪与小星芒
+        this.drawKeyRipples(ctx);
+
+        // 6. 暹罗猫双臂与巧克力棕渐变动感猫爪
+        this.drawArmsAndPaws(ctx, breathe, pokeJump + typeBounce);
+
+        // 7. 原地升起的三段式「敲击 -> 悬浮 -> 渐变消散」字母
+        this.drawFloatingLetters(ctx);
+
+        // 8. 前景彩铅星尘、水彩爱心、Zzz 与惊吓叹号
+        this.drawParticles(ctx);
+
+        ctx.restore();
+
+        // 9. 全局细腻水彩纸纹理叠层（OBS 绿幕模式除外，保证纯净抠图）
+        if (this.theme !== 'green' && this.paperPattern) {
+          ctx.save();
+          ctx.globalCompositeOperation = this.theme === 'night' ? 'soft-light' : 'multiply';
+          ctx.globalAlpha = this.theme === 'night' ? 0.16 : 0.42;
+          ctx.fillStyle = this.paperPattern;
+          ctx.fillRect(0, 0, this.viewW, this.viewH);
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+
+      /** 0. 绘制儿童绘本主题氛围背景 */
+      drawStorybookBackdrop(ctx, now) {
+        if (this.theme === 'green') return;
+
+        ctx.save();
+        if (this.theme === 'cream') {
+          // 柔和暖米水彩光晕
+          const g1 = ctx.createRadialGradient(this.x, this.y - 30, 30, this.x, this.y, Math.max(this.viewW, this.viewH) * 0.65);
+          g1.addColorStop(0, 'rgba(255, 245, 224, 0.92)');
+          g1.addColorStop(0.55, 'rgba(249, 238, 219, 0.4)');
+          g1.addColorStop(1, 'rgba(235, 217, 192, 0.45)');
+          ctx.fillStyle = g1;
+          ctx.fillRect(0, 0, this.viewW, this.viewH);
+        } else if (this.theme === 'mint') {
+          // 薄荷手账淡淡水彩晕染 + 柔和手账小圆点
+          const g = ctx.createRadialGradient(this.x, this.y, 40, this.x, this.y, Math.max(this.viewW, this.viewH) * 0.7);
+          g.addColorStop(0, 'rgba(246, 252, 247, 0.85)');
+          g.addColorStop(1, 'rgba(205, 230, 214, 0.45)');
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, this.viewW, this.viewH);
+
+          ctx.fillStyle = 'rgba(84, 126, 102, 0.12)';
+          const step = 30;
+          for (let x = step; x < this.viewW; x += step) {
+            for (let y = step; y < this.viewH; y += step) {
+              ctx.beginPath();
+              ctx.arc(x, y, 1.15, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        } else if (this.theme === 'night') {
+          // 晚安星夜蓝绘本渐变 + 温柔眨眼星星
+          const g = ctx.createRadialGradient(this.x, this.y - 40, 30, this.x, this.y, Math.max(this.viewW, this.viewH) * 0.72);
+          g.addColorStop(0, 'rgba(62, 78, 122, 0.52)');
+          g.addColorStop(1, 'rgba(22, 28, 48, 0.85)');
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, this.viewW, this.viewH);
+
+          for (const st of this.nightStars) {
+            const tw = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(now * st.speed + st.phase));
+            ctx.globalAlpha = tw * 0.85;
+            ctx.fillStyle = '#FCE8B2';
+            const sx = st.rx * this.viewW;
+            const sy = st.ry * this.viewH;
+            this.drawFourPointStar(ctx, sx, sy, st.size * (0.8 + tw * 0.4));
+          }
+        }
+        ctx.restore();
+      }
+
+      /** 1. 绘本桌面柔和投影 */
+      drawDeskShadows(ctx) {
+        ctx.save();
+        const shadowColor = this.theme === 'night' ? 'rgba(9, 12, 24, 0.38)' : 'rgba(94, 66, 46, 0.11)';
+        ctx.fillStyle = shadowColor;
+
+        // 键盘下方大片柔和阴影
+        ctx.beginPath();
+        ctx.ellipse(this.keyboard.centerX, this.keyboard.centerY + 62, 168, 22, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 鼠标垫阴影
+        ctx.beginPath();
+        ctx.ellipse(this.padCenter.x, this.padCenter.y + 38, 46, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      /** 2a. 暹罗猫海豹重点色修长尾巴（奶油根部渐变至深巧克力棕尾尖） */
+      drawTail(ctx, breathe) {
+        const sway = Math.sin(this.tailPhase) * (15 + this.typingEnergy * 7 + (this.petEnergy > 0 ? 10 : 0));
+        const sway2 = Math.cos(this.tailPhase * 0.9) * 8;
+
+        const baseX = 56 - this.lean * 6;
+        const baseY = 34 + breathe * 0.4;
+        const cp1x = 108;
+        const cp1y = 42 + sway2 * 0.4;
+        const cp2x = 122 + sway * 0.25;
+        const cp2y = -28 + sway * 0.45;
+        const tipX = 166 + sway * 0.55;
+        const tipY = -36 + sway * 0.72;
+
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // 尾巴温暖可可棕外轮廓
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, tipX, tipY);
+        ctx.strokeStyle = '#3E2B23';
+        ctx.lineWidth = 22.5;
+        ctx.stroke();
+
+        // 尾巴毛色渐变：根部暖奶茶过渡到尾尖深巧克力棕
+        const tailGrad = ctx.createLinearGradient(baseX, baseY, tipX, tipY);
+        tailGrad.addColorStop(0, '#D9C0A0');
+        tailGrad.addColorStop(0.32, '#7D5C48');
+        tailGrad.addColorStop(0.75, '#523A2E');
+        tailGrad.addColorStop(1, '#442F25');
+        ctx.strokeStyle = tailGrad;
+        ctx.lineWidth = 17.5;
+        ctx.stroke();
+
+        // 尾巴上方极柔和暖光高光笔触
+        ctx.beginPath();
+        ctx.moveTo(baseX + 8, baseY - 3);
+        ctx.bezierCurveTo(cp1x - 2, cp1y - 4, cp2x - 4, cp2y - 4, tipX - 6, tipY - 3);
+        ctx.strokeStyle = 'rgba(255, 240, 220, 0.16)';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      /** 2b. 海豹重点色暹罗猫圆润奶油米白色身体 */
+      drawBody(ctx, breathe) {
+        const l = this.lean;
+        const topShiftX = -l * 24;
+        const topY = -56 + breathe + this.sleepBlend * 6;
+        const baseY = 66;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(-42 + topShiftX, topY);
+        ctx.quadraticCurveTo(topShiftX + 2, topY - 8, 46 + topShiftX, topY);
+        // 柔和圆润的绘本梨形身体线条
+        ctx.bezierCurveTo(64 + topShiftX * 0.4, -12, 78 - l * 4, 24, 68 - l * 6, baseY);
+        ctx.lineTo(-64 - l * 4, baseY);
+        ctx.bezierCurveTo(-76 - l * 8, 22, -58 + topShiftX * 0.65, -14, -42 + topShiftX, topY);
+        ctx.closePath();
+
+        // 温暖水彩奶油渐变（中央柔白 #F6EBD8 -> 边缘柔和阴影 #E6D3B5）
+        const bodyGrad = ctx.createRadialGradient(-4 + topShiftX * 0.4, -4, 14, 2, 16, 94);
+        bodyGrad.addColorStop(0, '#FBF3E4');
+        bodyGrad.addColorStop(0.58, '#F6EBD8');
+        bodyGrad.addColorStop(0.88, '#E6D3B5');
+        bodyGrad.addColorStop(1, '#D7BE9C');
+        ctx.fillStyle = bodyGrad;
+        ctx.fill();
+
+        // 胸口处毛茸茸柔和奶白高光椭圆
+        ctx.beginPath();
+        ctx.ellipse(2 + topShiftX * 0.5, 4, 28, 34, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 252, 244, 0.48)';
+        ctx.fill();
+
+        // 脖子下方淡淡水彩阴影，增强立体绘本感
+        ctx.beginPath();
+        ctx.ellipse(2 + topShiftX * 0.85, topY + 12, 34, 12, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(138, 102, 76, 0.16)';
+        ctx.fill();
+
+        // 温暖深可可棕圆润轮廓线
+        ctx.beginPath();
+        ctx.moveTo(-42 + topShiftX, topY);
+        ctx.quadraticCurveTo(topShiftX + 2, topY - 8, 46 + topShiftX, topY);
+        ctx.bezierCurveTo(64 + topShiftX * 0.4, -12, 78 - l * 4, 24, 68 - l * 6, baseY);
+        ctx.lineTo(-64 - l * 4, baseY);
+        ctx.bezierCurveTo(-76 - l * 8, 22, -58 + topShiftX * 0.65, -14, -42 + topShiftX, topY);
+        ctx.strokeStyle = '#3E2B23';
+        ctx.lineWidth = 2.6;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      /** 2c. 暹罗猫头部：大耳、重点色渐变面罩、蓝宝石大眼、珊瑚粉彩铅腮红与灵动五官 */
+      drawHead(ctx, breathe, now) {
+        const l = this.lean;
+        const headCx = 2 - l * 28;
+        const headCy = -96 + breathe * 1.15 + this.sleepBlend * 11;
+
+        ctx.save();
+        ctx.translate(headCx, headCy);
+        ctx.rotate(this.headTilt);
+
+        // --- A. 标志性大号暹罗猫双耳（深巧克力棕渐变 + 暖粉内耳 + 茸毛） ---
+        const earFlat = this.petEnergy > 0 ? Math.min(1, this.petEnergy) * 0.25 : 0;
+        const earPerk = this.pokeTimer > 0 ? -0.14 : 0;
+        const twL = Math.sin(this.earTwitchL * Math.PI * 2) * 0.16;
+        const twR = Math.sin(this.earTwitchR * Math.PI * 2) * 0.16;
+
+        // 左耳
+        ctx.save();
+        ctx.translate(-37, -30);
+        ctx.rotate(-0.22 - earFlat + earPerk + twL);
+        this.drawSiameseEar(ctx);
+        ctx.restore();
+
+        // 右耳
+        ctx.save();
+        ctx.translate(37, -30);
+        ctx.rotate(0.22 + earFlat - earPerk - twR);
+        ctx.scale(-1, 1);
+        this.drawSiameseEar(ctx);
+        ctx.restore();
+
+        // --- B. 圆润软萌的暹罗猫脸型（奶油米白底色 + 柔和边缘水彩阴影） ---
+        ctx.beginPath();
+        ctx.moveTo(0, -45);
+        ctx.bezierCurveTo(38, -45, 60, -24, 59, 6);
+        ctx.bezierCurveTo(58, 34, 34, 47, 0, 47);
+        ctx.bezierCurveTo(-34, 47, -58, 34, -59, 6);
+        ctx.bezierCurveTo(-60, -24, -38, -45, 0, -45);
+        ctx.closePath();
+
+        const headGrad = ctx.createRadialGradient(-8, -14, 10, 0, 4, 68);
+        headGrad.addColorStop(0, '#FBF4E6');
+        headGrad.addColorStop(0.65, '#F6EBD8');
+        headGrad.addColorStop(0.92, '#E6D3B5');
+        headGrad.addColorStop(1, '#D9C09E');
+        ctx.fillStyle = headGrad;
+        ctx.fill();
+
+        // --- C. 海豹重点色经典柔和渐变面罩（在脸型轮廓内裁剪渲染，自然水彩晕染） ---
+        ctx.save();
+        ctx.clip();
+
+        // 1) 柔和外围咖啡晕染层（覆盖眼周与口鼻）
+        const maskOuter = ctx.createRadialGradient(0, 6, 8, 0, 6, 48);
+        maskOuter.addColorStop(0, 'rgba(74, 53, 42, 0.94)');
+        maskOuter.addColorStop(0.42, 'rgba(98, 71, 55, 0.85)');
+        maskOuter.addColorStop(0.70, 'rgba(130, 99, 79, 0.42)');
+        maskOuter.addColorStop(0.90, 'rgba(176, 142, 114, 0.12)');
+        maskOuter.addColorStop(1, 'rgba(246, 235, 216, 0)');
+        ctx.fillStyle = maskOuter;
+        ctx.beginPath();
+        ctx.ellipse(0, 5, 48, 36, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 2) 中央浓巧克力重点色鼻梁与吻部晕染
+        const maskCore = ctx.createRadialGradient(0, 11, 4, 0, 10, 29);
+        maskCore.addColorStop(0, 'rgba(66, 46, 36, 0.95)');
+        maskCore.addColorStop(0.58, 'rgba(84, 59, 46, 0.68)');
+        maskCore.addColorStop(1, 'rgba(84, 59, 46, 0)');
+        ctx.fillStyle = maskCore;
+        ctx.beginPath();
+        ctx.ellipse(0, 10, 30, 22, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 3) 耳根处微微延续下来的咖啡绒毛过渡
+        [-36, 36].forEach((ex) => {
+          const earShade = ctx.createRadialGradient(ex, -36, 2, ex, -34, 24);
+          earShade.addColorStop(0, 'rgba(90, 65, 51, 0.42)');
+          earShade.addColorStop(1, 'rgba(90, 65, 51, 0)');
+          ctx.fillStyle = earShade;
+          ctx.beginPath();
+          ctx.arc(ex, -34, 24, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        ctx.restore();
+
+        // 脸部温暖深可可棕柔顺描边
+        ctx.beginPath();
+        ctx.moveTo(0, -45);
+        ctx.bezierCurveTo(38, -45, 60, -24, 59, 6);
+        ctx.bezierCurveTo(58, 34, 34, 47, 0, 47);
+        ctx.bezierCurveTo(-34, 47, -58, 34, -59, 6);
+        ctx.bezierCurveTo(-60, -24, -38, -45, 0, -45);
+        ctx.strokeStyle = '#3E2B23';
+        ctx.lineWidth = 2.6;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+
+        // 头顶 2 根俏皮小呆毛笔触
+        ctx.beginPath();
+        ctx.moveTo(-5, -44);
+        ctx.quadraticCurveTo(-1, -54, 4, -49);
+        ctx.moveTo(1, -45);
+        ctx.quadraticCurveTo(6, -52, 9, -45);
+        ctx.strokeStyle = '#3E2B23';
+        ctx.lineWidth = 2.0;
+        ctx.stroke();
+
+        // --- D. 珊瑚粉彩铅柔和腮红（#F4A59E，抚摸时更温暖加深） ---
+        const blushStrength = 0.48 + clamp(this.petEnergy * 0.22, 0, 0.36);
+        [-38, 38].forEach((bx) => {
+          const bg = ctx.createRadialGradient(bx, 16, 2, bx, 16, 15);
+          bg.addColorStop(0, `rgba(244, 165, 158, ${blushStrength})`);
+          bg.addColorStop(0.65, `rgba(244, 165, 158, ${blushStrength * 0.45})`);
+          bg.addColorStop(1, 'rgba(244, 165, 158, 0)');
+          ctx.fillStyle = bg;
+          ctx.beginPath();
+          ctx.ellipse(bx, 16, 15, 9.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // 3道细腻彩铅斜线腮红笔触
+          ctx.strokeStyle = `rgba(232, 134, 126, ${blushStrength * 0.62})`;
+          ctx.lineWidth = 1.3;
+          ctx.lineCap = 'round';
+          for (let i = -1; i <= 1; i++) {
+            ctx.beginPath();
+            ctx.moveTo(bx + i * 4.5 - 2, 19);
+            ctx.lineTo(bx + i * 4.5 + 2.5, 13.5);
+            ctx.stroke();
+          }
+        });
+
+        // --- E. 清澈水彩蓝宝石大眼睛（#69B8F8 -> #2A71B5 + 手绘高光点） ---
+        const isHappy = this.petEnergy > 0.15;
+        const lidClose = Math.max(this.blink, this.sleepBlend * 0.92);
+        const eyeScale = this.pokeTimer > 0 ? 1.12 : 1.0;
+
+        [-21.5, 21.5].forEach((ex, idx) => {
+          ctx.save();
+          ctx.translate(ex, -2);
+          ctx.scale(eyeScale, eyeScale);
+
+          if (isHappy) {
+            // 摸头时的幸福弯弯笑眼 (^ ^)
+            ctx.beginPath();
+            ctx.arc(0, 5, 11.5, Math.PI * 1.12, Math.PI * 1.88);
+            ctx.strokeStyle = '#FFF7EA';
+            ctx.lineWidth = 4.6;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+            ctx.strokeStyle = '#3E2B23';
+            ctx.lineWidth = 2.6;
+            ctx.stroke();
+          } else {
+            // 眼眶柔和乳白边（微弱透亮感）
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 14.2, 13.2, idx === 0 ? -0.06 : 0.06, 0, Math.PI * 2);
+            ctx.fillStyle = '#E8F6FF';
+            ctx.fill();
+
+            ctx.save();
+            ctx.clip();
+
+            // 水彩蓝宝石虹膜（跟随鼠标轻微偏转）
+            const ix = this.pupilOffset.x * 0.65;
+            const iy = this.pupilOffset.y * 0.65;
+            const irisGrad = ctx.createRadialGradient(ix, iy + 5, 2, ix, iy - 2, 14);
+            irisGrad.addColorStop(0, '#AEE3FF');
+            irisGrad.addColorStop(0.45, '#69B8F8');
+            irisGrad.addColorStop(0.85, '#2A71B5');
+            irisGrad.addColorStop(1, '#1E4C82');
+            ctx.fillStyle = irisGrad;
+            ctx.beginPath();
+            ctx.ellipse(ix, iy, 13.5, 13.0, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 深邃海蓝瞳孔（丝滑追踪指针）
+            const px = this.pupilOffset.x;
+            const py = this.pupilOffset.y;
+            const prX = 5.4 * Math.min(1.28, this.pupilScale);
+            const prY = 7.4 * Math.min(1.22, this.pupilScale);
+            ctx.fillStyle = '#1B2A4A';
+            ctx.beginPath();
+            ctx.ellipse(px, py, prX, prY, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 底部清澈水彩天蓝反光月牙
+            ctx.fillStyle = 'rgba(186, 236, 255, 0.55)';
+            ctx.beginPath();
+            ctx.ellipse(px * 0.6, py + 6.5, 5.8, 2.6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 手绘一大一小奶油白高光点
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.ellipse(px - 3.6, py - 4.2, 3.3, 2.7, -0.35, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(px + 3.4, py + 2.8, 1.45, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 眨眼 / 打瞌睡温柔眼皮遮罩
+            if (lidClose > 0.02) {
+              const lidY = -14 + lidClose * 27.5;
+              ctx.fillStyle = '#5D4336';
+              ctx.fillRect(-18, -18, 36, lidY + 18);
+              ctx.beginPath();
+              ctx.moveTo(-15, lidY);
+              ctx.quadraticCurveTo(0, lidY + 4.5, 15, lidY);
+              ctx.strokeStyle = '#3E2B23';
+              ctx.lineWidth = 2.4;
+              ctx.stroke();
+            }
+
+            ctx.restore();
+
+            // 温暖深可可棕柔顺眼框
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 14.2, 13.2, idx === 0 ? -0.06 : 0.06, 0, Math.PI * 2);
+            ctx.strokeStyle = '#3E2B23';
+            ctx.lineWidth = 2.3;
+            ctx.stroke();
+          }
+          ctx.restore();
+        });
+
+        // --- F. 小巧深棕爱心鼻 & 软萌 w 形猫嘴（受惊时张开小口发出喵声） ---
+        // 爱心鼻
+        ctx.save();
+        ctx.translate(0, 10.5);
+        ctx.fillStyle = '#36231C';
+        ctx.beginPath();
+        ctx.moveTo(0, 4.2);
+        ctx.bezierCurveTo(-5.5, 0.5, -5.2, -4.2, 0, -2.0);
+        ctx.bezierCurveTo(5.2, -4.2, 5.5, 0.5, 0, 4.2);
+        ctx.fill();
+        // 鼻尖一点温柔高光
+        ctx.fillStyle = 'rgba(255, 235, 224, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(-1.4, -1.2, 1.4, 0.8, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // w 形猫嘴 / 受惊小圆嘴
+        ctx.save();
+        ctx.strokeStyle = '#2B1B15';
+        ctx.lineWidth = 2.0;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        if (this.pokeTimer > 0.16) {
+          // 戳鼻子受惊张开粉嫩小嘴 "o"
+          ctx.fillStyle = '#E58A84';
+          ctx.beginPath();
+          ctx.ellipse(0, 21.5, 5.2, 6.2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          // 软萌 w 嘴（摸头时嘴角更柔和上扬）
+          const smileLift = this.petEnergy > 0 ? 1.6 : 0;
+          ctx.beginPath();
+          ctx.moveTo(0, 14.5);
+          ctx.lineTo(0, 17.8);
+          ctx.moveTo(-8.5, 19.2 - smileLift);
+          ctx.quadraticCurveTo(-4.2, 24.0, 0, 17.8);
+          ctx.quadraticCurveTo(4.2, 24.0, 8.5, 19.2 - smileLift);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // --- G. 灵动柔和胡须（左右各 3 根，微微随呼吸与心情轻颤） ---
+        const wiggle = Math.sin(now * 0.0042) * 1.1 + (this.petEnergy > 0 ? Math.sin(now * 0.022) * 1.6 : 0);
+        ctx.strokeStyle = 'rgba(62, 43, 35, 0.65)';
+        ctx.lineWidth = 1.6;
+        ctx.lineCap = 'round';
+
+        [
+          [-39, 9, -68, 4 + wiggle],
+          [-40, 15, -70, 15 + wiggle * 0.5],
+          [-38, 21, -66, 26 - wiggle * 0.5],
+          [39, 9, 68, 4 - wiggle],
+          [40, 15, 70, 15 - wiggle * 0.5],
+          [38, 21, 66, 26 + wiggle * 0.5]
+        ].forEach(([x1, y1, x2, y2]) => {
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.quadraticCurveTo((x1 + x2) * 0.5, (y1 + y2) * 0.5 - 1.8, x2, y2);
+          ctx.stroke();
+        });
+
+        ctx.restore();
+      }
+
+      /** 绘制单只经典海豹重点色暹罗大耳朵 */
+      drawSiameseEar(ctx) {
+        ctx.beginPath();
+        ctx.moveTo(-17, 16);
+        ctx.bezierCurveTo(-21, -18, -11, -43, 2, -46);
+        ctx.bezierCurveTo(15, -42, 23, -12, 20, 14);
+        ctx.closePath();
+
+        // 深巧克力棕渐变至柔和咖棕
+        const earGrad = ctx.createLinearGradient(0, -46, 0, 16);
+        earGrad.addColorStop(0, '#412D23');
+        earGrad.addColorStop(0.55, '#594033');
+        earGrad.addColorStop(1, '#856552');
+        ctx.fillStyle = earGrad;
+        ctx.fill();
+
+        // 柔和灰粉色内耳
+        ctx.beginPath();
+        ctx.moveTo(-9, 10);
+        ctx.bezierCurveTo(-11, -12, -5, -28, 2, -31);
+        ctx.bezierCurveTo(10, -28, 13, -8, 10, 10);
+        ctx.closePath();
+        const innerGrad = ctx.createLinearGradient(0, -30, 0, 10);
+        innerGrad.addColorStop(0, '#B98476');
+        innerGrad.addColorStop(1, '#E2B7A6');
+        ctx.fillStyle = innerGrad;
+        ctx.fill();
+
+        // 耳洞边两缕软萌奶白茸毛
+        ctx.strokeStyle = 'rgba(246, 235, 216, 0.72)';
+        ctx.lineWidth = 1.8;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-8, 4);
+        ctx.quadraticCurveTo(-2, 0, 2, 3);
+        ctx.moveTo(-6, 9);
+        ctx.quadraticCurveTo(0, 6, 4, 9);
+        ctx.stroke();
+
+        // 温暖深可可棕耳廓线
+        ctx.beginPath();
+        ctx.moveTo(-17, 16);
+        ctx.bezierCurveTo(-21, -18, -11, -43, 2, -46);
+        ctx.bezierCurveTo(15, -42, 23, -12, 20, 14);
+        ctx.strokeStyle = '#3E2B23';
+        ctx.lineWidth = 2.5;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+      }
+
+      /** 3. 绘制画面左侧的小圆形毛毡鼠标垫与手绘奶油鼠标 */
+      drawMousepadAndMouse(ctx) {
+        const pc = this.padCenter;
+        ctx.save();
+
+        // 圆形毛毡鼠标垫（暖燕麦杏色 + 手工缝线虚线边）
+        ctx.beginPath();
+        ctx.ellipse(pc.x, pc.y + 5, 45, 34, -0.06, 0, Math.PI * 2);
+        ctx.fillStyle = '#E8D5BC';
+        ctx.fill();
+        ctx.strokeStyle = '#3E2B23';
+        ctx.lineWidth = 2.1;
+        ctx.stroke();
+
+        // 内圈柔和缝线
+        ctx.save();
+        ctx.setLineDash([4.5, 4.5]);
+        ctx.beginPath();
+        ctx.ellipse(pc.x, pc.y + 5, 38, 27.5, -0.06, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(130, 97, 72, 0.45)';
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+        ctx.restore();
+
+        // 鼠标本身柔和投影
+        const mx = this.mousePos.x;
+        const my = this.mousePos.y + this.mouseClickPress * 2.4;
+        ctx.beginPath();
+        ctx.ellipse(mx, my + 16, 20, 9, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(74, 53, 42, 0.16)';
+        ctx.fill();
+
+        // 手绘圆润奶油色鼠标
+        ctx.translate(mx, my);
+        ctx.scale(1 + this.mouseClickPress * 0.05, 1 - this.mouseClickPress * 0.07);
+
+        // 鼠标侧边厚度
+        ctx.beginPath();
+        ctx.ellipse(0, 3.5, 20.5, 23, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#DECBB2';
+        ctx.fill();
+
+        // 鼠标顶面奶油色渐变
+        const mGrad = ctx.createRadialGradient(-5, -6, 3, 0, 0, 24);
+        mGrad.addColorStop(0, '#FFFDF8');
+        mGrad.addColorStop(0.75, '#FBF1E1');
+        mGrad.addColorStop(1, '#E9D6BD');
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 20, 22.5, 0, 0, Math.PI * 2);
+        ctx.fillStyle = mGrad;
+        ctx.fill();
+        ctx.strokeStyle = '#3E2B23';
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+
+        // 左右按键温和分割弧线
+        ctx.beginPath();
+        ctx.moveTo(0, -22);
+        ctx.lineTo(0, -8);
+        ctx.moveTo(-18.5, -4);
+        ctx.quadraticCurveTo(0, -1, 18.5, -4);
+        ctx.strokeStyle = 'rgba(62, 43, 35, 0.22)';
+        ctx.lineWidth = 1.3;
+        ctx.stroke();
+
+        // 珊瑚粉彩小滚轮
+        ctx.beginPath();
+        ctx.roundRect(-2.7, -14, 5.4, 9.5, 2.7);
+        ctx.fillStyle = this.mouseClickPress > 0.2 ? '#E88068' : '#F4A582';
+        ctx.fill();
+        ctx.strokeStyle = '#3E2B23';
+        ctx.lineWidth = 1.3;
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      /** 4. 绘制面向猫咪的儿童绘本木质/奶油色透视键盘（最上排为加长空格键！） */
+      drawKeyboard(ctx) {
+        const kb = this.keyboard;
+        ctx.save();
+
+        // 键盘外框透视4顶点
+        const padFrame = 0.05;
+        const tl = kb.project(-1 - padFrame, -0.05);
+        const tr = kb.project(1 + padFrame, -0.05);
+        const br = kb.project(1 + padFrame, 1.06);
+        const bl = kb.project(-1 - padFrame, 1.06);
+
+        // 底座厚实暖木色侧面（2.5D立体桌面厚度）
+        const thickness = 11;
+        traceRoundedQuad(ctx, [
+          { x: tl.x, y: tl.y + thickness },
+          { x: tr.x, y: tr.y + thickness },
+          { x: br.x, y: br.y + thickness },
+          { x: bl.x, y: bl.y + thickness }
+        ], 14);
+        ctx.fillStyle = '#C9AA85';
+        ctx.fill();
+        ctx.strokeStyle = '#3E2B23';
+        ctx.lineWidth = 2.4;
+        ctx.stroke();
+
+        // 键盘奶油暖木框体顶面
+        traceRoundedQuad(ctx, [tl, tr, br, bl], 13);
+        const frameGrad = ctx.createLinearGradient(0, tl.y, 0, bl.y);
+        frameGrad.addColorStop(0, '#EFE0C9');
+        frameGrad.addColorStop(0.5, '#E7D3B7');
+        frameGrad.addColorStop(1, '#DBC1A0');
+        ctx.fillStyle = frameGrad;
+        ctx.fill();
+        ctx.strokeStyle = '#3E2B23';
+        ctx.lineWidth = 2.4;
+        ctx.stroke();
+
+        // 键盘内凹槽柔和阴影
+        const inTL = kb.project(-0.97, 0.04);
+        const inTR = kb.project(0.97, 0.04);
+        const inBR = kb.project(0.97, 0.96);
+        const inBL = kb.project(-0.97, 0.96);
+        traceRoundedQuad(ctx, [inTL, inTR, inBR, inBL], 8);
+        ctx.fillStyle = 'rgba(98, 71, 51, 0.16)';
+        ctx.fill();
+
+        // 逐个绘制透视键帽（从面向猫咪的最上排空格行 -> 最下排数字行）
+        for (const k of kb.keys) {
+          const pressShift = k.press * 3.4;
+
+          // 键帽色调配比：空格键为暖奶油黄/杏色，回车/Esc 为珊瑚橘粉彩，功能键为燕麦奶咖，字母键为奶油白
+          let topColor = '#FFFBF2';
+          let sideColor = '#DFD1BC';
+          if (k.type === 'space') {
+            topColor = '#FCE29E';
+            sideColor = '#DCB96B';
+          } else if (k.type === 'accent') {
+            topColor = '#F8BEA5';
+            sideColor = '#D69478';
+          } else if (k.type === 'mod') {
+            topColor = '#F4E8D6';
+            sideColor = '#D4C2A8';
+          }
+
+          // 1) 键帽立体底部阴影层
+          const sideQuad = k.quad.map((pt) => ({ x: pt.x, y: pt.y + 3.6 }));
+          traceRoundedQuad(ctx, sideQuad, 4.2);
+          ctx.fillStyle = sideColor;
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(62, 43, 35, 0.42)';
+          ctx.lineWidth = 1.1;
+          ctx.stroke();
+
+          // 2) 键帽顶面（按下时真实下沉并泛起暖水彩光晕）
+          const topQuad = k.quad.map((pt) => ({ x: pt.x, y: pt.y + pressShift }));
+          traceRoundedQuad(ctx, topQuad, 4.0);
+          ctx.fillStyle = topColor;
+          ctx.fill();
+
+          if (k.glow > 0.02) {
+            ctx.fillStyle = `rgba(255, 212, 118, ${k.glow * 0.62})`;
+            ctx.fill();
+          }
+
+          ctx.strokeStyle = k.glow > 0.1 ? '#B86A38' : 'rgba(62, 43, 35, 0.55)';
+          ctx.lineWidth = k.glow > 0.1 ? 1.5 : 1.15;
+          ctx.stroke();
+
+          // 3) 键帽顶面柔和手绘字符标注（清秀淡棕色）
+          ctx.save();
+          ctx.fillStyle = k.glow > 0.2 ? '#6E3C1E' : 'rgba(104, 77, 59, 0.72)';
+          const fontSize = k.label.length > 2 ? 6.8 : 8.4;
+          ctx.font = `600 ${fontSize}px "Fredoka", "Noto Sans SC", sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(k.label, k.cx, k.cy + pressShift + 0.3);
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+
+      /** 5. 绘制键帽敲击点的细腻水彩涟漪与手绘小星芒 */
+      drawKeyRipples(ctx) {
+        for (const r of this.keyRipples) {
+          const p = clamp(r.age / r.duration, 0, 1);
+          const alpha = 1 - smoothstep(0.15, 1, p);
+          const rad = lerp(4, 23, 1 - Math.pow(1 - p, 2.5));
+
+          ctx.save();
+          ctx.translate(r.x, r.y);
+          ctx.globalAlpha = alpha * 0.78;
+
+          // 柔和扩散水彩涟漪圈
+          ctx.beginPath();
+          ctx.ellipse(0, 0, rad, rad * 0.62, 0, 0, Math.PI * 2);
+          ctx.strokeStyle = r.color;
+          ctx.lineWidth = 2.0 * (1 - p * 0.6);
+          ctx.stroke();
+
+          // 绽放的小手绘四角星芒
+          for (const sp of r.sparks) {
+            const d = sp.dist * (0.25 + 0.85 * (1 - Math.pow(1 - p, 2)));
+            const sx = Math.cos(sp.ang) * d;
+            const sy = Math.sin(sp.ang) * d * 0.68 - p * 6;
+            ctx.fillStyle = r.color;
+            this.drawFourPointStar(ctx, sx, sy, sp.size * (1 - p * 0.55));
+          }
+          ctx.restore();
+        }
+      }
+
+      /** 6. 绘制暹罗猫海豹重点色双臂与弹性软爪 */
+      drawArmsAndPaws(ctx, breathe, bodyLift) {
+        const l = this.lean;
+        const shoulderY = -22 + breathe - bodyLift;
+
+        // 画面左侧肩膀（猫咪右手）与画面右侧肩膀（猫咪左手）
+        const leftShoulderX = -32 - l * 22;
+        const rightShoulderX = 36 - l * 16;
+
+        this.drawSiameseArm(ctx, leftShoulderX, shoulderY, this.leftPaw);
+        this.drawSiameseArm(ctx, rightShoulderX, shoulderY, this.rightPaw);
+      }
+
+      /** 绘制单条暹罗猫手臂：肩部奶油色平滑过渡到前臂与圆润猫爪的深巧克力棕重点色 */
+      drawSiameseArm(ctx, sx, sy, paw) {
+        const px = paw.x;
+        const py = paw.y;
+        const dx = px - sx;
+        const dy = py - sy;
+        const len = Math.max(1, Math.hypot(dx, dy));
+        const nx = -dy / len;
+        const ny = dx / len;
+
+        // 手臂自然弧度与微锥度
+        const wTop = 14.5;
+        const wWrist = 11.2;
+
+        ctx.save();
+
+        // 悬空敲击时在键盘上投影一点温柔阴影
+        if (paw.liftZ > 0.08) {
+          ctx.fillStyle = `rgba(62, 43, 35, ${0.14 * (1 - paw.liftZ * 0.4)})`;
+          ctx.beginPath();
+          ctx.ellipse(px, py + 12 + paw.liftZ * 6, 13, 6, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // 1) 绘制手臂主体（从肩部奶油米白渐变到下段海豹咖啡棕）
+        const armGrad = ctx.createLinearGradient(sx, sy, px, py);
+        armGrad.addColorStop(0, '#F6EBD8');
+        armGrad.addColorStop(0.32, '#DEC8AC');
+        armGrad.addColorStop(0.68, '#6B4D3D');
+        armGrad.addColorStop(1, '#4A352A');
+
+        ctx.beginPath();
+        ctx.moveTo(sx + nx * wTop, sy + ny * wTop);
+        ctx.quadraticCurveTo(
+          (sx + px) * 0.5 + nx * (wTop + wWrist) * 0.48,
+          (sy + py) * 0.5 + ny * (wTop + wWrist) * 0.48,
+          px + nx * wWrist,
+          py + ny * wWrist
+        );
+        ctx.lineTo(px - nx * wWrist, py - ny * wWrist);
+        ctx.quadraticCurveTo(
+          (sx + px) * 0.5 - nx * (wTop + wWrist) * 0.48,
+          (sy + py) * 0.5 - ny * (wTop + wWrist) * 0.48,
+          sx - nx * wTop,
+          sy - ny * wTop
+        );
+        ctx.closePath();
+        ctx.fillStyle = armGrad;
+        ctx.fill();
+
+        // 两侧柔顺可可棕手臂描边（肩部开放，自然融入身体毛色）
+        ctx.beginPath();
+        ctx.moveTo(sx + nx * wTop, sy + ny * wTop);
+        ctx.quadraticCurveTo(
+          (sx + px) * 0.5 + nx * (wTop + wWrist) * 0.48,
+          (sy + py) * 0.5 + ny * (wTop + wWrist) * 0.48,
+          px + nx * wWrist,
+          py + ny * wWrist
+        );
+        ctx.moveTo(sx - nx * wTop, sy - ny * wTop);
+        ctx.quadraticCurveTo(
+          (sx + px) * 0.5 - nx * (wTop + wWrist) * 0.48,
+          (sy + py) * 0.5 - ny * (wTop + wWrist) * 0.48,
+          px - nx * wWrist,
+          py - ny * wWrist
+        );
+        ctx.strokeStyle = '#3E2B23';
+        ctx.lineWidth = 2.4;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+
+        // 2) 圆润巧克力棕猫爪末端（支持敲击瞬间的 squash & stretch 挤压弹性变形）
+        ctx.translate(px, py);
+        ctx.scale(paw.squashX, paw.squashY);
+
+        const pawGrad = ctx.createRadialGradient(-3, -3, 2, 0, 0, 15);
+        pawGrad.addColorStop(0, '#6B4D3D');
+        pawGrad.addColorStop(0.65, '#4A352A');
+        pawGrad.addColorStop(1, '#3D2A21');
+
+        ctx.beginPath();
+        ctx.ellipse(0, 1, 13.5, 11.8, 0, 0, Math.PI * 2);
+        ctx.fillStyle = pawGrad;
+        ctx.fill();
+        ctx.strokeStyle = '#3E2B23';
+        ctx.lineWidth = 2.4;
+        ctx.stroke();
+
+        // 可爱三小趾缝细线
+        ctx.strokeStyle = 'rgba(246, 235, 216, 0.25)';
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.moveTo(-4.5, 8);
+        ctx.lineTo(-4.5, 11.5);
+        ctx.moveTo(4.5, 8);
+        ctx.lineTo(4.5, 11.5);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      /** 7. 绘制原地升起的三段式「敲击 -> 悬浮 -> 渐变消散」字母 */
+      drawFloatingLetters(ctx) {
+        for (const fl of this.floatingLetters) {
+          const tf = this.evaluateLetterTransform(fl);
+          if (tf.alpha <= 0.01) continue;
+
+          ctx.save();
+          ctx.translate(tf.x, tf.y);
+          ctx.rotate(tf.rot);
+          ctx.scale(tf.scale, tf.scale);
+          ctx.globalAlpha = tf.alpha;
+
+          const isLong = fl.label.length > 2;
+          ctx.font = `700 ${isLong ? 12.5 : 16.5}px "Fredoka", "Noto Sans SC", sans-serif`;
+          const textW = ctx.measureText(fl.label).width;
+          const pillW = Math.max(27, textW + 14);
+          const pillH = 26;
+
+          // 1) 柔和暖水彩光晕背景
+          if (tf.glowAlpha > 0.02) {
+            const halo = ctx.createRadialGradient(0, 0, 3, 0, 0, pillW * 0.85);
+            halo.addColorStop(0, fl.palette.glow);
+            halo.addColorStop(1, 'rgba(255, 232, 180, 0)');
+            ctx.save();
+            ctx.globalAlpha = tf.alpha * tf.glowAlpha;
+            ctx.fillStyle = halo;
+            ctx.beginPath();
+            ctx.arc(0, 0, pillW * 0.85, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+
+          // 2) 手绘绘本小圆牌底色（渐隐期柔美过渡为暖粉彩）
+          ctx.beginPath();
+          ctx.roundRect(-pillW * 0.5, -pillH * 0.5, pillW, pillH, 10);
+          ctx.fillStyle = tf.fadeMix > 0.35 ? fl.palette.fade : fl.palette.bg;
+          ctx.fill();
+          ctx.strokeStyle = '#3E2B23';
+          ctx.lineWidth = 1.9;
+          ctx.stroke();
+
+          // 3) 清晰温柔字符
+          ctx.fillStyle = tf.fadeMix > 0.5 ? '#FFFDF8' : fl.palette.fg;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(fl.label, 0, 0.8);
+
+          ctx.restore();
+        }
+      }
+
+      /** 8. 绘制彩铅星尘、水彩爱心、瞌睡 Zzz、惊吓叹号与对话气泡 */
+      drawParticles(ctx) {
+        for (const pt of this.particles) {
+          ctx.save();
+          ctx.globalAlpha = clamp(pt.life, 0, 1);
+          ctx.translate(pt.x, pt.y);
+          ctx.rotate(pt.rot);
+
+          if (pt.type === 'heart') {
+            const s = pt.size * (0.75 + (1 - pt.life) * 0.38);
+            ctx.fillStyle = pt.color;
+            ctx.strokeStyle = 'rgba(62, 43, 35, 0.55)';
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.moveTo(0, s * 0.3);
+            ctx.bezierCurveTo(-s * 0.65, -s * 0.3, -s, s * 0.25, 0, s * 0.95);
+            ctx.bezierCurveTo(s, s * 0.25, s * 0.65, -s * 0.3, 0, s * 0.3);
+            ctx.fill();
+            ctx.stroke();
+          } else if (pt.type === 'stardust') {
+            ctx.fillStyle = pt.color;
+            this.drawFourPointStar(ctx, 0, 0, pt.size * (0.6 + pt.life * 0.6));
+          } else if (pt.type === 'zzz') {
+            const sc = 0.82 + (1 - pt.life) * 0.45;
+            ctx.scale(sc, sc);
+            ctx.font = '700 15px "Fredoka", sans-serif';
+            ctx.strokeStyle = '#FFFBF2';
+            ctx.lineWidth = 3.5;
+            ctx.strokeText(pt.text, 0, 0);
+            ctx.fillStyle = '#6B88C8';
+            ctx.fillText(pt.text, 0, 0);
+          } else if (pt.type === 'exclaim') {
+            const sc = 0.85 + Math.sin(pt.life * Math.PI) * 0.35;
+            ctx.scale(sc, sc);
+            ctx.font = '700 22px "Fredoka", sans-serif';
+            ctx.strokeStyle = '#FFFBF2';
+            ctx.lineWidth = 4;
+            ctx.strokeText('!', 0, 0);
+            ctx.fillStyle = '#E87A64';
+            ctx.fillText('!', 0, 0);
+          } else if (pt.type === 'bubble') {
+            ctx.font = '600 12px "Fredoka", "Noto Sans SC", sans-serif';
+            const tw = ctx.measureText(pt.text).width;
+            ctx.beginPath();
+            ctx.roundRect(-tw * 0.5 - 9, -12, tw + 18, 23, 11);
+            ctx.fillStyle = '#FFFBF2';
+            ctx.fill();
+            ctx.strokeStyle = '#3E2B23';
+            ctx.lineWidth = 1.6;
+            ctx.stroke();
+
+            ctx.fillStyle = '#4A352A';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(pt.text, 0, -0.5);
+          }
+
+          ctx.restore();
+        }
+      }
+
+      /** 辅助绘制柔和手绘四角星芒 */
+      drawFourPointStar(ctx, cx, cy, r) {
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - r);
+        ctx.quadraticCurveTo(cx + r * 0.18, cy - r * 0.18, cx + r, cy);
+        ctx.quadraticCurveTo(cx + r * 0.18, cy + r * 0.18, cx, cy + r);
+        ctx.quadraticCurveTo(cx - r * 0.18, cy + r * 0.18, cx - r, cy);
+        ctx.quadraticCurveTo(cx - r * 0.18, cy - r * 0.18, cx, cy - r);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 4. 页面启动与全局交互绑定
+     * ============================================================================
+     */
+    window.addEventListener('DOMContentLoaded', () => {
+      const canvas = document.getElementById('pet-canvas');
+      const statKeys = document.getElementById('stat-keys');
+      const statClicks = document.getElementById('stat-clicks');
+      const guideText = document.getElementById('guide-text');
+      const guidePill = document.getElementById('guide-pill');
+      const statusDot = document.getElementById('status-dot');
+
+      const btnSound = document.getElementById('btn-sound');
+      const soundIcon = document.getElementById('sound-icon');
+      const soundText = document.getElementById('sound-text');
+
+      const btnViewMode = document.getElementById('btn-view-mode');
+      const viewModeText = document.getElementById('view-mode-text');
+
+      const btnToggleMore = document.getElementById('btn-toggle-more');
+      const moreMenu = document.getElementById('more-menu');
+
+      const imeInput = document.getElementById('ime-input');
+      const inputCapsule = document.getElementById('input-capsule');
+      const btnHideInput = document.getElementById('btn-hide-input');
+      const btnShowInput = document.getElementById('btn-show-input');
+
+      const sound = new StorybookSound();
+      const pet = new SiameseCatPet(canvas, sound, {
+        onStats: (st) => {
+          statKeys.textContent = st.keys.toLocaleString();
+          statClicks.textContent = st.clicks.toLocaleString();
+        },
+        onStatus: (msg, sleeping) => {
+          guideText.textContent = msg;
+          statusDot.className = sleeping
+            ? 'w-2 h-2 rounded-full bg-[#8DA6E8] shadow-[0_0_6px_#8DA6E8]'
+            : 'w-2 h-2 rounded-full bg-[#69B8F8] shadow-[0_0_6px_#69B8F8]';
+        }
+      });
+
+      // 初始化今日计数显示
+      statKeys.textContent = pet.stats.keys.toLocaleString();
+      statClicks.textContent = pet.stats.clicks.toLocaleString();
+
+      // 响应式窗口变化
+      window.addEventListener('resize', () => pet.resize());
+
+      // 全局指针事件（桌面鼠标与移动端触控兼容）
+      window.addEventListener('pointermove', (e) => {
+        pet.handlePointerMove(e.clientX, e.clientY);
+      }, { passive: true });
+
+      window.addEventListener('pointerdown', (e) => {
+        pet.handlePointerDown(e.clientX, e.clientY, e.target);
+      });
+
+      window.addEventListener('pointerup', () => pet.handlePointerUp());
+      window.addEventListener('pointercancel', () => pet.handlePointerUp());
+
+      // 全局键盘监听（无需聚焦任何输入框即可直接敲击！）
+      let lastRepeatAt = 0;
+      let isComposingIME = false;
+
+      imeInput.addEventListener('compositionstart', () => { isComposingIME = true; });
+      imeInput.addEventListener('compositionend', (e) => {
+        isComposingIME = false;
+        const text = (e.data || '').trim();
+        if (text) {
+          // 中文词组上屏时逐字错开极短间隔，触发灵动的连敲与汉字升起动画
+          const chars = Array.from(text).slice(-6);
+          chars.forEach((ch, idx) => {
+            setTimeout(() => {
+              pet.handleKeyPress(ch, '', ch);
+            }, idx * 75);
+          });
+        }
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.isComposing || isComposingIME || e.key === 'Process') {
+          // 拼音选词按键时也同步轻敲对应字母键
+          if (e.code && e.code.startsWith('Key')) {
+            pet.handleKeyPress(e.key, e.code);
+          }
+          return;
+        }
+        if (e.repeat) {
+          const now = performance.now();
+          if (now - lastRepeatAt < 78) return;
+          lastRepeatAt = now;
+        }
+        pet.handleKeyPress(e.key, e.code);
+      });
+
+      // 兼容手机端虚拟软键盘输入
+      let prevInputVal = '';
+      imeInput.addEventListener('input', (e) => {
+        const val = imeInput.value;
+        if (!isComposingIME && val.length > prevInputVal.length) {
+          const added = val.slice(prevInputVal.length);
+          // 若 65ms 内未由物理 keydown 触发，则为移动虚拟键盘输入
+          if (added && performance.now() - pet.lastKeyTime > 65) {
+            const ch = added.slice(-1);
+            pet.handleKeyPress(ch, '', ch);
+          }
+        }
+        prevInputVal = val;
+        if (val.length > 50) {
+          imeInput.value = val.slice(-24);
+          prevInputVal = imeInput.value;
+        }
+      });
+
+      // --- 右上角悬浮条交互 ---
+      btnSound.addEventListener('click', () => {
+        const next = !sound.enabled;
+        sound.setEnabled(next);
+        soundIcon.textContent = next ? '🔊' : '🔇';
+        soundText.textContent = next ? '音效开' : '静音';
+      });
+
+      btnViewMode.addEventListener('click', () => {
+        const mode = pet.toggleViewMode();
+        viewModeText.textContent = mode === 'cat' ? '猫咪视角' : '镜像左右';
+      });
+
+      btnToggleMore.addEventListener('click', () => {
+        moreMenu.classList.toggle('hidden');
+      });
+
+      document.getElementById('act-pet').addEventListener('click', () => pet.triggerPet(true));
+      document.getElementById('act-poke').addEventListener('click', () => pet.triggerPoke('nose'));
+      document.getElementById('act-sleep').addEventListener('click', () => pet.toggleSleep());
+      document.getElementById('act-reset').addEventListener('click', () => pet.resetPosition());
+
+      // 4 套绘本背景主题切换
+      const themeDots = document.querySelectorAll('.theme-dot');
+      themeDots.forEach((dot) => {
+        dot.addEventListener('click', () => {
+          const theme = dot.dataset.theme;
+          document.body.classList.remove('theme-cream', 'theme-mint', 'theme-night', 'theme-green');
+          document.body.classList.add('theme-' + theme);
+          pet.setTheme(theme);
+
+          themeDots.forEach((d) => d.classList.remove('ring-2', 'ring-[#E89B72]'));
+          dot.classList.add('ring-2', 'ring-[#E89B72]');
+
+          // OBS 绿幕模式下自动弱化底部文字提示，方便直播抠图
+          guidePill.style.opacity = theme === 'green' ? '0' : '0.85';
+        });
+      });
+
+      // 底部便携输入条收起/展开
+      btnHideInput.addEventListener('click', () => {
+        inputCapsule.classList.add('hidden');
+        btnShowInput.classList.remove('hidden');
+      });
+      btnShowInput.addEventListener('click', () => {
+        btnShowInput.classList.add('hidden');
+        inputCapsule.classList.remove('hidden');
+        imeInput.focus();
+      });
+
+      // 启动 60fps 丝滑绘本动画主循环
+      let prevTime = performance.now();
+      function loop(now) {
+        const dt = Math.min(0.05, (now - prevTime) / 1000);
+        prevTime = now;
+        pet.update(dt, now);
+        pet.render(now);
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<title>毛桃桌面宠物</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="pet-scene" aria-hidden="true">
+  <canvas id="pet" aria-label="毛桃桌面宠物"></canvas>
+  <div class="anger-mark" aria-hidden="true">
+    <svg viewBox="0 0 100 100" focusable="false">
+      <path d="M21 12 C33 27 67 27 79 12 M10 27 C25 39 25 61 10 73 M90 27 C75 39 75 61 90 73 M21 88 C33 73 67 73 79 88" />
+    </svg>
+  </div>
+  <div class="tail-impact" aria-hidden="true">
+    <svg viewBox="0 0 100 100" focusable="false">
+      <path d="M50 7 L50 28 M17 22 L31 38 M83 22 L69 38 M13 69 L34 62 M87 69 L66 62" />
+    </svg>
+  </div>
+</div>
+<div id="status" role="status"></div>
+<script src="/assets/pet/third-party/7paws/three.min.js"></script>
+<script src="/assets/pet/third-party/7paws/7paws.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
