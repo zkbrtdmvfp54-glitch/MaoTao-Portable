@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<title>毛桃控制面板</title>
+<link rel="stylesheet" href="menu.css">
+</head>
+<body>
+<div class="shell" role="dialog" aria-label="毛桃桌面宠物控制面板">
+  <header class="header" title="按住此处可拖动窗口">
+    <div class="brand">
+      <div class="brand-badge" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M5 10.5L6.2 4.8L10.3 7.8C11.4 7.5 12.6 7.5 13.7 7.8L17.8 4.8L19 10.5C19.6 11.7 20 13 20 14.3C20 17.8 16.5 20 12 20C7.5 20 4 17.8 4 14.3C4 13 4.4 11.7 5 10.5Z" fill="currentColor" opacity="0.14" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+          <circle cx="9.2" cy="13.6" r="1.25" fill="currentColor"/>
+          <circle cx="14.8" cy="13.6" r="1.25" fill="currentColor"/>
+          <circle cx="12" cy="15.8" r="0.95" fill="#d97757"/>
+        </svg>
+      </div>
+      <div class="brand-meta">
+        <div class="brand-title-row">
+          <span class="brand-name">毛桃桌面宠物</span>
+          <span id="version-tag" class="version-tag">v1.2.0</span>
+        </div>
+        <div class="brand-sub">
+          <span id="status-dot" class="status-dot"></span>
+          <span id="status-text">就绪</span>
+          <span class="sep">·</span>
+          <span id="stats-text">今日 0 键 / 0 击</span>
+        </div>
+      </div>
+    </div>
+    <button id="btn-close" class="icon-btn" type="button" title="关闭 (Esc)" aria-label="关闭面板">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M4.2 4.2L11.8 11.8M11.8 4.2L4.2 11.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    </button>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="功能分页">
+    <button class="tab-btn active" role="tab" data-tab="style" type="button">装扮</button>
+    <button class="tab-btn" role="tab" data-tab="interact" type="button">互动</button>
+    <button class="tab-btn" role="tab" data-tab="settings" type="button">设置</button>
+  </nav>
+
+  <main class="content">
+    <!-- Tab 1: 装扮 -->
+    <section class="tab-panel active" data-panel="style">
+      <div class="group">
+        <div class="group-head">
+          <span class="group-title">猫咪花色</span>
+          <span id="coat-label" class="group-hint">灰白虎斑（毛桃）</span>
+        </div>
+        <div id="coat-grid" class="coat-grid"></div>
+      </div>
+
+      <div class="group">
+        <div class="group-head">
+          <span class="group-title">瞳色</span>
+          <span id="eye-label" class="group-hint">默认瞳色</span>
+        </div>
+        <div id="eye-row" class="eye-row"></div>
+      </div>
+
+      <div class="group">
+        <div class="group-head">
+          <span class="group-title">头部配饰</span>
+        </div>
+        <div id="acc-row" class="acc-grid"></div>
+      </div>
+    </section>
+
+    <!-- Tab 2: 互动 -->
+    <section class="tab-panel" data-panel="interact">
+      <div class="group">
+        <div class="group-head"><span class="group-title">快捷互动</span></div>
+        <div class="action-grid">
+          <button class="action-btn" data-action="perform" data-value="pet" type="button">摸摸头</button>
+          <button class="action-btn" data-action="perform" data-value="poke" type="button">戳鼻子</button>
+          <button class="action-btn" data-action="perform" data-value="yarn" type="button">毛线球</button>
+          <button class="action-btn" data-action="perform" data-value="butterfly" type="button">捉蝴蝶</button>
+          <button class="action-btn" data-action="perform" data-value="wash" type="button">舔爪洗脸</button>
+          <button class="action-btn" data-action="perform" data-value="sleep" type="button">睡觉 / 唤醒</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-head"><span class="group-title">模式与联动</span></div>
+        <div class="card-list">
+          <button class="toggle-row" data-toggle="keyboard" type="button">
+            <div class="row-copy">
+              <span class="row-title">显示键盘与鼠标</span>
+              <span class="row-desc">打字敲击与桌面视线跟随</span>
+            </div>
+            <span class="switch" aria-hidden="true"></span>
+          </button>
+          <button class="toggle-row" data-toggle="focusMode" type="button">
+            <div class="row-copy">
+              <span class="row-title">专注模式</span>
+              <span class="row-desc">25 分钟计时与专注耳机</span>
+            </div>
+            <span class="switch" aria-hidden="true"></span>
+          </button>
+          <button id="row-link" class="toggle-row" data-action="toggleInput" type="button">
+            <div class="row-copy">
+              <span class="row-title">跨应用输入联动</span>
+              <span id="link-desc" class="row-desc">仅同步方向与类别，不记录文字</span>
+            </div>
+            <span class="switch" aria-hidden="true"></span>
+          </button>
+          <button class="toggle-row" data-toggle="standbyMode" type="button">
+            <div class="row-copy">
+              <span class="row-title">待机模式</span>
+              <span class="row-desc">暂停联动，进入闲置玩耍</span>
+            </div>
+            <span class="switch" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 3: 设置 -->
+    <section class="tab-panel" data-panel="settings">
+      <div class="card-list">
+        <div class="setting-row">
+          <span class="setting-label">宠物大小</span>
+          <div class="segmented" data-group="size">
+            <button data-set="size" data-value="small" type="button">小</button>
+            <button data-set="size" data-value="medium" type="button">中</button>
+            <button data-set="size" data-value="large" type="button">大</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">键盘样式</span>
+          <div class="segmented" data-group="keyboardStyle">
+            <button data-set="keyboardStyle" data-value="cream" type="button">奶白</button>
+            <button data-set="keyboardStyle" data-value="matcha" type="button">抹茶</button>
+            <button data-set="keyboardStyle" data-value="sakura" type="button">樱粉</button>
+            <button data-set="keyboardStyle" data-value="obsidian" type="button">暗夜</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">键盘视角</span>
+          <div class="segmented" data-group="view">
+            <button data-set="view" data-value="cat" type="button">猫咪</button>
+            <button data-set="view" data-value="mirror" type="button">镜像</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">自动休眠</span>
+          <div class="segmented" data-group="sleepMinutes">
+            <button data-set="sleepMinutes" data-value="2" type="button">2分</button>
+            <button data-set="sleepMinutes" data-value="5" type="button">5分</button>
+            <button data-set="sleepMinutes" data-value="10" type="button">10分</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">音量</span>
+          <div class="audio-bar">
+            <button class="chip-btn" data-toggle="sound" type="button">音效</button>
+            <button class="chip-btn" data-toggle="keySound" type="button">键音</button>
+            <input id="volume-slider" class="volume-slider" type="range" min="0" max="100" step="5" aria-label="音量">
+            <span id="volume-val" class="volume-val">70%</span>
+          </div>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">窗口位置</span>
+          <div class="pill-group">
+            <button class="pill-btn" data-action="dock" data-value="left" type="button">左下</button>
+            <button class="pill-btn" data-action="dock" data-value="right" type="button">右下</button>
+            <button class="pill-btn" data-action="center" type="button">居中</button>
+            <button class="pill-btn" data-action="reset" type="button">复位</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="quick-chips">
+        <button id="chip-top" class="chip-btn" data-toggle="top" type="button">常驻置顶</button>
+        <button class="chip-btn" data-toggle="hideOnClose" type="button">关闭隐藏至托盘</button>
+        <button class="chip-btn" data-action="typing" type="button">中英文试打</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <button id="btn-visible" class="footer-btn" data-action="toggle" type="button">隐藏宠物</button>
+    <button class="quit-btn" data-action="quit" type="button">退出程序</button>
+  </footer>
+</div>
+<script type="module" src="menu.js"></script>
+</body>
+</html>
