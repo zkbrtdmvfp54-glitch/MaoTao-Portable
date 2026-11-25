@@ -24,6 +24,14 @@ contextBridge.exposeInMainWorld('maotao', Object.freeze({
       ipcRenderer.send('try:key', { code, key });
     }
   },
+  getMenuState: () => ipcRenderer.invoke('menu:state'),
+  onMenuState: callback => on('menu:state', callback),
+  menuCommand: cmd => {
+    if (cmd && typeof cmd.type === 'string') ipcRenderer.send('menu:command', cmd);
+  },
+  menuDragStart: () => ipcRenderer.send('menu:drag-start'),
+  menuDragEnd: () => ipcRenderer.send('menu:drag-end'),
+  closeMenu: () => ipcRenderer.send('menu:close'),
   onPreferences: callback => on('pet:preferences', callback),
   onCursor: callback => on('pet:cursor', callback),
   onInput: callback => on('pet:input', callback),
