@@ -24,7 +24,7 @@ function webOptions() {
   return {
     preload: path.join(__dirname, '../preload/preload.js'),
     contextIsolation: true, sandbox: true, nodeIntegration: false,
-    spellcheck: false
+    spellcheck: false, backgroundThrottling: false
   };
 }
 

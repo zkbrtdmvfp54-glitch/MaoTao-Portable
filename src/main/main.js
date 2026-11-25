@@ -3,12 +3,15 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { app, BrowserWindow, ipcMain, net, protocol, session, dialog, powerMonitor } = require('electron');
 const { PetWindow, restrictContents, webOptions } = require('./window');
+const { MenuWindow } = require('./menu-window');
 const { SettingsStore } = require('./settings');
 const { setupTray, buildMenu } = require('./tray');
+const pkg = require('../../package.json');
 
 const ORIGIN = 'maotao://app';
 const PET_URL = ORIGIN + '/src/renderer/index.html';
 const TRY_URL = ORIGIN + '/src/renderer/typing.html';
+const MENU_URL = ORIGIN + '/src/renderer/menu.html';
 const APP_DIR = path.join(__dirname, '../..');
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'maotao', privileges: {
@@ -38,7 +41,7 @@ function serveLocal(request) {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  let pet, tray, store, hook, typing, menu, quitting = false;
+  let pet, tray, store, hook, typing, menu, menuWin, quitting = false;
   const waylandSession = process.platform === 'linux' && (
     process.env.XDG_SESSION_TYPE?.toLowerCase() === 'wayland' ||
     (Boolean(process.env.WAYLAND_DISPLAY) && !process.env.DISPLAY)
@@ -61,10 +64,22 @@ if (!app.requestSingleInstanceLock()) {
     }
     return 'Windows 输入监听启动失败。应用内互动仍可使用。';
   }
+  function getMenuState() {
+    store.rollover();
+    return {
+      prefs: store.prefs,
+      stats: store.stats,
+      listening: hook?.active ?? false,
+      visible: pet?.win?.isVisible() ?? false,
+      unavailableReason: inputUnavailableReason(),
+      version: pkg.version,
+      waylandSession
+    };
+  }
   function updateMenu() {
     if (!pet || !tray || quitting) return;
     menu = buildMenu(store, actions, hook?.active ?? false, pet.win.isVisible(), inputUnavailableReason());
-
+    menuWin?.pushState();
   }
   function sendPrefs() {
     pet.send('pet:preferences', store.prefs);
@@ -156,6 +171,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('window-all-closed', () => app.quit());
   app.on('before-quit', () => {
     quitting = true;
+    menuWin?.destroy();
     pet?.destroy();
     hook?.stop();
     store?.flush();
@@ -173,6 +189,7 @@ if (!app.requestSingleInstanceLock()) {
       else updateMenu();
     }, actions.quit);
     tray = setupTray(actions);
+    menuWin = new MenuWindow(MENU_URL, getMenuState);
     tray.on('right-click', () => { updateMenu(); tray.popUpContextMenu(menu); });
     try {
       const { InputHook } = require('./input-hook');
@@ -186,11 +203,37 @@ if (!app.requestSingleInstanceLock()) {
     }
     ipcMain.handle('pet:preferences', event =>
       fromWindow(event, pet.win, PET_URL) ? store.prefs : null);
+    ipcMain.handle('menu:state', event =>
+      fromWindow(event, menuWin?.win, MENU_URL) ? getMenuState() : null);
+    ipcMain.on('menu:close', event => {
+      if (fromWindow(event, menuWin?.win, MENU_URL)) menuWin.hide();
+    });
+    ipcMain.on('menu:drag-start', event => {
+      if (fromWindow(event, menuWin?.win, MENU_URL)) menuWin.startDrag();
+    });
+    ipcMain.on('menu:drag-end', event => {
+      if (fromWindow(event, menuWin?.win, MENU_URL)) menuWin.endDrag();
+    });
+    ipcMain.on('menu:command', (event, cmd) => {
+      if (!fromWindow(event, menuWin?.win, MENU_URL) || !cmd) return;
+      switch (cmd.type) {
+        case 'set': actions.set(cmd.key, cmd.value); break;
+        case 'dock': actions.dock(cmd.value); break;
+        case 'center': actions.center(); break;
+        case 'reset': actions.reset(); break;
+        case 'toggle': actions.toggle(); break;
+        case 'toggleInput': actions.toggleInput(); break;
+        case 'perform': actions.perform(cmd.value); break;
+        case 'typing': actions.typing(); break;
+        case 'quit': actions.quit(); break;
+      }
+      menuWin.pushState();
+    });
     const petEvents = {
       'pet:mask': mask => pet.setMask(mask),
       'pet:drag-start': point => pet.startDrag(point),
       'pet:drag-end': () => pet.endDrag(),
-      'pet:menu': () => { updateMenu(); menu?.popup({ window: pet.win }); },
+      'pet:menu': () => { updateMenu(); menuWin.toggleNear(); },
       'pet:focus-complete': () => {
         if (store.prefs.focusMode) {
           store.set('focusMode', false);
@@ -213,6 +256,14 @@ if (!app.requestSingleInstanceLock()) {
     });
     for (const event of ['lock-screen', 'suspend', 'shutdown', 'user-did-resign-active']) {
       powerMonitor.on(event, stopInput);
+    }
+    if (inputReady() && !store.prefs.standbyMode && !hook.active) {
+      try {
+        hook.start();
+        pet.globalInput = true;
+      } catch {
+        // Gracefully keep local desktop interactions working if OS permission is missing.
+      }
     }
     updateMenu();
   }).catch(error => {

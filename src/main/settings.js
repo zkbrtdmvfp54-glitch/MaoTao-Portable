@@ -3,14 +3,17 @@ const path = require('node:path');
 
 const defaults = Object.freeze({
   top: true, keyboard: true, sound: true, keySound: true, focusMode: false, standbyMode: false, volume: 0.7,
-  size: 'medium', dock: 'right', view: 'cat', theme: 'cream', coat: 'maotao', sleepMinutes: 5,
+  size: 'medium', dock: 'right', view: 'cat', keyboardStyle: 'cream', theme: 'cream', coat: 'maotao', eyeColor: 'auto', accessory: 'none', sleepMinutes: 5,
   hideOnClose: true, position: null
 });
 const choices = {
   size: ['small', 'medium', 'large'],
   dock: ['left', 'right'],
   view: ['cat', 'mirror'],
-  coat: ['black', 'calico', 'siamese', 'maotao', 'orange', 'white', 'solidblack'],
+  keyboardStyle: ['cream', 'matcha', 'sakura', 'obsidian'],
+  coat: ['black', 'calico', 'siamese', 'maotao', 'orange', 'ragdoll', 'white', 'solidblack'],
+  eyeColor: ['auto', 'blue', 'amber', 'emerald', 'violet', 'rose', 'odd'],
+  accessory: ['none', 'crown', 'sprout', 'beret', 'halo'],
   theme: ['cream', 'mint', 'night', 'green'],
   sleepMinutes: [2, 5, 10]
 };

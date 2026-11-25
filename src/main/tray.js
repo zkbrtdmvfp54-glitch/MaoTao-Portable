@@ -23,8 +23,19 @@ function buildMenu(store, actions, listening, visible, unavailableReason = '') {
   const coatMenu = [
     choice('黑白奶牛猫', 'coat', 'black'), choice('三花猫', 'coat', 'calico'),
     choice('暹罗猫', 'coat', 'siamese'), choice('灰白虎斑（毛桃）', 'coat', 'maotao'),
-    choice('橘猫', 'coat', 'orange'), choice('异瞳白猫', 'coat', 'white'),
-    choice('纯黑猫', 'coat', 'solidblack')
+    choice('橘猫', 'coat', 'orange'), choice('布偶猫', 'coat', 'ragdoll'),
+    choice('异瞳白猫', 'coat', 'white'), choice('纯黑猫', 'coat', 'solidblack')
+  ];
+  const eyeMenu = [
+    choice('默认瞳色', 'eyeColor', 'auto'), choice('蓝宝石', 'eyeColor', 'blue'),
+    choice('琥珀金', 'eyeColor', 'amber'), choice('祖母绿', 'eyeColor', 'emerald'),
+    choice('紫罗兰', 'eyeColor', 'violet'), choice('樱花粉', 'eyeColor', 'rose'),
+    choice('异瞳蓝金', 'eyeColor', 'odd')
+  ];
+  const accessoryMenu = [
+    choice('无配饰', 'accessory', 'none'),
+    choice('小皇冠', 'accessory', 'crown'), choice('小嫩芽', 'accessory', 'sprout'),
+    choice('贝雷帽', 'accessory', 'beret'), choice('天使光环', 'accessory', 'halo')
   ];
   const sizeMenu = [choice('小', 'size', 'small'), choice('中', 'size', 'medium'), choice('大', 'size', 'large')];
   const interactMenu = [
@@ -33,11 +44,15 @@ function buildMenu(store, actions, listening, visible, unavailableReason = '') {
     { type: 'separator' },
     { label: '玩毛线球', click: () => actions.perform('yarn') },
     { label: '捉蝴蝶', click: () => actions.perform('butterfly') },
+    { label: '舔爪洗脸', click: () => actions.perform('wash') },
     { type: 'separator' },
     { label: '睡觉 / 唤醒', click: () => actions.perform('sleep') }
   ];
   const windowMenu = [
     { label: visible ? '隐藏宠物' : '显示宠物', click: actions.toggle },
+    { type: 'separator' },
+    { label: '瞳色', submenu: eyeMenu },
+    { label: '头部配饰', submenu: accessoryMenu },
     { type: 'separator' },
     { label: '大小', submenu: sizeMenu },
     { label: '位置', submenu: [
@@ -63,6 +78,12 @@ function buildMenu(store, actions, listening, visible, unavailableReason = '') {
     { label: '跨应用输入联动' + (prefs.standbyMode ? '（待机中）' : unavailableReason.includes('Wayland') ? '（Wayland 暂不可用）' : unavailableReason ? '（暂不可用）' : listening ? '（监听中）' : '（已暂停）'),
       type: 'checkbox', checked: listening, enabled: !unavailableReason && !prefs.standbyMode, click: actions.toggleInput },
     { type: 'separator' },
+    { label: '键盘样式', submenu: [
+      choice('经典奶白', 'keyboardStyle', 'cream'),
+      choice('抹茶青白', 'keyboardStyle', 'matcha'),
+      choice('樱花粉白', 'keyboardStyle', 'sakura'),
+      choice('曜石暗夜', 'keyboardStyle', 'obsidian')
+    ] },
     { label: '键盘视角', submenu: [choice('猫咪视角', 'view', 'cat'), choice('镜像左右', 'view', 'mirror')] },
     { label: '自动休眠', submenu: [2, 5, 10].map(value => choice(value + ' 分钟', 'sleepMinutes', value)) },
     { type: 'separator' },
