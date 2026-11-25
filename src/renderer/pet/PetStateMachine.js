@@ -27,9 +27,33 @@ export class PetStateMachine {
     this.standbyMode = false;
     this.focusRemaining = 25 * 60;
     this.onFocusComplete = null;
+    this.lastLinkedLetter = '';
+  }
+  linkedVisualLabel(keyObj) {
+    const leftPool = 'QWERASDFZXCVTGB';
+    const rightPool = 'YUIOPHJKLNM';
+    const allPool = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const pool = keyObj.id === 'Space' ? allPool
+      : keyObj.uCenter < 0 ? leftPool : rightPool;
+    let letter = pool[Math.floor(Math.random() * pool.length)];
+    if (letter === this.lastLinkedLetter && pool.length > 1) {
+      letter = pool[(pool.indexOf(letter) + 1 + Math.floor(Math.random() * (pool.length - 1))) % pool.length];
+    }
+    this.lastLinkedLetter = letter;
+    return letter;
   }
   setModel(model) {
     this.model = model;
+  }
+  setDragging(enabled) {
+    const next = Boolean(enabled);
+    if (this.dragging === next) return;
+    this.dragging = next;
+    if (next) {
+      this.effects.floatingLetters.length = 0;
+      this.effects.keyRipples.length = 0;
+    }
+    this.model?.setDragging?.(next);
   }
   configure(prefs) {
     const wasFocusMode = this.focusMode;
@@ -98,6 +122,7 @@ export class PetStateMachine {
       case 'poke': this.poked('nose'); break;
       case 'yarn': this.playToy(); break;
       case 'butterfly': this.playButterfly(); break;
+      case 'wash': this.playWash(); break;
       case 'sleep': (this.sleeping || this.model?.isSleeping?.()) ? this.wake() : this.setSleep(true); break;
       case 'input-on': this.status('跨应用联动已开启'); break;
       case 'input-off': this.status('跨应用联动已暂停'); break;
@@ -157,6 +182,13 @@ export class PetStateMachine {
     this.effects.spawnHeartBubbles(headX, headY - 3);
     this.status(`${this.petName()}追着蝴蝶玩`);
   }
+  playWash() {
+    if (this.dragging) return;
+    this.wake();
+    this.model?.playWash?.();
+    this.sound.playPurr();
+    this.status(`${this.petName()}舔爪子洗脸中`);
+  }
   cursor(x, y, followMouse) {
     const now = performance.now();
     if (this.dragging) return;
@@ -186,6 +218,10 @@ export class PetStateMachine {
     if (!this.prefs.keyboard || !toyMouse || this.dragging || this.petEnergy > 0.12 || this.poke > 0) return;
     this.lastMouse = now;
     this.mousePress = 1;
+    const mBox = this.model?.regions?.()?.[4];
+    const mx = mBox ? mBox[0] + mBox[2] * 0.5 : this.mouseX;
+    const my = mBox ? mBox[1] + mBox[3] * 0.42 : this.mouseY - 6;
+    this.effects.spawnMouseClick?.(mx, my, side);
     this.effects.spawnKeyRipple(this.mouseX + (side === 'right' ? 7 : -4), this.mouseY - 6, 'accent');
   }
   key(keyObj, label, linked = false) {
@@ -203,7 +239,14 @@ export class PetStateMachine {
     this.sound.playKeyClick(keyObj.uCenter, keyObj.row, space);
     this.keyboard.pressKey(keyObj);
     this.effects.spawnKeyRipple(keyObj.cx, keyObj.cy, keyObj.type);
-    if (label) this.effects.spawnFloatingLetter(label, keyObj.cx, Math.max(keyObj.cy, this.assets.layers.keyboard.box[1] + 18), keyObj.type);
+    const visualLabel = label || (linked ? this.linkedVisualLabel(keyObj) : null);
+    if (visualLabel) {
+      const kbBox = this.assets.layers.keyboard.box;
+      const spread = linked ? (Math.random() - 0.5) * kbBox[2] * 0.28 : (Math.random() - 0.5) * 10;
+      const spawnX = clamp(keyObj.cx + spread, kbBox[0] + 18, kbBox[0] + kbBox[2] - 18);
+      const spawnY = kbBox[1] + 2 + (Math.random() - 0.5) * 6;
+      this.effects.spawnFloatingLetter(visualLabel, spawnX, spawnY, keyObj.type);
+    }
 
     const fire = (paw, x) => {
       const side = paw === this.leftPaw ? 'left' : 'right';
@@ -266,7 +309,7 @@ export class PetStateMachine {
       || this.focusMode
       || this.leftPaw.timer || this.rightPaw.timer || this.lean > 0.08 || now < this.wakeUntil
       || (now >= this.nextBlink && now < this.nextBlink + 190 && !this.sleeping)
-      || this.effects.floatingLetters.length || now - this.lastVisual < 135;
+      || this.effects.floatingLetters.length || (this.effects.mouseClicks?.length ?? 0) || now - this.lastVisual < 135;
     return active ? 15 : 30;
   }
 }

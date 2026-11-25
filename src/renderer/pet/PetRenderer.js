@@ -96,24 +96,29 @@ export class PetRenderer {
     ctx.clearRect(0, 0, baseW, baseH);
     if (this.model) {
       this.model.draw(ctx);
-      if (this.state.prefs.keyboard) {
+      if (this.state.prefs.keyboard && !this.state.dragging) {
         this.state.effects.drawKeyRipples(ctx);
+        this.state.effects.drawMouseClicks?.(ctx);
       }
     } else {
       this.drawCat(ctx, now);
-      if (this.state.prefs.keyboard) {
+      if (this.state.prefs.keyboard && !this.state.dragging) {
         this.drawMouse(ctx);
         this.state.keyboard.draw(ctx);
         this.drawPaw(ctx, this.assets.layers.left, this.state.leftPaw);
         this.drawPaw(ctx, this.assets.layers.right, this.state.rightPaw);
       }
     }
-    if (!this.model && this.state.prefs.keyboard) {
+    if (!this.model && this.state.prefs.keyboard && !this.state.dragging) {
       this.state.effects.drawKeyRipples(ctx);
+      this.state.effects.drawMouseClicks?.(ctx);
     }
     this.drawFocusTimer(ctx);
     this.state.effects.drawFloatingLetters(ctx);
     this.state.effects.drawParticles(ctx);
+    if (this.model?.host) {
+      this.model.host.dataset.floatingLetters = String(this.state.effects.floatingLetters.length);
+    }
   }
   drawFocusTimer(ctx) {
     const state = this.state;
@@ -226,10 +231,16 @@ export class PetRenderer {
       siamese: { fur: '#f1dfc5', seam: '#4a352f', eye: ['#46a9e8', '#46a9e8'], nose: '#9f6d5b' },
       maotao: { fur: '#c7c8c6', seam: '#777875', eye: ['#48a9e8', '#48a9e8'], nose: '#c98a8b' },
       orange: { fur: '#ebb064', seam: '#b87c3e', eye: ['#99b854', '#99b854'], nose: '#df918d' },
+      ragdoll: { fur: '#fcfaf5', seam: '#6f5b50', eye: ['#3b8ee6', '#3b8ee6'], nose: '#e09fa6' },
       white: { fur: '#fbf9f4', seam: '#827b71', eye: ['#47a4df', '#e7bd39'], nose: '#dca1aa' },
       solidblack: { fur: '#121214', seam: '#35343a', eye: ['#fffdf8', '#fffdf8'], nose: '#f7f4ed' }
     };
-    return coats[this.state.prefs.coat] ?? coats.solidblack;
+    const base = coats[this.state.prefs.coat] ?? coats.solidblack;
+    const eyeMap = {
+      blue: ['#45a3e5', '#45a3e5'], amber: ['#e8b838', '#e8b838'], emerald: ['#5ec27e', '#5ec27e'],
+      violet: ['#9a7ee0', '#9a7ee0'], rose: ['#e688a8', '#e688a8'], odd: ['#45a3e5', '#e8b838']
+    };
+    return eyeMap[this.state.prefs.eyeColor] ? { ...base, eye: eyeMap[this.state.prefs.eyeColor] } : base;
   }
   drawCoatMarks(ctx) {
     const coat = this.state.prefs.coat;
@@ -245,10 +256,19 @@ export class PetRenderer {
       ellipse(210, 188, 24, 45, '#f7f3e8');
       ellipse(180, 86, 14, 27, '#f7f3e8', -0.16);
     } else if (coat === 'calico') {
-      ellipse(171, 68, 19, 32, '#e99a3f', -0.25);
-      ellipse(245, 67, 19, 32, '#2b292a', 0.22);
-      ellipse(163, 175, 17, 30, '#e99a3f', -0.24);
-      ellipse(255, 177, 17, 31, '#2b292a', 0.2);
+      ellipse(167, 63, 18, 28, '#e48b3b', -0.28);
+      ellipse(154, 78, 12, 18, '#e48b3b', -0.42);
+      ellipse(244, 66, 23, 34, '#262426', 0.24);
+      ellipse(258, 82, 14, 20, '#262426', 0.36);
+      ellipse(161, 174, 21, 34, '#e48b3b', -0.22);
+      ellipse(176, 156, 12, 16, '#e48b3b', -0.1);
+      ellipse(256, 185, 19, 30, '#262426', 0.22);
+      ellipse(246, 204, 13, 16, '#262426', 0.12);
+    } else if (coat === 'ragdoll') {
+      ellipse(158, 66, 22, 34, '#6b554a', -0.26);
+      ellipse(262, 66, 22, 34, '#6b554a', 0.26);
+      ellipse(152, 178, 16, 28, '#9a8679', -0.18);
+      ellipse(268, 178, 16, 28, '#9a8679', 0.18);
     } else if (coat === 'siamese') {
       ellipse(210, 101, 40, 34, '#49332d');
       ellipse(154, 48, 15, 33, '#49332d', -0.12);

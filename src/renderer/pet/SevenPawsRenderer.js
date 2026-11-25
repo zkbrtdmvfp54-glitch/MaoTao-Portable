@@ -9,6 +9,9 @@ export class SevenPawsRenderer {
     this.host = host;
     this.api = window.createCat(host, {
       coat: preferences.coat || 'maotao',
+      eyeColor: preferences.eyeColor || 'auto',
+      accessory: preferences.accessory || 'none',
+      keyboardStyle: preferences.keyboardStyle || 'cream',
       sleepMinutes: preferences.sleepMinutes,
       focusMode: !!preferences.focusMode
     });
@@ -34,6 +37,9 @@ export class SevenPawsRenderer {
       showKeyLabels: false,
       leftMouse: false,
       coat: preferences.coat || 'maotao',
+      eyeColor: preferences.eyeColor || 'auto',
+      accessory: preferences.accessory || 'none',
+      keyboardStyle: preferences.keyboardStyle || 'cream',
       sleepMinutes: preferences.sleepMinutes
     });
     this.api.setLayout(preferences.view === 'mirror' ? 'mirror' : 'cat');
@@ -67,6 +73,10 @@ export class SevenPawsRenderer {
     this.api.setFocusMode(Boolean(enabled));
   }
 
+  setDragging(enabled) {
+    this.api.setDragging?.(Boolean(enabled));
+  }
+
   pickToy(x, y) {
     return this.api.pickToy(x, y);
   }
@@ -81,6 +91,10 @@ export class SevenPawsRenderer {
 
   playButterfly() {
     this.api.playButterfly?.();
+  }
+
+  playWash() {
+    this.api.playWash?.();
   }
 
   pickTail(x, y) {

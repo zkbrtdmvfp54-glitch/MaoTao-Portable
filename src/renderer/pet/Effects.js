@@ -5,8 +5,11 @@ export class Effects {
     this.particles = [];
     this.floatingLetters = [];
     this.keyRipples = [];
+    this.mouseClicks = [];
     this.theme = 'cream';
     this.heartSequenceUntil = 0;
+    this.lastLetterAt = 0;
+    this.lastLetterX = null;
   }
 
   spawnParticle(type, x, y, opts = {}) {
@@ -60,27 +63,36 @@ export class Effects {
    * 在键帽实际 (x, y) 坐标位置弹出三段式「敲击 -> 悬浮 -> 渐变消散」字母！
    */
   spawnFloatingLetter(label, x, y, keyType) {
-    // 绘本粉彩主色调与渐隐水彩尾色
     const palette = keyType === 'space'
-      ? { fg: '#8A5628', bg: '#FFF1C7', glow: 'rgba(252, 214, 128, 0.72)', fade: '#F4B886' }
+      ? { fg: '#8A5628', bg: 'rgba(255, 244, 212, 0.88)', border: 'rgba(138, 86, 40, 0.45)', glow: 'rgba(252, 214, 128, 0.48)', fade: 'rgba(244, 184, 134, 0.72)' }
       : keyType === 'accent'
-        ? { fg: '#8F3E2E', bg: '#FFE4D8', glow: 'rgba(248, 178, 152, 0.72)', fade: '#F4A59E' }
-        : { fg: '#4A352A', bg: '#FFFBF2', glow: 'rgba(255, 226, 158, 0.72)', fade: '#9CC6E8' };
+        ? { fg: '#8F3E2E', bg: 'rgba(255, 234, 224, 0.88)', border: 'rgba(143, 62, 46, 0.42)', glow: 'rgba(248, 178, 152, 0.48)', fade: 'rgba(244, 165, 158, 0.72)' }
+        : { fg: '#4A352A', bg: 'rgba(255, 251, 242, 0.88)', border: 'rgba(74, 53, 42, 0.38)', glow: 'rgba(255, 226, 158, 0.45)', fade: 'rgba(156, 198, 232, 0.72)' };
 
-    if (this.floatingLetters.length >= 35) this.floatingLetters.shift();
+    const now = performance.now();
+    let spawnX = x + (Math.random() - 0.5) * 14;
+    if (this.lastLetterX !== null && now - this.lastLetterAt < 220 && Math.abs(spawnX - this.lastLetterX) < 16) {
+      spawnX += (spawnX >= this.lastLetterX ? 1 : -1) * (14 + Math.random() * 8);
+    }
+    this.lastLetterAt = now;
+    this.lastLetterX = spawnX;
+
+    if (this.floatingLetters.length >= 32) this.floatingLetters.shift();
     this.floatingLetters.push({
       label,
-      x,
-      y: y - 2,
-      startX: x,
-      startY: y - 2,
+      x: spawnX,
+      y: y - 4,
+      startX: spawnX,
+      startY: y - 4,
       age: 0,
-      duration: 1.48,
-      tilt: (Math.random() - 0.5) * 0.34,
+      duration: 1.18 + Math.random() * 0.22,
+      tilt: (Math.random() - 0.5) * 0.30,
+      baseScale: 0.88 + Math.random() * 0.20,
+      driftX: (Math.random() - 0.5) * 18,
       swayPhase: Math.random() * Math.PI * 2,
-      swayAmp: 7 + Math.random() * 5.5,
-      swayFreq: 4.2 + Math.random() * 1.4,
-      riseDist: 34 + Math.random() * 10,
+      swayAmp: 4.5 + Math.random() * 4.0,
+      swayFreq: 3.8 + Math.random() * 1.4,
+      riseDist: 36 + Math.random() * 14,
       palette,
       stardustSpawned: false
     });
@@ -110,7 +122,31 @@ export class Effects {
     });
   }
 
+  /** 鼠标点击时的轻盈暖色反馈特效（无青色） */
+  spawnMouseClick(x, y, side = 'left') {
+    const count = 6;
+    const rays = [];
+    for (let i = 0; i < count; i++) {
+      const ang = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.28;
+      rays.push({ ang, len: 5 + Math.random() * 4.5 });
+    }
+    if (this.mouseClicks.length >= 16) this.mouseClicks.shift();
+    this.mouseClicks.push({
+      x: x + (side === 'right' ? 5 : -3),
+      y: y - 3,
+      age: 0,
+      duration: 0.36,
+      color: side === 'right' ? '#ec9383' : '#f2b85c',
+      rays
+    });
+  }
+
   update(dt, now) {
+    for (let i = this.mouseClicks.length - 1; i >= 0; i--) {
+      const mc = this.mouseClicks[i];
+      mc.age += dt;
+      if (mc.age >= mc.duration) this.mouseClicks.splice(i, 1);
+    }
     for (let i = this.keyRipples.length - 1; i >= 0; i--) {
       const r = this.keyRipples[i];
       r.age += dt;
@@ -203,10 +239,10 @@ export class Effects {
     }
 
     return {
-      x: fl.startX + xOffset,
+      x: fl.startX + xOffset + (fl.driftX || 0) * smoothstep(0, 1, p),
       y: fl.startY + yOffset,
-      scale,
-      alpha,
+      scale: scale * (fl.baseScale || 1),
+      alpha: alpha * 0.9,
       rot,
       glowAlpha,
       fadeMix: smoothstep(0.68, 1.0, p)
@@ -214,29 +250,47 @@ export class Effects {
   }
 
   drawKeyRipples(ctx) {
-    for (const r of this.keyRipples) {
-      const p = clamp(r.age / r.duration, 0, 1);
-      const alpha = 1 - smoothstep(0.15, 1, p);
-      const rad = lerp(4, 23, 1 - Math.pow(1 - p, 2.5));
+    void ctx;
+  }
 
+  drawMouseClicks(ctx) {
+    for (const mc of this.mouseClicks) {
+      const p = clamp(mc.age / mc.duration, 0, 1);
+      const ease = 1 - Math.pow(1 - p, 2.4);
+      const alpha = 1 - smoothstep(0.22, 1, p);
+      const radius = lerp(5, 24, ease);
       ctx.save();
-      ctx.translate(r.x, r.y);
-      ctx.globalAlpha = alpha * 0.78;
+      ctx.translate(mc.x, mc.y);
+      ctx.globalAlpha = alpha * 0.95;
 
-      // 柔和扩散水彩涟漪圈
+      // Soft warm expanding ring
       ctx.beginPath();
-      ctx.ellipse(0, 0, rad, rad * 0.62, 0, 0, Math.PI * 2);
-      ctx.strokeStyle = r.color;
-      ctx.lineWidth = 2.0 * (1 - p * 0.6);
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.strokeStyle = mc.color;
+      ctx.lineWidth = Math.max(1.2, 2.8 * (1 - p * 0.55));
       ctx.stroke();
 
-      // 绽放的小手绘四角星芒
-      for (const sp of r.sparks) {
-        const d = sp.dist * (0.25 + 0.85 * (1 - Math.pow(1 - p, 2)));
-        const sx = Math.cos(sp.ang) * d;
-        const sy = Math.sin(sp.ang) * d * 0.68 - p * 6;
-        ctx.fillStyle = r.color;
-        this.drawFourPointStar(ctx, sx, sy, sp.size * (1 - p * 0.55));
+      // Inner tap flash
+      if (p < 0.5) {
+        ctx.beginPath();
+        ctx.arc(0, 0, lerp(7, 2, p / 0.5), 0, Math.PI * 2);
+        ctx.fillStyle = mc.color;
+        ctx.globalAlpha = (1 - p / 0.5) * 0.48;
+        ctx.fill();
+      }
+
+      // Crisp short radial click ticks
+      ctx.globalAlpha = alpha * 0.95;
+      ctx.strokeStyle = mc.color;
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 2.0;
+      for (const ray of mc.rays) {
+        const r0 = lerp(7, 17, ease);
+        const r1 = r0 + ray.len * 1.2 * (1 - p * 0.45);
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(ray.ang) * r0, Math.sin(ray.ang) * r0);
+        ctx.lineTo(Math.cos(ray.ang) * r1, Math.sin(ray.ang) * r1);
+        ctx.stroke();
       }
       ctx.restore();
     }
@@ -254,39 +308,36 @@ export class Effects {
       ctx.globalAlpha = tf.alpha;
 
       const isLong = fl.label.length > 2;
-      ctx.font = `700 ${isLong ? 12.5 : 16.5}px "Segoe UI", "Microsoft YaHei UI", sans-serif`;
+      ctx.font = `700 ${isLong ? 11 : 14}px "Segoe UI", "Microsoft YaHei UI", sans-serif`;
       const textW = ctx.measureText(fl.label).width;
-      const pillW = Math.max(27, textW + 14);
-      const pillH = 26;
+      const pillW = Math.max(22, textW + 11);
+      const pillH = 21;
 
-      // 1) 柔和暖水彩光晕背景
       if (tf.glowAlpha > 0.02) {
-        const halo = ctx.createRadialGradient(0, 0, 3, 0, 0, pillW * 0.85);
+        const halo = ctx.createRadialGradient(0, 0, 2, 0, 0, pillW * 0.78);
         halo.addColorStop(0, fl.palette.glow);
         halo.addColorStop(1, 'rgba(255, 232, 180, 0)');
         ctx.save();
         ctx.globalAlpha = tf.alpha * tf.glowAlpha;
         ctx.fillStyle = halo;
         ctx.beginPath();
-        ctx.arc(0, 0, pillW * 0.85, 0, Math.PI * 2);
+        ctx.arc(0, 0, pillW * 0.78, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       }
 
-      // 2) 手绘绘本小圆牌底色（渐隐期柔美过渡为暖粉彩）
       ctx.beginPath();
-      ctx.roundRect(-pillW * 0.5, -pillH * 0.5, pillW, pillH, 10);
+      ctx.roundRect(-pillW * 0.5, -pillH * 0.5, pillW, pillH, 8.5);
       ctx.fillStyle = tf.fadeMix > 0.35 ? fl.palette.fade : fl.palette.bg;
       ctx.fill();
-      ctx.strokeStyle = '#3E2B23';
-      ctx.lineWidth = 1.9;
+      ctx.strokeStyle = fl.palette.border || 'rgba(62, 43, 35, 0.38)';
+      ctx.lineWidth = 1.3;
       ctx.stroke();
 
-      // 3) 清晰温柔字符
       ctx.fillStyle = tf.fadeMix > 0.5 ? '#FFFDF8' : fl.palette.fg;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(fl.label, 0, 0.8);
+      ctx.fillText(fl.label, 0, 0.6);
 
       ctx.restore();
     }
