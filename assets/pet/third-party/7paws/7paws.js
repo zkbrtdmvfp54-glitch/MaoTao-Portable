@@ -202,10 +202,61 @@ const mouseRim = new THREE.Mesh(mouseBody.geometry, back('#1c1d1a')); mouseRim.s
 const mouseBtn = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.02, 0.16), flat('#1c1d1a')); mouseBtn.position.set(0, 0.215, 0.24); mouseGroup.add(mouseBtn);
 const mouseWheel = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.09), flat('#f2b25c')); mouseWheel.position.set(0, 0.222, 0.16); mouseGroup.add(mouseWheel);
 
+const KEYBOARD_STYLES = {
+  cream:    { case: '#1c1d1a', plain: '#fbfbf3', mod: '#e3dfce', accent: '#f2b25c', mouse: '#fbfbf3', wheel: '#f2b25c' },
+  matcha:   { case: '#2d3b32', plain: '#f7f9f2', mod: '#b7d1b4', accent: '#e2b665', mouse: '#f4f8ef', wheel: '#96b992' },
+  sakura:   { case: '#4a3538', plain: '#fff8f9', mod: '#f4cad3', accent: '#e8869a', mouse: '#fff7f9', wheel: '#e8869a' },
+  obsidian: { case: '#141518', plain: '#2c2f36', mod: '#202228', accent: '#e5a44d', mouse: '#2c2f36', wheel: '#e5a44d' }
+};
+let currentKeyboardStyle = 'cream';
+const wheelBaseColor = new THREE.Color('#f2b25c');
+const wheelClickColor = new THREE.Color('#ffe08a');
+function applyKeyboardStyle(id) {
+  const st = KEYBOARD_STYLES[id] || KEYBOARD_STYLES.cream;
+  currentKeyboardStyle = KEYBOARD_STYLES[id] ? id : 'cream';
+  KEYCAP.plain.set(st.plain);
+  KEYCAP.mod.set(st.mod);
+  KEYCAP.accent.set(st.accent);
+  capColor.set(st.mouse);
+  wheelBaseColor.set(st.wheel);
+  for (const layout of Object.values(LAYOUTS)) {
+    layout.base.material.color.set(st.case);
+    layout.keys.forEach(k => k.mesh.material.color.copy(k.base));
+  }
+  mouseBody.material.color.copy(capColor);
+  mouseRim.material.color.set(st.case);
+  mouseBtn.material.color.set(st.case);
+  mouseWheel.material.color.copy(wheelBaseColor);
+  stageEl.dataset.keyboardStyle = currentKeyboardStyle;
+}
+applyKeyboardStyle(options.keyboardStyle || 'cream');
+
 // A yarn ball is a real scene object. During idle/standby play the cat tracks and chases it,
 // and clicking the ball redirects its trajectory across the desk.
 const YARN_SCALE = 1.42;
 const yarn = new THREE.Group(); yarn.visible = false; yarn.scale.setScalar(YARN_SCALE); scene.add(yarn);
+
+// Cozy plush sleep cushion that appears beneath the cat when sleeping (keyboard & mouse hide).
+const sleepCushion = new THREE.Group();
+sleepCushion.position.set(0.06, 0.0, 0.16);
+sleepCushion.visible = false;
+{
+  const padGeo = new THREE.SphereGeometry(1, 28, 18);
+  const pad = new THREE.Mesh(padGeo, flat('#f6e8d5'));
+  pad.scale.set(1.52, 0.22, 1.14);
+  pad.position.y = 0.12;
+  const bolsterGeo = new THREE.TorusGeometry(1.32, 0.22, 14, 34);
+  const bolster = new THREE.Mesh(bolsterGeo, flat('#e7c3a2'));
+  bolster.rotation.x = Math.PI * 0.5;
+  bolster.scale.set(1.12, 0.86, 0.82);
+  bolster.position.y = 0.20;
+  const bolsterRim = new THREE.Mesh(new THREE.TorusGeometry(1.34, 0.25, 12, 34), back('#6b5548'));
+  bolsterRim.rotation.x = Math.PI * 0.5;
+  bolsterRim.scale.set(1.13, 0.87, 0.84);
+  bolsterRim.position.y = 0.19;
+  sleepCushion.add(pad, bolster, bolsterRim);
+}
+scene.add(sleepCushion);
 const yarnCore = new THREE.Mesh(new THREE.SphereGeometry(0.15, 24, 18), flat('#d96b55'));
 yarnCore.scale.set(1, 0.92, 0.94); yarn.add(yarnCore);
 for (const axis of ['x', 'y', 'z']) {
@@ -388,10 +439,66 @@ function paintCoat(c) {
     blob(h, 0.25, 0.265, 0.16, 0.05, c.faceShadow, 0, 0.12);
   }
   if (pat.includes('calico')) {
-    blob(b, 0.04, 0.42, 0.15, 0.2, c.patchA); blob(b, 0.56, 0.22, 0.13, 0.13, c.patchB); blob(b, 0.78, 0.5, 0.16, 0.22, c.patchB); blob(b, 0.5, 0.56, 0.1, 0.12, c.patchA);
-    // Two separated crown clouds keep the white center of the face clear.
-    blob(h, 0.14, 0.69, 0.13, 0.25, c.patchA, 0.18, 0.9);
-    blob(h, 0.37, 0.7, 0.12, 0.24, c.patchB, -0.18, 0.9);
+    // Organic multi-lobe patches with soft fur-blended edges (asymmetric like a real calico cat).
+    const calicoPatch = (g, lobes, color, strength = 0.96) => {
+      for (const [u, v, ru, rv, rot = 0, s = 1] of lobes) {
+        blob(g, u, v, ru, rv, color, rot, strength * s);
+      }
+    };
+    calicoPatch(b, [
+      [0.01, 0.56, 0.13, 0.18, 0.22, 0.96],
+      [0.95, 0.46, 0.14, 0.20, -0.18, 0.95],
+      [0.07, 0.36, 0.085, 0.11, 0.35, 0.88]
+    ], c.patchA);
+    calicoPatch(b, [
+      [0.50, 0.72, 0.095, 0.12, -0.25, 0.92],
+      [0.56, 0.64, 0.075, 0.095, 0.15, 0.85]
+    ], c.patchA);
+    calicoPatch(b, [
+      [0.88, 0.23, 0.10, 0.12, 0.24, 0.92],
+      [0.82, 0.16, 0.07, 0.08, -0.2, 0.84]
+    ], c.patchA);
+    calicoPatch(b, [
+      [0.48, 0.34, 0.125, 0.17, -0.22, 0.96],
+      [0.57, 0.25, 0.11, 0.13, 0.18, 0.93],
+      [0.43, 0.45, 0.08, 0.10, -0.35, 0.86]
+    ], c.patchB);
+    calicoPatch(b, [
+      [0.73, 0.52, 0.14, 0.21, 0.16, 0.96],
+      [0.67, 0.38, 0.11, 0.15, -0.2, 0.93],
+      [0.80, 0.62, 0.09, 0.12, 0.28, 0.88]
+    ], c.patchB);
+    calicoPatch(h, [
+      [0.12, 0.76, 0.11, 0.18, 0.24, 0.95],
+      [0.05, 0.65, 0.105, 0.17, 0.38, 0.92],
+      [0.17, 0.84, 0.075, 0.11, 0.12, 0.88],
+      [0.95, 0.72, 0.10, 0.16, -0.15, 0.90]
+    ], c.patchA);
+    calicoPatch(h, [
+      [0.39, 0.73, 0.125, 0.20, -0.22, 0.96],
+      [0.46, 0.62, 0.11, 0.18, -0.34, 0.93],
+      [0.34, 0.82, 0.09, 0.13, -0.10, 0.91],
+      [0.54, 0.74, 0.105, 0.16, 0.12, 0.90]
+    ], c.patchB);
+    calicoPatch(h, [
+      [0.72, 0.66, 0.13, 0.19, 0.2, 0.94],
+      [0.64, 0.56, 0.09, 0.13, -0.25, 0.88]
+    ], c.patchB);
+    calicoPatch(h, [
+      [0.85, 0.56, 0.11, 0.15, -0.18, 0.92]
+    ], c.patchA);
+  }
+  if (pat === 'ragdoll') {
+    // Seal bicolor ragdoll: soft seal-brown side masks leaving a clean inverted-V white blaze on the face.
+    blob(h, 0.10, 0.60, 0.135, 0.23, c.point, 0.28, 0.90);
+    blob(h, 0.04, 0.44, 0.09, 0.16, c.point, 0.20, 0.78);
+    blob(h, 0.40, 0.60, 0.135, 0.23, c.point, -0.28, 0.90);
+    blob(h, 0.46, 0.44, 0.09, 0.16, c.point, -0.20, 0.78);
+    blob(h, 0.75, 0.64, 0.22, 0.24, c.point, 0, 0.85);
+    faceTriangle(h, 0.25, 0.62, 0.20, 0.175, c.chest || c.fur);
+    blob(b, 0.75, 0.54, 0.22, 0.26, c.saddle || c.point, 0, 0.58);
+    blob(b, 0.62, 0.44, 0.13, 0.20, c.saddle || c.point, -0.15, 0.42);
+    blob(b, 0.88, 0.44, 0.13, 0.20, c.saddle || c.point, 0.15, 0.42);
   }
   if (pat === 'tuxedo') {
     // Classic tuxedo cat: fuller black mantle wrapping back, shoulders and flanks with a clean white chest,
@@ -463,7 +570,10 @@ const earGeo = new THREE.LatheGeometry(Array.from({ length: 29 }, (_, i) => new 
 // The inner marking is a strip of the ear's own front surface, lifted a hair so it never floats.
 const earInnerGeo = new THREE.ParametricGeometry((u, v, out) => { const y = mix(0.1, 0.47, v), r = earR(y), a = (u - 0.5) * 2 * 0.72 * Math.sqrt(Math.max(0, 1 - v ** 5)) * (0.72 + 0.28 * Math.min(1, v * 6)); out.set(r * Math.sin(a), y, r * Math.cos(a) * EAR_T + 0.007); }, 20, 28);
 const ears = [-1, 1].map(s => { const g = new THREE.Group(); g.position.set(s * 0.46, 0.3, -0.04); g.rotation.z = -s * 0.24; head.add(g);
-  M.ear = M.ear || new THREE.MeshBasicMaterial({ color: 0x101010, side: THREE.DoubleSide }); const ear = new THREE.Mesh(earGeo, M.ear); ear.scale.z = EAR_T; g.add(ear);
+  M.ear = M.ear || new THREE.MeshBasicMaterial({ color: 0x101010, side: THREE.DoubleSide });
+  const earKey = s < 0 ? 'earL' : 'earR';
+  M[earKey] = M[earKey] || new THREE.MeshBasicMaterial({ color: 0x101010, side: THREE.DoubleSide });
+  const ear = new THREE.Mesh(earGeo, M[earKey]); ear.scale.z = EAR_T; g.add(ear);
   const inner = new THREE.Mesh(earInnerGeo, M.inner); inner.renderOrder = 3; g.add(inner); return g; });
 
 // Focus accessories share the head pivot so they track head turns, nods and leans naturally.
@@ -532,6 +642,65 @@ const setRandomHeadphones = () => {
 if (focusMode) { headphones.visible = true; setRandomHeadphones(); }
 headphones.renderOrder = 12;
 
+// Selectable lightweight 3D head accessories attached to the head group.
+const accessoriesGroup = new THREE.Group(); head.add(accessoriesGroup);
+const accessoryMap = {};
+{
+  const crown = new THREE.Group(); crown.position.set(0, 0.74, 0.06); crown.rotation.x = 0.08;
+  const gold = flat('#f4c44e'), gem = flat('#e86a7c');
+  crown.add(new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.19, 0.14, 16), gold));
+  for (let i = 0; i < 5; i++) {
+    const a = i / 5 * Math.PI * 2 - Math.PI * 0.5;
+    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.062, 0.16, 8), gold);
+    spike.position.set(Math.cos(a) * 0.18, 0.13, Math.sin(a) * 0.18);
+    crown.add(spike);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 8), i === 0 ? gem : gold);
+    tip.position.set(Math.cos(a) * 0.18, 0.21, Math.sin(a) * 0.18);
+    crown.add(tip);
+  }
+  accessoriesGroup.add(crown); accessoryMap.crown = crown;
+
+  const sprout = new THREE.Group(); sprout.position.set(0, 0.70, 0.04);
+  const stemMat = flat('#5ca856'), leafMat = flat('#78c668');
+  const stemCurve = new THREE.QuadraticBezierCurve3(V(0, 0, 0), V(0.03, 0.18, 0.02), V(0.01, 0.34, 0));
+  sprout.add(new THREE.Mesh(new THREE.TubeGeometry(stemCurve, 12, 0.024, 6, false), stemMat));
+  const leafGeo = new THREE.SphereGeometry(0.11, 14, 10);
+  const l1 = new THREE.Mesh(leafGeo, leafMat); l1.scale.set(1.35, 0.52, 0.36); l1.position.set(-0.11, 0.35, 0.02); l1.rotation.z = 0.42;
+  const l2 = new THREE.Mesh(leafGeo, leafMat); l2.scale.set(1.25, 0.48, 0.34); l2.position.set(0.12, 0.33, 0.01); l2.rotation.z = -0.38;
+  sprout.add(l1, l2);
+  accessoriesGroup.add(sprout); accessoryMap.sprout = sprout;
+
+  const beret = new THREE.Group(); beret.position.set(0.08, 0.72, -0.02); beret.rotation.set(0.12, 0, -0.22);
+  const beretMat = flat('#d67c56'), beretStem = flat('#9a4e32');
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.46, 20, 14), beretMat); cap.scale.set(1.08, 0.36, 0.96);
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.032, 0.12, 8), beretStem); stem.position.set(0.02, 0.18, 0); stem.rotation.z = -0.24;
+  beret.add(cap, stem);
+  accessoriesGroup.add(beret); accessoryMap.beret = beret;
+
+  const halo = new THREE.Group(); halo.position.set(0, 0.96, 0);
+  const haloMesh = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.038, 12, 28), flat('#fae078'));
+  haloMesh.rotation.x = Math.PI * 0.5;
+  halo.add(haloMesh);
+  accessoriesGroup.add(halo); accessoryMap.halo = halo;
+}
+let currentAccessory = 'none';
+let currentCoat = null;
+function setAccessory(id) {
+  currentAccessory = accessoryMap[id] ? id : 'none';
+  for (const [k, obj] of Object.entries(accessoryMap)) obj.visible = k === currentAccessory;
+  accessoriesGroup.visible = !focusMode && currentAccessory !== 'none';
+  stageEl.dataset.accessory = currentAccessory;
+}
+setAccessory(options.accessory || 'none');
+
+// Tiny cute pink tongue that peeks out ONLY while the cat is licking its paw.
+const catTongue = new THREE.Mesh(new THREE.SphereGeometry(0.085, 14, 10), flat('#f391a3'));
+catTongue.scale.set(0.92, 1.05, 0.55);
+catTongue.position.set(0, -0.17, 0.77);
+catTongue.renderOrder = 7;
+catTongue.visible = false;
+head.add(catTongue);
+
 // A patch is a small ellipse wrapped onto the head's surface, so eyes and markings sit on the face from every angle.
 const PR = 6, PS = 32;
 function makePatch(mat, order) {
@@ -552,16 +721,27 @@ function softenMark(mesh, strength = 0.82) {
 }
 const onHead = (x, y, z, lift, out, n) => { const k = 1 / Math.sqrt((x / HEAD_R[0]) ** 2 + (y / HEAD_R[1]) ** 2 + (z / HEAD_R[2]) ** 2); x *= k; y *= k; z *= k;
   const nx = x / HEAD_R[0] ** 2, ny = y / HEAD_R[1] ** 2, nz = z / HEAD_R[2] ** 2, nl = Math.hypot(nx, ny, nz); out.setXYZ(n, x + nx / nl * lift, y + ny / nl * lift, z + nz / nl * lift); };
-function fillPatch(mesh, cx, cy, rx, ry, turn, lift) {
+function fillPatch(mesh, cx, cy, rx, ry, turn, lift, clipTop = Infinity, clipCurve = 0) {
   cx = clamp(cx, -0.78, 0.78); cy = clamp(cy, -0.58, 0.58);
   const pos = mesh.geometry.attributes.position, inside = Math.max(0.03, 1 - (cx / HEAD_R[0]) ** 2 - (cy / HEAD_R[1]) ** 2), cz = HEAD_R[2] * Math.sqrt(inside);
   // tangent directions at the centre: along x and along y on the ellipsoid
   let ax = 1, az = -(cx / HEAD_R[0] ** 2) / (cz / HEAD_R[2] ** 2), al = Math.hypot(ax, az); ax /= al; az /= al;
   let by = 1, bz = -(cy / HEAD_R[1] ** 2) / (cz / HEAD_R[2] ** 2), bl = Math.hypot(by, bz); by /= bl; bz /= bl;
   const co = Math.cos(turn), si = Math.sin(turn);
-  onHead(cx, cy, cz, lift, pos, 0);
-  for (let r = 1; r <= PR; r++) for (let k = 0; k < PS; k++) { const a = k / PS * Math.PI * 2, u = Math.cos(a) * rx * r / PR, v = Math.sin(a) * ry * r / PR, lx = u * co - v * si, ly = u * si + v * co;
-    onHead(cx + ax * lx, cy + by * ly, cz + az * lx + bz * ly, lift, pos, 1 + (r - 1) * PS + k); }
+  const centerCut = clipTop - clipCurve;
+  const cv = Math.min(0, centerCut);
+  onHead(cx + ax * (-cv * si), cy + by * (cv * co), cz + az * (-cv * si) + bz * (cv * co), lift, pos, 0);
+  const safeRx = Math.max(1e-4, rx);
+  for (let r = 1; r <= PR; r++) for (let k = 0; k < PS; k++) {
+    const a = k / PS * Math.PI * 2, u = Math.cos(a) * rx * r / PR;
+    let v = Math.sin(a) * ry * r / PR;
+    if (clipTop < Infinity) {
+      const cut = clipTop - clipCurve * Math.max(0, 1 - (u / safeRx) ** 2);
+      if (v > cut) v = cut;
+    }
+    const lx = u * co - v * si, ly = u * si + v * co;
+    onHead(cx + ax * lx, cy + by * ly, cz + az * lx + bz * ly, lift, pos, 1 + (r - 1) * PS + k);
+  }
   pos.needsUpdate = true;
 }
 const nose = makePatch(M.nose, 6);
@@ -614,6 +794,7 @@ function shapeSausage(mesh, path, radius, ref) {
 function paintTail(c) {
   const colors = tail.geometry.attributes.color;
   const base = new THREE.Color(c.tail || c.fur);
+  const white = new THREE.Color(c.fur);
   const mark = new THREE.Color(c.stripe || c.fur);
   const orange = new THREE.Color(c.patchA || c.fur);
   const black = new THREE.Color(c.patchB || c.tail || c.fur);
@@ -621,23 +802,36 @@ function paintTail(c) {
   const color = new THREE.Color();
   for (let r = 0; r < RINGS; r++) {
     const t = Math.min(1, r / SEG);
-    let blend = 0;
-    if (c.pattern === 'tabby') {
-      const wave = 0.5 + 0.5 * Math.cos((t * 5 + 0.12) * Math.PI * 2);
-      blend = smooth(0.5, 0.94, wave) * (c.tailStripeStrength || 0.78);
-      color.copy(base).lerp(mark, blend);
-    } else if (c.pattern === 'calico') {
-      const patch = smooth(0.04, 0.94, t);
-      color.copy(orange).lerp(black, patch);
-    } else if (c.pattern === 'siamese') {
-      const toast = new THREE.Color('#9e7c62');
-      const mid = smooth(0.02, 0.45, t);
-      const deep = smooth(0.32, 0.88, t) * 0.92;
-      color.copy(new THREE.Color(c.fur)).lerp(toast, mid * 0.65).lerp(softPoint, deep);
-    } else {
-      color.copy(base);
+    for (let k = 0; k < SIDES; k++) {
+      if (c.pattern === 'tabby') {
+        const wave = 0.5 + 0.5 * Math.cos((t * 5 + 0.12) * Math.PI * 2);
+        const blend = smooth(0.5, 0.94, wave) * (c.tailStripeStrength || 0.78);
+        color.copy(base).lerp(mark, blend);
+      } else if (c.pattern === 'calico') {
+        const a = k / SIDES * Math.PI * 2;
+        const warp = Math.sin(a + 0.6) * 0.075 + Math.cos(a * 2 - 0.4) * 0.025;
+        const u = clamp(t + warp, 0, 1);
+        const lowerBlack = smooth(0.11, 0.21, u) * (1 - smooth(0.41, 0.50, u));
+        const midOrange = smooth(0.46, 0.55, u + Math.cos(a) * 0.04) * (1 - smooth(0.73, 0.81, u));
+        const tipBlack = smooth(0.76, 0.85, u);
+        color.copy(white);
+        if (lowerBlack > 0.001) color.lerp(black, lowerBlack * 0.96);
+        if (midOrange > 0.001) color.lerp(orange, midOrange * 0.95);
+        if (tipBlack > 0.001) color.lerp(black, tipBlack * 0.97);
+      } else if (c.pattern === 'redpanda') {
+        const ring = 0.5 + 0.5 * Math.cos((t * 5.2 + 0.1) * Math.PI * 2);
+        const blend = smooth(0.35, 0.75, ring);
+        color.copy(new THREE.Color(c.fur)).lerp(new THREE.Color(c.point || '#36241d'), blend * 0.78);
+      } else if (c.pattern === 'siamese' || c.pattern === 'ragdoll') {
+        const toast = new THREE.Color('#9e7c62');
+        const mid = smooth(0.02, 0.45, t);
+        const deep = smooth(0.32, 0.88, t) * 0.92;
+        color.copy(white).lerp(toast, mid * 0.65).lerp(softPoint, deep);
+      } else {
+        color.copy(base);
+      }
+      colors.setXYZ(r * SIDES + k, color.r, color.g, color.b);
     }
-    for (let k = 0; k < SIDES; k++) colors.setXYZ(r * SIDES + k, color.r, color.g, color.b);
   }
   colors.needsUpdate = true;
 }
@@ -697,29 +891,49 @@ function drawLimb(p, shoulder, t) {
   p.root.position.copy(shoulder); p.root.scale.setScalar(legRadius(0) * 1.02);
 }
 function paintLimb(c) {
-  const base = new THREE.Color(c.fur), point = new THREE.Color(c.leg || c.fur), mark = new THREE.Color(c.stripe || c.fur), pawTone = new THREE.Color(c.patch), darkCoat = new THREE.Color(c.patchB || '#1b1a1c'), color = new THREE.Color();
+  const base = new THREE.Color(c.fur), point = new THREE.Color(c.leg || c.fur), mark = new THREE.Color(c.stripe || c.fur), pawTone = new THREE.Color(c.patch), darkCoat = new THREE.Color(c.patchB || '#1b1a1c'), orange = new THREE.Color(c.patchA || c.fur), color = new THREE.Color();
   for (const paw of Object.values(paws)) {
     paw.root.material = c.pattern === 'tuxedo' ? M.ear : M.fur;
     const colors = paw.core.geometry.attributes.color;
     for (let r = 0; r < RINGS; r++) {
       const t = Math.min(1, r / SEG);
-      if (c.pattern === 'tabby') {
-        const wave = 0.5 + 0.5 * Math.cos((t * 3.5 + 0.12) * Math.PI * 2);
-        const blend = smooth(0.56, 0.94, wave) * 0.58;
-        const palePaw = smooth(0.82, 0.99, t) * 0.58;
-        color.copy(base).lerp(mark, blend).lerp(pawTone, palePaw);
-      } else if (c.pattern === 'tuxedo') {
-        const whiteSock = smooth(0.24, 0.78, t);
-        color.copy(darkCoat).lerp(pawTone, whiteSock);
-      } else if (c.leg) {
-        const toast = new THREE.Color('#9e7c62');
-        const mid = smooth(0.08, 0.52, t);
-        const deep = smooth(0.36, 0.92, t) * 0.92;
-        color.copy(base).lerp(toast, mid * 0.62).lerp(point, deep);
-      } else {
-        color.copy(base);
+      for (let k = 0; k < SIDES; k++) {
+        if (c.pattern === 'tabby') {
+          const wave = 0.5 + 0.5 * Math.cos((t * 3.5 + 0.12) * Math.PI * 2);
+          const blend = smooth(0.56, 0.94, wave) * 0.58;
+          const palePaw = smooth(0.82, 0.99, t) * 0.58;
+          color.copy(base).lerp(mark, blend).lerp(pawTone, palePaw);
+        } else if (c.pattern === 'calico') {
+          const a = k / SIDES * Math.PI * 2;
+          const outer = 0.5 + 0.5 * Math.sin(a + (paw.side === 'L' ? 0.5 : -0.5));
+          color.copy(base);
+          if (paw.side === 'L') {
+            const band = smooth(0.05, 0.16, t) * (1 - smooth(0.36, 0.48, t));
+            const spot = band * smooth(0.28, 0.72, outer);
+            if (spot > 0.001) color.lerp(orange, spot * 0.92);
+          } else {
+            const band = smooth(0.18, 0.28, t) * (1 - smooth(0.42, 0.53, t));
+            const spot = band * smooth(0.38, 0.80, outer);
+            if (spot > 0.001) color.lerp(darkCoat, spot * 0.92);
+          }
+        } else if (c.pattern === 'corgi' || c.pattern === 'schnauzer') {
+          const whiteSock = smooth(0.28, 0.72, t);
+          color.copy(base).lerp(pawTone, whiteSock);
+        } else if (c.pattern === 'redpanda') {
+          color.copy(new THREE.Color(c.point || '#36241d'));
+        } else if (c.pattern === 'tuxedo') {
+          const whiteSock = smooth(0.24, 0.78, t);
+          color.copy(darkCoat).lerp(pawTone, whiteSock);
+        } else if (c.leg) {
+          const toast = new THREE.Color('#9e7c62');
+          const mid = smooth(0.08, 0.52, t);
+          const deep = smooth(0.36, 0.92, t) * 0.92;
+          color.copy(base).lerp(toast, mid * 0.62).lerp(point, deep);
+        } else {
+          color.copy(base);
+        }
+        colors.setXYZ(r * SIDES + k, color.r, color.g, color.b);
       }
-      for (let k = 0; k < SIDES; k++) colors.setXYZ(r * SIDES + k, color.r, color.g, color.b);
     }
     colors.needsUpdate = true;
   }
@@ -728,21 +942,42 @@ function paintLimb(c) {
 /* ---------- coats and backgrounds ---------- */
 const COATS = [
   { id: 'black', name: '奶牛猫', pattern: 'tuxedo', fur: '#faf7f0', faceFur: '#faf7f0', patch: '#faf7f0', chest: false, chin: false, ear: '#1b1a1c', tail: '#1b1a1c', patchB: '#1b1a1c', line: '#524e50', eye: '#edae42', nose: '#d89498', whisker: '#faf7f0', whiskerOut: '#4b4649', stripe: '#1b1a1c', inner: '#41353a' },
-  { id: 'calico', name: '三花猫', pattern: 'calico', fur: '#faf7ef', patch: '#fffaf1', chest: '#fffaf1', patchA: '#e99a3f', patchB: '#262528', tail: '#262528', line: '#a99c8b', eye: '#e8bd37', nose: '#d98d87', whisker: '#fffaf1', whiskerOut: '#817b72', stripe: '#faf7ef', inner: '#edb8a8' },
+  { id: 'calico', name: '三花猫', pattern: 'calico', fur: '#faf7ef', patch: '#fffaf1', chest: '#fffaf1', patchA: '#e48b3b', patchB: '#262426', earL: '#e48b3b', earR: '#262426', tail: '#262426', line: '#9a8e7f', eye: '#e8bd37', nose: '#d98d87', whisker: '#fffaf1', whiskerOut: '#817b72', stripe: '#faf7ef', inner: '#edb8a8' },
   { id: 'siamese', name: '暹罗猫', pattern: 'siamese', fur: '#f0dfc4', patch: '#49332d', chest: '#fff3df', chin: '#f7ead5', point: '#49332d', leg: '#49332d', ear: '#49332d', tail: '#49332d', line: '#392a27', eye: '#43a7e7', nose: '#9f6d5b', whisker: '#fff8ec', whiskerOut: '#49332d', stripe: '#f0dfc4', inner: '#ba8279' },
   { id: 'maotao', name: '灰白虎斑（毛桃）', pattern: 'tabby', fur: '#c2c3c0', faceFur: '#c9c9c6', faceLight: '#e4e1dc', faceMidtone: '#a1a29f', faceWhite: '#f5eddd', faceShadow: '#898a87', patch: '#f6f2e9', chest: '#fbf8ee', chin: '#f5eddd', line: '#858683', eye: '#48a9e8', nose: '#c98a8b', whisker: '#fff9eb', whiskerOut: '#747571', stripe: '#727471', faceStripe: '#7a7c79', inner: '#c6a29a', tail: '#c2c3c0', tailStripeStrength: 0.8 },
   { id: 'orange', name: '橘猫', pattern: 'tabby', fur: '#ebb064', faceFur: '#f0b86e', faceLight: '#f8d89c', faceMidtone: '#de9a4c', faceWhite: '#fff8ec', faceShadow: '#c7833d', patch: '#fff7e8', chest: '#fff9ed', chin: '#fff7e8', line: '#b87c3e', eye: '#99b854', nose: '#df918d', whisker: '#fffaf0', whiskerOut: '#b87c3e', stripe: '#c97b34', faceStripe: '#cf823b', inner: '#efb09e', tail: '#ebb064', tailStripeStrength: 0.72 },
+  { id: 'ragdoll', name: '布偶猫', pattern: 'ragdoll', fur: '#fcfaf5', faceFur: '#fcfaf5', patch: '#ffffff', chest: '#ffffff', chin: '#ffffff', point: '#5f4b41', saddle: '#9c887b', ear: '#5b473d', tail: '#5b473d', line: '#7d6b61', eye: '#3b8ee6', nose: '#e09fa6', whisker: '#ffffff', whiskerOut: '#8a7a70', stripe: '#fcfaf5', inner: '#ddb8ae' },
   { id: 'white', name: '异瞳白猫', fur: '#faf8f2', patch: '#fffdf8', chest: '#fffdf8', chin: '#fffdf8', line: '#c8c2b8', eye: '#45a3dc', eyeAlt: '#e6b839', nose: '#dca1aa', whisker: '#fffdf8', whiskerOut: '#aaa49a', stripe: '#faf8f2', inner: '#f2c5bc' },
   { id: 'solidblack', name: '纯黑猫', fur: '#151416', patch: '#151416', chest: false, chin: false, line: '#77767a', eye: '#fffdf8', nose: '#f7f4ed', whisker: '#f6f1e8', whiskerOut: '#4b4649', stripe: '#151416', inner: '#302a2c' }
 ];
+const EYE_PRESETS = {
+  blue: ['#45a3e5', '#45a3e5'],
+  amber: ['#e8b838', '#e8b838'],
+  emerald: ['#5ec27e', '#5ec27e'],
+  violet: ['#9a7ee0', '#9a7ee0'],
+  rose: ['#e688a8', '#e688a8'],
+  odd: ['#45a3e5', '#e8b838']
+};
+let currentEyeColor = options.eyeColor || 'auto';
+currentCoat = COATS[0];
+function applyEyeColor(c = currentCoat) {
+  const preset = EYE_PRESETS[currentEyeColor];
+  M.eye.color.set(preset ? preset[0] : (c.eye || '#b9d36b'));
+  M.eyeAlt.color.set(preset ? preset[1] : (c.eyeAlt || c.eye || '#b9d36b'));
+  stageEl.dataset.eyeColor = currentEyeColor;
+}
 const WALLS = [['浅色桌面', 'transparent', '#e9ebb6'], ['深色桌面', '#1f2226', '#454c57'], ['蓝色桌面', '#2f5d8a', '#454c57'], ['照片桌面', 'linear-gradient(135deg,#3b2f4a,#b8693f 55%,#e9c46a)', '#454c57']];
 function setCoat(i) {
   const c = COATS[i] || COATS[0];
+  currentCoat = c;
   for (const k of ['fur', 'patch', 'line', 'eye', 'eyeAlt', 'stripe', 'inner']) M[k].color.set(c[k] || c.eye || c.fur);
+  applyEyeColor(c);
   M.stripe.color.set(c.faceStripe || c.stripe || c.fur);
   M.fur.color.set(c.fur);
   M.body.color.set('#ffffff');
   M.ear.color.set(c.ear || c.fur);
+  M.earL.color.set(c.earL || c.ear || c.fur);
+  M.earR.color.set(c.earR || c.ear || c.fur);
   M.lid.color.set(c.pattern === 'tuxedo' ? (c.patchB || '#1b1a1c') : c.fur);
   M.shut.color.set(c.line);
   M.nose.color.set(c.nose);
@@ -939,10 +1174,19 @@ function frame() {
   if (VIEW.get('pose')) { S.act = VIEW.get('pose'); S.actUntil = t + (+VIEW.get('left') || 900); }   // preview switch: hold one idle action at a chosen moment
   const typing = !standbyMode && t - S.lastKey < 3000, hover = VIEW.has('hover') || (!standbyMode && t - S.lastKey < 900), asleep = sleeping(t);   // hover: paws stay raised only briefly after the last key
   if (demo && t < S.demoMouse) { S.lastMouse = t; S.wigX = Math.sin(t / 170) * 0.12; S.wigZ = Math.cos(t / 230) * 0.08; S.mouseDown = S.demoMouse - t < 900 && S.demoMouse - t > 650; }
-  const playingNow = (S.act === 'play' || S.act === 'butterfly') && !asleep;
+  const playingNow = (S.act === 'play' || S.act === 'butterfly' || S.act === 'wash') && !asleep;
   const mouseOn = mouseGroup.visible && t - S.lastMouse < 1600 && !asleep && !playingNow, mousing = mouseGroup.visible && t - S.lastMouse < 2200 && S.lastMouse > S.lastKey && !asleep && !playingNow;   // paw on the mouse / whole attention on the mouse
   S.wigX *= Math.exp(-dt * 5); S.wigZ *= Math.exp(-dt * 5); S.mouseLean += ((mousing ? 1 : 0) - S.mouseLean) * ease(6);
-  mouseGroup.position.set(MOUSE_AT.x + (DESK_DIR > 0 ? Math.min(S.wigX, 0.05) : Math.max(S.wigX, -0.05)), 0, MOUSE_AT.z + S.wigZ); mouseBody.material.color.copy(capColor).lerp(hitColor, S.mouseDown && mouseOn ? 1 : 0);
+  S.mousePress = (S.mousePress || 0) + ((S.mouseDown ? 1 : 0) - (S.mousePress || 0)) * ease(28);
+  const mp = S.mousePress;
+  const clickTilt = (S.mouseSide === 'right' ? -0.11 : 0.11) * mp * DESK_DIR;
+  mouseGroup.position.set(MOUSE_AT.x + (DESK_DIR > 0 ? Math.min(S.wigX, 0.05) : Math.max(S.wigX, -0.05)), -0.024 * mp, MOUSE_AT.z + S.wigZ);
+  mouseGroup.rotation.z = clickTilt;
+  mouseBody.scale.set(0.7 + 0.03 * mp, 0.42 - 0.075 * mp, 1.2 + 0.03 * mp);
+  mouseRim.scale.set(0.77 + 0.03 * mp, 0.47 - 0.075 * mp, 1.27 + 0.03 * mp);
+  mouseWheel.position.y = 0.222 - 0.022 * mp;
+  mouseWheel.material.color.copy(wheelBaseColor).lerp(wheelClickColor, mp * 0.75);
+  mouseBody.material.color.copy(capColor);
   S.rate *= Math.exp(-dt * 1.2);
   const fast = typing ? clamp((S.rate - 1.8) / 5.5, 0, 1) : 0;
   const angerTarget = !asleep && t < S.angerUntil ? 1 : typing && !asleep ? smooth(3.4, 6.5, S.rate) : 0;
@@ -964,10 +1208,10 @@ function frame() {
 
   // keys
   const jolt = 0.03 * Math.exp(-(t - S.jolt) / 55); board.position.y = -jolt;
-  keys.forEach(k => { if (!k.down && k.glow > 0) k.glow = Math.max(0, k.glow - dt * 5); k.mesh.position.y = 0.145 - (k.down ? 0.045 : 0); k.mesh.material.color.copy(k.base).lerp(hitColor, k.glow); });
+  keys.forEach(k => { if (!k.down && k.glow > 0) k.glow = Math.max(0, k.glow - dt * 5); k.mesh.position.y = 0.145 - (k.down ? 0.045 : 0); k.mesh.material.color.copy(k.base); });
 
   // body
-  const act0 = S.act, stretching = act0 === 'stretch', licking = act0 === 'lick', yawning = act0 === 'yawn', flicking = act0 === 'tail', pouncing = act0 === 'pounce', playing = act0 === 'play', chasingButterfly = act0 === 'butterfly', actLeft = S.actUntil - t;
+  const act0 = S.act, stretching = act0 === 'stretch', licking = act0 === 'lick' || act0 === 'wash', yawning = act0 === 'yawn', flicking = act0 === 'tail', pouncing = act0 === 'pounce', playing = act0 === 'play', chasingButterfly = act0 === 'butterfly', actLeft = S.actUntil - t;
   S.phase += dt * (asleep ? 0.85 : 1.7 + Math.min(1.4, S.rate * 0.14));
   const breath = reduceMotion ? 0 : Math.sin(S.phase), bounceE = (t - S.bounceAt) / 420, bounce = bounceE < 1 ? Math.sin(Math.PI * bounceE) : 0;
   const reach = (paws.L.pos.z > 0.86 ? paws.L.pos.x - REST.L.x : 0) + (paws.R.pos.z > 0.86 ? paws.R.pos.x - REST.R.x : 0);
@@ -975,11 +1219,23 @@ function frame() {
   if (pouncing && actLeft <= 520 && !S.pounced) { S.pounced = true; S.bounceAt = t; } if (!pouncing) S.pounced = false;
   S.loaf = (S.loaf || 0) + ((asleep ? 1 : 0) - (S.loaf || 0)) * ease(3.2);
   S.low = (S.low || 0) + ((stretching ? 1 : crouch ? 0.55 : 0) - (S.low || 0)) * ease(crouch ? 9 : 5);
+  S.dragBlend = (S.dragBlend || 0) + ((S.dragging ? 1 : 0) - (S.dragBlend || 0)) * ease(16);
+  const drag = S.dragBlend;
   const loaf = S.loaf, squat = 1 - 0.52 * loaf - 0.16 * S.low;       // asleep: curled on its side into a compact sleeping ball
+  const hideDesk = S.dragging || asleep;
+  activeLayout.group.visible = showKeyboard && !hideDesk;
+  mouseGroup.visible = showMousePref && !hideDesk;
+  sleepCushion.visible = !S.dragging && loaf > 0.05;
+  if (sleepCushion.visible) {
+    const cs = smooth(0.05, 0.72, loaf);
+    sleepCushion.scale.set(cs, cs, cs);
+  }
+  cat.position.y = drag * 0.34 + loaf * 0.16;
+  cat.rotation.z = drag > 0.005 ? Math.sin(t / 195) * 0.095 * drag : 0;
   torso.scale.set(
-    P.bodyW * (1 + 0.36 * loaf + breath * (0.012 + 0.02 * loaf) - bounce * 0.03),
-    P.bodyH * squat * (1 + breath * (0.012 + 0.018 * loaf) + bounce * 0.05 - S.thump * (0.012 + 0.02 * fast)),
-    1 + 0.3 * loaf + breath * 0.02
+    P.bodyW * (1 + 0.36 * loaf + breath * (0.012 + 0.02 * loaf) - bounce * 0.03 - 0.11 * drag),
+    P.bodyH * squat * (1 + breath * (0.012 + 0.018 * loaf) + bounce * 0.05 - S.thump * (0.012 + 0.02 * fast) + 0.15 * drag),
+    1 + 0.3 * loaf + breath * 0.02 - 0.06 * drag
   );
   torso.rotation.z = -0.32 * loaf;
   torso.position.x = 0.12 * loaf;
@@ -1027,7 +1283,7 @@ function frame() {
     bfWings[0].rotation.z = flap;
     bfWings[1].rotation.z = -flap;
   }
-  const tailTarget = asleep ? 1 : angry ? 0.34 + angerBeat * 0.64 : 0;
+  const tailTarget = asleep ? 1 : drag > 0.05 ? 0.55 * drag : angry ? 0.34 + angerBeat * 0.64 : 0;
   S.tailDown = (S.tailDown || 0) + (tailTarget - (S.tailDown || 0)) * ease(angry ? 20 : 2.6);
   const tailStrikeNow = angry && angerBeat > 0.72, tailImpact = tailStrikeNow && !S.tailStrike;
   if (tailImpact) { S.thump = Math.max(S.thump, 0.42); S.jolt = t; }
@@ -1050,22 +1306,24 @@ function frame() {
   // head
   const happy = t < S.happyUntil, calm = !typing && !asleep && !happy && !mousing;
   const pointerStale = Boolean(S.pointer) && (t - S.lastPointerMove >= POINTER_STARE_TIMEOUT_MS);
-  if (S.wantStretch) { S.wantStretch = false; if (calm && !focusMode && !reduceMotion) { S.act = 'play'; S.actUntil = t + 7500; S.nextAct = t + rnd(9000, 13000); kickYarn(false); } }
-  // After ~10 seconds of staring at a stationary cursor, transition into yarn-ball standby play.
+  const startIdleAct = () => {
+    const idlePool = ['wash', 'play', 'wash', 'butterfly'];
+    const pick = idlePool[Math.floor(Math.random() * idlePool.length)];
+    S.act = pick;
+    S.actUntil = t + (pick === 'wash' ? 4800 : 7500);
+    S.nextAct = t + rnd(9000, 13500);
+    if (pick === 'play') kickYarn(false);
+  };
+  if (S.wantStretch) { S.wantStretch = false; if (calm && !focusMode && !reduceMotion) startIdleAct(); }
+  // After ~10 seconds of staring at a stationary cursor, transition into species-matched idle animation.
   if (calm && !focusMode && !reduceMotion && pointerStale && !S.autoIdleTriggered && !S.act) {
     S.autoIdleTriggered = true;
-    S.act = 'play';
-    S.actUntil = t + 7500;
-    S.nextAct = t + rnd(9500, 14000);
-    kickYarn(false);
+    startIdleAct();
   }
   if (calm && !focusMode && !reduceMotion && t > S.nextAct) {
-    S.act = 'play';
-    S.actUntil = t + 7500;
-    S.nextAct = t + rnd(9500, 14500);
-    kickYarn(false);
+    startIdleAct();
   }
-  if (S.act && (t > S.actUntil || ((S.act === 'play' || S.act === 'butterfly') ? (typing || asleep || happy) : !calm))) S.act = null;
+  if (S.act && (t > S.actUntil || (playingNow ? (typing || asleep || happy) : !calm))) S.act = null;
   const looking = typing && t - S.lastKey < 1000;
   const mouseMoving = t - S.lastPointerMove < POINTER_IDLE_MS;
   const typingDirection = typing && !mouseMoving && S.hasKeyAim;
@@ -1096,15 +1354,18 @@ function frame() {
     }
   }
   const gazeTarget = watchYarn || watchButterfly || follow || typingDirection;
-  const turnT = asleep ? 0.42 : (watchYarn || watchButterfly) ? clamp(pdx * 0.9, -0.48, 0.48) : gazeTarget ? clamp(pdx * 0.5, -0.4, 0.4) : mousing ? -0.36 * DESK_DIR : looking ? (S.lastSide === 'L' ? -0.3 : 0.3) : 0;
-  const nodT = asleep ? 0.44 : yawning ? -0.3 * yawn : crouch ? 0.16 : happy ? -0.12 : licking ? 0.34 + Math.sin(t / 140) * 0.09 : stretching ? -0.18 : watchButterfly ? clamp(-pdy * 0.55 - 0.18, -0.42, 0.12) : watchYarn ? clamp(-pdy * 0.38 + 0.1, 0.08, 0.38) : gazeTarget ? clamp(pdy * 0.5, -0.28, 0.4) : looking ? 0.3 : mousing ? 0.22 : 0;
-  const tiltT = asleep ? 0.52 : licking ? -0.12 : watchButterfly ? clamp(pdx * 0.35, -0.24, 0.24) : happy ? (S.petSide || -1) * 0.1 + Math.sin(t / 330) * 0.06 : 0;
+  const washPhase = licking ? ((t % 2400) / 2400) : 0;
+  const washRub = licking && washPhase >= 0.42;
+  const turnT = asleep ? 0.42 : licking ? (washRub ? -0.18 + Math.sin(t / 190) * 0.08 : 0.08) : (watchYarn || watchButterfly) ? clamp(pdx * 0.9, -0.48, 0.48) : gazeTarget ? clamp(pdx * 0.5, -0.4, 0.4) : mousing ? -0.36 * DESK_DIR : looking ? (S.lastSide === 'L' ? -0.3 : 0.3) : 0;
+  const baseNod = asleep ? 0.44 : yawning ? -0.3 * yawn : crouch ? 0.16 : happy ? -0.12 : licking ? (washRub ? 0.22 + Math.sin(t / 150) * 0.11 : 0.34 + Math.sin(t / 115) * 0.08) : stretching ? -0.18 : watchButterfly ? clamp(-pdy * 0.55 - 0.18, -0.42, 0.12) : watchYarn ? clamp(-pdy * 0.38 + 0.1, 0.08, 0.38) : gazeTarget ? clamp(pdy * 0.5, -0.28, 0.4) : looking ? 0.3 : mousing ? 0.22 : 0;
+  const nodT = (!asleep && S.anger > 0.02) ? mix(baseNod, Math.max(0.24, baseNod), smooth(0.05, 0.45, S.anger)) : baseNod;
+  const tiltT = asleep ? 0.52 : licking ? (washRub ? -0.20 + Math.cos(t / 170) * 0.09 : -0.10) : watchButterfly ? clamp(pdx * 0.35, -0.24, 0.24) : happy ? (S.petSide || -1) * 0.1 + Math.sin(t / 330) * 0.06 : 0;
   S.turn += (turnT - S.turn) * ease(7); S.nod += (nodT - S.nod) * ease(6); S.tilt += (tiltT - S.tilt) * ease(5);
   { const w = (t - (S.wokeAt || -1e9)) / 750; S.shake = w > 0.15 && w < 1 ? Math.sin(w * 26) * 0.16 * (1 - w) : 0; }
   head.rotation.set(S.nod + S.thump * (0.05 + 0.05 * fast), S.turn + S.shake, S.tilt);
   head.position.x = -0.36 * loaf;
   head.position.z = 0.1 - fwd * 0.5 + 0.58 * loaf;
-  head.position.y = (2.3 * P.bodyH + P.neck) * (1 - 0.6 * loaf - 0.16 * S.low) + breath * (0.018 + 0.016 * loaf) + bounce * 0.09 - 0.18 * loaf - S.thump * 0.02;
+  head.position.y = (2.3 * P.bodyH + P.neck) * (1 - 0.6 * loaf - 0.16 * S.low) + breath * (0.018 + 0.016 * loaf) + bounce * 0.09 - 0.18 * loaf - S.thump * 0.02 - 0.04 * S.anger;
   { const py = head.position.y; headFix.matrix.set(1, -sx, 0, sx * py,  0, 1, 0, 0,  0, -fwd, 1, fwd * py,  0, 0, 0, 1); }
   if (angerMark && angry) {
     angerAnchor.set(-0.68, 0.72, 0.14);
@@ -1114,7 +1375,16 @@ function frame() {
     angerMark.style.top = `${(1 - angerAnchor.y) * 0.5 * h}px`;
   }
   const flick = S.act === 'ear' ? Math.sin((S.actUntil - t) / 420 * Math.PI * 2) * 0.28 : 0;
-  { const relax = (S.lidDir < 0 ? 0.2 * smooth(0.5, 1, S.lid) : 0) + 0.18 * loaf; ears[0].rotation.z = 0.24 + relax + flick; ears[1].rotation.z = -0.24 - relax - flick * 0.5; ears[0].rotation.x = ears[1].rotation.x = -0.32 * fast; }
+  { const relax = (S.lidDir < 0 ? 0.2 * smooth(0.5, 1, S.lid) : 0) + 0.18 * loaf + 0.24 * drag; ears[0].rotation.z = 0.24 + relax + flick; ears[1].rotation.z = -0.24 - relax - flick * 0.5; ears[0].rotation.x = ears[1].rotation.x = -0.32 * fast + 0.15 * drag; }
+  catTongue.visible = licking && !washRub && !asleep;
+  if (catTongue.visible) {
+    const lickBeat = 0.5 + 0.5 * Math.sin(t / 105);
+    catTongue.position.set(0.03, -0.17 - lickBeat * 0.045, 0.77 + lickBeat * 0.055);
+    catTongue.scale.set(0.92, 0.9 + lickBeat * 0.28, 0.55);
+  }
+  if (accessoryMap.halo && accessoryMap.halo.visible) {
+    accessoryMap.halo.position.y = 0.96 + Math.sin(t / 480) * 0.035;
+  }
 
   // eyes
   if (t > S.blinkAt) { S.blinkUntil = t + 130; S.blinkAt = t + rnd(2600, 5600); }
@@ -1125,23 +1395,38 @@ function frame() {
   stageEl.dataset.gazeX = S.gazeX.toFixed(3);
   stageEl.dataset.gazeY = S.gazeY.toFixed(3);
   const ex = 0.37 * P.eyeSpread, ey = P.eyeY, er = 0.205 * P.eyeSize, iry = er, c = S.lid, dir = S.lidDir || 1;
-  for (const e of eyes) {                                           // the eye keeps its shape; a fur-coloured lid slides over it and leaves a soft crescent
-    // Closing: the eye squashes flat, then becomes one clean curved line (down-curve for a blink or sleep, arch when happy).
-    const pet = dir < 0, shut = c > 0.7, h = iry * mix(1, pet ? 0.7 : 0.3, smooth(0, 0.8, c)) * (1 - 0.36 * S.anger), eyeTurn = e.s * (P.eyeTilt + 0.3 * S.anger), eyc = ey + (dir * h * (pet ? 0.84 : 0.7) - iry) * smooth(0.35, 0.7, c);   // anger narrows and tilts the eye ellipses inward without extra eyebrows
+  const angerClip = smooth(0.06, 0.72, S.anger);
+  for (const e of eyes) {
+    // Angry eyes clip the upper side of the oval eye geometry directly (no extra lid overlay on the face).
+    const pet = dir < 0, shut = c > 0.7;
+    const h = iry * mix(1, pet ? 0.7 : 0.3, smooth(0, 0.8, c));
+    const eyeTurn = e.s * (P.eyeTilt + (!shut ? 0.38 * angerClip : 0));
+    const eyc = ey + (dir * h * (pet ? 0.84 : 0.7) - iry) * smooth(0.35, 0.7, c);
+    const clipTop = !shut && angerClip > 0.02 ? mix(h * 1.05, h * 0.14, angerClip) : Infinity;
+    const clipCurve = !shut && angerClip > 0.02 ? h * 0.08 * angerClip : 0;
     e.iris.material = shut ? M.shut : (e.s < 0 ? M.eye : M.eyeAlt);
-    fillPatch(e.iris, e.s * ex, eyc, er * (shut ? (pet ? 0.8 : 0.92) : 0.98 * (1 + 0.06 * S.anger)), h * 0.98, eyeTurn, 0.008);
-    const pupilRadius = er * 0.56 * (1 - 0.18 * S.anger);
+    fillPatch(e.iris, e.s * ex, eyc, er * (shut ? (pet ? 0.8 : 0.92) : 0.98), h * 0.98, eyeTurn, 0.008, clipTop, clipCurve);
+    const pupilRadius = er * 0.56 * (1 - 0.06 * angerClip);
     const pupilTravel = Math.max(0, h - pupilRadius - er * 0.04), gazeLength = Math.hypot(S.gazeX, S.gazeY);
     const gazeScale = gazeLength > 1 ? 1 / gazeLength : 1;
-    const dx = S.gazeX * pupilTravel * gazeScale, dy = S.gazeY * pupilTravel * gazeScale;
-    fillPatch(e.pupil, e.s * ex + dx, eyc + dy, pupilRadius, pupilRadius, eyeTurn * 0.5, 0.013);
+    const dx = S.gazeX * pupilTravel * gazeScale * (1 - 0.55 * angerClip);
+    const dy = S.gazeY * pupilTravel * gazeScale * (1 - 0.55 * angerClip);
+    const coE = Math.cos(eyeTurn), siE = Math.sin(eyeTurn);
+    const pOffU = -e.s * er * 0.04 * angerClip;
+    const pOffV = h * 0.08 * angerClip;
+    const px = e.s * ex + dx + (pOffU * coE - pOffV * siE);
+    const py = eyc + dy + (pOffU * siE + pOffV * coE);
+    const pClipTop = clipTop < Infinity ? clipTop - pOffV : Infinity;
+    fillPatch(e.pupil, px, py, pupilRadius, pupilRadius, eyeTurn, 0.013, pClipTop, clipCurve * 0.85);
     const pupilVisible = c < 0.45;
     e.pupil.visible = pupilVisible;
-    e.glintMain.visible = pupilVisible;
+    e.glintMain.visible = pupilVisible && angerClip < 0.35;
     e.glintSub.visible = pupilVisible;
-    if (pupilVisible) {
-      fillPatch(e.glintMain, e.s * ex + dx - pupilRadius * 0.31, eyc + dy + pupilRadius * 0.33, pupilRadius * 0.25, pupilRadius * 0.23, 0.2, 0.016);
-      fillPatch(e.glintSub, e.s * ex + dx + pupilRadius * 0.3, eyc + dy - pupilRadius * 0.3, pupilRadius * 0.12, pupilRadius * 0.12, 0, 0.016);
+    if (e.glintMain.visible) {
+      fillPatch(e.glintMain, px - pupilRadius * 0.31, py + pupilRadius * 0.33, pupilRadius * 0.25, pupilRadius * 0.23, 0.2, 0.016);
+    }
+    if (e.glintSub.visible) {
+      fillPatch(e.glintSub, px + pupilRadius * 0.3, py - pupilRadius * 0.3, pupilRadius * 0.12, pupilRadius * 0.12, 0, 0.016);
     }
     e.lid.visible = shut;
     if (shut) fillPatch(e.lid, e.s * ex, eyc + dir * h * (pet ? 0.32 : 0.6), er * (pet ? 0.8 : 1.08), h, eyeTurn, 0.018);
@@ -1150,7 +1435,12 @@ function frame() {
   // paws
   for (const side of ['L', 'R']) {
     const p = paws[side], since = t - p.tapAt;
-    if (since < STRIKE) {
+    if (drag > 0.08) {
+      p.mode = 'drag';
+      const s = side === 'L' ? -1 : 1;
+      tmpGoal.set(s * 0.24 + Math.sin(t / 170 + s) * 0.055 * drag, 0.12 + Math.cos(t / 155 + s * 1.4) * 0.06 * drag, 0.44);
+      p.pos.lerp(tmpGoal, ease(16));
+    } else if (since < STRIKE) {
       const progress = clamp(since / STRIKE, 0, 1), travel = progress * progress * (3 - 2 * progress);
       p.pos.lerpVectors(p.from, p.to, travel);
       p.pos.y += Math.sin(progress * Math.PI) * 0.14;
@@ -1177,7 +1467,30 @@ function frame() {
         tmpGoal.z = clamp(tmpGoal.z - 0.18, 0.82, 1.25);
         cat.worldToLocal(tmpGoal); p.pos.lerp(tmpGoal, ease(15));
       }
-      else if (licking && side === 'R' && since > STRIKE + 110) { p.mode = 'lick'; head.getWorldPosition(tmpGoal); tmpGoal.x += 0.06; tmpGoal.y += -0.5 * P.headSize - Math.sin(t / 140) * 0.06; tmpGoal.z += 0.66 * P.headSize; p.pos.lerp(tmpGoal, ease(12)); }
+      else if (licking && side === 'R' && since > STRIKE + 110) {
+        p.mode = 'lick';
+        scene.updateMatrixWorld(true);
+        if (washRub) {
+          // Sweep paw cleanly along the outer cheek surface (never clipping into the head or under the eye).
+          const ang = ((washPhase - 0.42) / 0.58) * Math.PI * 4;
+          tmpGoal.set(
+            0.54 + Math.cos(ang) * 0.16,
+            -0.06 + Math.sin(ang) * 0.22,
+            0.88 + Math.max(0, -Math.cos(ang)) * 0.16
+          );
+        } else {
+          // Hold raised paw cleanly in front of the mouth/pink tongue with zero clipping.
+          const lickBeat = 0.5 + 0.5 * Math.sin(t / 105);
+          tmpGoal.set(
+            0.16,
+            -0.38 - lickBeat * 0.04,
+            1.02 - lickBeat * 0.05
+          );
+        }
+        head.localToWorld(tmpGoal);
+        cat.worldToLocal(tmpGoal);
+        p.pos.lerp(tmpGoal, ease(14));
+      }
       else if (swat && side === (S.pointer && S.pointer.x > 0 ? 'R' : 'L') && since > STRIKE + 110) { p.mode = 'swat'; tmpGoal.set((side === 'L' ? -1 : 1) * 0.62, 1.25, 1.05); p.pos.lerp(tmpGoal, ease(26)); }
       else if ((stretching || loaf > 0.05) && since > STRIKE + 110) {
         p.mode = 'rest'; tmpGoal.copy(REST[side]);
@@ -1221,6 +1534,11 @@ const HOLD_MAX = 1400, downAt = new Map();
 const letGo = setInterval(() => { const t = performance.now();
   for (const [code, at] of downAt) if (t - at > HOLD_MAX) { keyUp(code); downAt.delete(code); }
   if (S.mouseDown && buttonsAt && t - buttonsAt > HOLD_MAX) S.mouseDown = false; }, 200);
+let showMousePref = true;
+const syncDeskVisibility = () => {
+  activeLayout.group.visible = showKeyboard && !S.dragging;
+  mouseGroup.visible = showMousePref && !S.dragging;
+};
 return {
   coats: COATS.map(c => c.id),
   headSideAt(clientX, clientY) {
@@ -1275,7 +1593,11 @@ return {
     for (const code of keySet) if (!shownKeys.has(code)) { keyDown(code); downAt.set(code, performance.now()); }
     shownKeys = new Set(keySet);
     const t = performance.now(), n = buttonSet.size;
-    if (n !== buttonsDown) { wake(t); S.lastMouse = t; S.mouseDown = n > 0; buttonsDown = n; buttonsAt = n > 0 ? t : 0; }
+    if (n !== buttonsDown) {
+      wake(t); S.lastMouse = t; S.mouseDown = n > 0; buttonsDown = n; buttonsAt = n > 0 ? t : 0;
+      if (buttonSet.has('right')) S.mouseSide = 'right';
+      else if (buttonSet.has('left')) S.mouseSide = 'left';
+    }
   },
   tap(side) {
     if (!showKeyboard) return;
@@ -1286,29 +1608,47 @@ return {
     if ('showKeyboard' in o) {
       const wasShown = showKeyboard;
       showKeyboard = !!o.showKeyboard;
-      activeLayout.group.visible = showKeyboard;
+      syncDeskVisibility();
       if (wasShown && !showKeyboard) {
         this.clear();
         S.lastKey = S.lastMouse = -1e9;
         S.rate = 0;
       }
     }
-    if ('showMouse' in o) mouseGroup.visible = !!o.showMouse;
+    if ('showMouse' in o) { showMousePref = !!o.showMouse; syncDeskVisibility(); }
     if ('followKeys' in o) { followKeys = !!o.followKeys; if (!followKeys) { [...S.down.keys()].forEach(keyUp); shownKeys = new Set(); downAt.clear(); } }
     if ('focusMode' in o) this.setFocusMode(!!o.focusMode);
     if ('leftMouse' in o) setHanded(!!o.leftMouse);
     if ('coat' in o) setCoat(coatIndex(o.coat));
+    if ('eyeColor' in o) { currentEyeColor = o.eyeColor || 'auto'; applyEyeColor(); }
+    if ('accessory' in o) setAccessory(o.accessory || 'none');
+    if ('keyboardStyle' in o) applyKeyboardStyle(o.keyboardStyle || 'cream');
     if ('sleepMinutes' in o && !VIEW.get('sleep')) SLEEP_AFTER = (+o.sleepMinutes > 0 ? clamp(+o.sleepMinutes, 1, 120) : 1e12) * 60000;
     if ('showKeyLabels' in o) {
       showKeyLabels = !!o.showKeyLabels;
       if (!showKeyLabels) { S.chips.forEach(c => c.el.remove()); S.chips = []; }
     }
   },
+  setDragging(enabled) {
+    const next = Boolean(enabled);
+    if (S.dragging === next) return;
+    S.dragging = next;
+    if (next) {
+      this.clear();
+      wake(performance.now());
+      S.act = null;
+      yarn.visible = false;
+      butterfly.visible = false;
+    }
+    syncDeskVisibility();
+    stageEl.dataset.dragging = next ? 'true' : 'false';
+  },
   setFocusMode(enabled) {
     const next = Boolean(enabled);
     if (next === focusMode) return;
     focusMode = next;
     headphones.visible = focusMode;
+    accessoriesGroup.visible = !focusMode && currentAccessory !== 'none';
     if (focusMode) {
       setRandomHeadphones();
       const t = performance.now();
@@ -1366,6 +1706,18 @@ return {
     S.nextAct = t + 11500;
     yarn.visible = false;
     butterfly.visible = true;
+  },
+  playWash() {
+    const t = performance.now();
+    wake(t);
+    S.lastKey = S.lastMouse = -1e9;
+    S.rate = 0;
+    S.happyUntil = 0;
+    S.act = 'wash';
+    S.actUntil = t + 5000;
+    S.nextAct = t + 10000;
+    yarn.visible = false;
+    butterfly.visible = false;
   },
   anger() {
     const t = performance.now(); wake(t);
