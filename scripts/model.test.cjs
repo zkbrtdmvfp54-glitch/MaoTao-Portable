@@ -73,12 +73,19 @@ test('linked keystrokes animate through petting and stay blocked in standby', as
   assert.deepEqual(pressed, ['KeyD']);
   assert.ok(state.leftPaw.timer > 0 || state.rightPaw.timer > 0);
   assert.ok(effects.keyRipples.length > 0);
+  assert.equal(effects.floatingLetters.length, 1);
+  assert.match(effects.floatingLetters[0].label, /^[A-Z]$/);
+  for (let i = 0; i < 6; i++) state.key(keyboard.resolveKey(i % 2 ? 'KeyK' : 'KeyD'), null, true);
+  assert.equal(effects.floatingLetters.length, 7);
+  for (let i = 0; i < 40; i++) effects.update(0.05, performance.now());
+  assert.equal(effects.floatingLetters.length, 0, 'floating letters must auto-clean after duration');
   state.configure({ keyboard: true, view: 'cat', sleepMinutes: 5, standbyMode: true });
   const before = [...pressed];
   state.key(keyboard.resolveKey('KeyD'), null, true);
   assert.deepEqual(pressed, before);
   assert.equal(state.leftPaw.timer, 0);
   assert.equal(state.rightPaw.timer, 0);
+  assert.equal(effects.floatingLetters.length, 0);
 });
 
 test('hiding the keyboard blocks linked typing too', async () => {
