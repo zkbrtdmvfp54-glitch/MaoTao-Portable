@@ -55,7 +55,7 @@ export class InteractionController {
   }
   beginDrag() {
     this.pointer.dragging = true;
-    this.state.dragging = true;
+    this.state.setDragging(true);
     this.state.clearPaws();
     this.canvas.style.cursor = 'grabbing';
     this.api.dragStart(this.pointer.point);
@@ -90,7 +90,7 @@ export class InteractionController {
     if (dragging) this.api.dragEnd();
     else if (clicked && zone === 'body') this.state.poked('belly');
     else if (clicked && zone === 'tail') this.state.poked('tail');
-    this.state.dragging = false;
+    this.state.setDragging(false);
     this.state.lastActivity = performance.now();
     this.canvas.style.cursor = 'default';
   }
