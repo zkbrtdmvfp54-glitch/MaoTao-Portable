@@ -11,283 +11,295 @@
     --card: #fffdf8;
     --ink: #151412;
     --ink-soft: #464039;
-    --ink-muted: #6b6258;
-    --line: rgba(21, 20, 18, 0.11);
-    --accent: #f39c2b;
+    --ink-muted: #756b60;
+    --line: rgba(21, 20, 18, 0.10);
     --green: #4c7d60;
   }
   * { box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
     margin: 0;
     background: var(--bg);
     color: var(--ink);
     font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
   }
-  .wrap {
-    max-width: 820px;
-    margin: 0 auto;
-    padding: 56px 20px 72px;
-  }
-  .hero {
+  .page {
+    width: 100%;
+    max-width: 560px;
     text-align: center;
-    margin-bottom: 40px;
   }
-  .badge {
+  .eyebrow {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    border-radius: 999px;
-    background: var(--surface);
+    gap: 7px;
     font-size: 13px;
     font-weight: 700;
-    color: var(--ink-soft);
-    margin-bottom: 18px;
+    color: var(--ink-muted);
+    margin-bottom: 14px;
   }
-  .badge .dot {
-    width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+  .eyebrow i {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block;
   }
   h1 {
     margin: 0 0 12px;
-    font-size: clamp(32px, 5vw, 48px);
+    font-size: clamp(34px, 6vw, 48px);
     font-weight: 900;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
   }
-  .subtitle {
+  .lead {
     margin: 0 auto 28px;
-    max-width: 540px;
-    font-size: 16px;
+    max-width: 420px;
+    font-size: 15px;
     line-height: 1.65;
     color: var(--ink-soft);
   }
-  .download-card {
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 22px;
-    padding: 26px 24px;
-    box-shadow: 0 18px 44px rgba(21, 20, 18, 0.08);
-    text-align: center;
-  }
-  .primary-btn {
+  .cta {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    min-width: 260px;
+    min-width: 256px;
     height: 52px;
-    padding: 0 28px;
+    padding: 0 30px;
     border-radius: 999px;
     background: var(--ink);
     color: #fff;
     text-decoration: none;
     font-size: 16px;
     font-weight: 800;
-    transition: transform 120ms, opacity 120ms;
+    box-shadow: 0 10px 28px rgba(21, 20, 18, 0.14);
+    transition: transform 140ms, opacity 140ms;
   }
-  .primary-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-  .detected-note {
-    margin-top: 12px;
-    font-size: 13px;
-    color: var(--ink-muted);
-  }
-  .platform-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 12px;
-    margin-top: 24px;
-    text-align: left;
-  }
-  .plat-box {
+  .cta:hover { opacity: 0.9; transform: translateY(-1px); }
+  .route-switch {
+    margin: 14px auto 0;
+    display: inline-flex;
+    padding: 3px;
+    gap: 3px;
+    border-radius: 999px;
     background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 14px 16px;
   }
-  .plat-title {
-    font-size: 14px;
-    font-weight: 800;
-    margin-bottom: 8px;
-  }
-  .plat-links {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .plat-links a {
+  .route-btn {
+    border: none;
+    background: transparent;
     color: var(--ink-soft);
-    text-decoration: none;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 6px 10px;
-    border-radius: 8px;
-    background: var(--card);
-    border: 1px solid var(--line);
-    transition: background 120ms;
-  }
-  .plat-links a:hover { background: #fff; color: var(--ink); }
-  .info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 14px;
-    margin-top: 24px;
-  }
-  .info-card {
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    padding: 18px 20px;
-  }
-  .info-card h2 {
-    margin: 0 0 8px;
-    font-size: 15px;
-    font-weight: 800;
-  }
-  .info-card p, .info-card code {
-    margin: 0;
-    font-size: 13px;
-    line-height: 1.65;
-    color: var(--ink-soft);
-  }
-  .cmd {
-    display: block;
-    margin-top: 8px;
-    padding: 8px 10px;
-    border-radius: 8px;
-    background: var(--surface);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 12px;
-    word-break: break-all;
+    font-weight: 700;
+    padding: 5px 13px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 120ms, color 120ms;
   }
-  footer {
-    margin-top: 36px;
-    text-align: center;
+  .route-btn.active {
+    background: var(--ink);
+    color: #fff;
+  }
+  .sub-meta {
+    margin-top: 10px;
     font-size: 12.5px;
     color: var(--ink-muted);
   }
-  footer a { color: var(--ink-soft); }
+  .alt-links {
+    margin-top: 26px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 16px;
+    font-size: 13px;
+  }
+  .alt-links a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 120ms;
+  }
+  .alt-links a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+  .alt-links .sep { color: rgba(21, 20, 18, 0.22); }
+  .tips {
+    margin: 22px auto 0;
+    max-width: 460px;
+    text-align: left;
+  }
+  .tips summary {
+    cursor: pointer;
+    list-style: none;
+    text-align: center;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+  .tips summary::-webkit-details-marker { display: none; }
+  .tips-body {
+    margin-top: 12px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--ink-soft);
+  }
+  .tips-body code {
+    display: block;
+    margin-top: 6px;
+    padding: 6px 9px;
+    border-radius: 8px;
+    background: var(--surface);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    word-break: break-all;
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="hero">
-    <div class="badge"><span class="dot"></span><span id="ver-badge">正在获取最新版本…</span> · Windows / macOS / 麒麟三端支持</div>
-    <h1>屏幕一角，安静陪你。</h1>
-    <p class="subtitle">极简 3D 桌面陪伴小猫：实时同步键鼠动作、8 款猫咪花色、10 款精修 3D 配饰与番茄专注钟。本地内存运行，绝不记录或上传任何输入内容。</p>
-  </header>
+<main class="page">
+  <div class="eyebrow"><i></i><span id="ver">毛桃桌面宠物 · 开源免费</span></div>
+  <h1>屏幕一角，安静陪你。</h1>
+  <p class="lead">极简 3D 桌面陪伴小猫，实时键鼠联动与番茄专注。纯本地内存运行，绝不记录或上传任何输入内容。</p>
 
-  <section class="download-card">
-    <a id="primary-dl" class="primary-btn" href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">一键下载桌面端</a>
-    <div id="detected-note" class="detected-note">正在自动识别你的操作系统…</div>
+  <a id="primary-dl" class="cta" href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">立即下载</a>
 
-    <div class="platform-grid">
-      <div class="plat-box">
-        <div class="plat-title">Windows（Win 10 / 11）</div>
-        <div class="plat-links" id="links-win">
-          <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">绿色便携版 (.exe)</a>
-          <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">标准安装版 (.exe)</a>
-        </div>
-      </div>
-      <div class="plat-box">
-        <div class="plat-title">macOS（Apple Silicon / Intel）</div>
-        <div class="plat-links" id="links-mac">
-          <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">M1–M4 芯片 (.dmg)</a>
-          <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">Intel 芯片 (.dmg)</a>
-        </div>
-      </div>
-      <div class="plat-box">
-        <div class="plat-title">麒麟 / Linux（x64 / ARM64）</div>
-        <div class="plat-links" id="links-kylin">
-          <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">麒麟 / Ubuntu x64 (.deb)</a>
-          <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">飞腾 / 鲲鹏 ARM64 (.deb)</a>
-          <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">通用便携包 (.AppImage)</a>
-        </div>
+  <div>
+    <div class="route-switch" role="group" aria-label="下载线路">
+      <button id="btn-cn" class="route-btn" type="button">国内高速线路</button>
+      <button id="btn-global" class="route-btn" type="button">GitHub 国际线路</button>
+    </div>
+  </div>
+  <div id="sub-meta" class="sub-meta">自动适配 Windows · macOS · 麒麟</div>
+
+  <nav class="alt-links" id="alt-links" aria-label="其他系统版本">
+    <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">Windows 便携版</a>
+    <span class="sep">·</span>
+    <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">Windows 安装版</a>
+    <span class="sep">·</span>
+    <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">macOS (M 芯片)</a>
+    <span class="sep">·</span>
+    <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">macOS (Intel)</a>
+    <span class="sep">·</span>
+    <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">麒麟 x64 / ARM64</a>
+  </nav>
+
+  <details class="tips">
+    <summary>隐私说明与 macOS 首次打开指引 ▾</summary>
+    <div class="tips-body">
+      <div><strong>隐私保护：</strong>键鼠仅在本地内存中驱动 3D 动画，随时按 <strong>Alt+Shift+P</strong> 一键切换隐私模式。</div>
+      <div style="margin-top:8px;"><strong>macOS 提示“无法验证/已损坏”：</strong>拖入「应用程序」后在终端执行一次：
+        <code>xattr -cr "/Applications/MAOTAO Desktop Pet.app"</code>
       </div>
     </div>
-  </section>
-
-  <section class="info-grid">
-    <div class="info-card">
-      <h2>隐私安全承诺</h2>
-      <p>跨应用键鼠联动仅在本地内存中驱动 3D 动画，不落盘、不联网、不记录任何输入文字。随时按 <strong>Alt + Shift + P</strong> 一键切换隐私模式，按 <strong>Alt + Shift + L</strong> 切换点击穿透锁定。</p>
-    </div>
-    <div class="info-card">
-      <h2>macOS 首次打开提示说明</h2>
-      <p>若系统提示“无法验证开发者”或“已损坏”，请将应用拖入「应用程序」后在终端执行一次解除隔离命令，并在「系统设置 → 隐私与安全性 → 输入监控」中勾选允许：</p>
-      <code class="cmd">xattr -cr "/Applications/MAOTAO Desktop Pet.app"</code>
-    </div>
-  </section>
-
-  <footer>
-    开源仓库：<a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable" target="_blank" rel="noopener">github.com/zkbrtdmvfp54-glitch/MaoTao-Portable</a>
-  </footer>
-</div>
+  </details>
+</main>
 
 <script>
 const REPO = 'zkbrtdmvfp54-glitch/MaoTao-Portable';
 const FALLBACK = `https://github.com/${REPO}/releases/latest`;
+const CN_MIRROR_PREFIX = 'https://ghfast.top/';
 
-function detectPlatform() {
+// 如已上传至 123云盘 / Gitee Releases，可在此填入直链，国内线路将优先使用这里的链接：
+const CN_DIRECT_LINKS = {
+  winPortable: '',
+  winSetup: '',
+  macArm: '',
+  macX64: '',
+  kylinX64: '',
+  kylinArm: ''
+};
+
+function detectOS() {
   const ua = navigator.userAgent || '';
   const plat = (navigator.userAgentData?.platform || navigator.platform || '').toLowerCase();
-  if (/win/i.test(plat) || /windows/i.test(ua)) return { os: 'win', label: 'Windows x64 绿色便携版' };
-  if (/mac/i.test(plat) || /mac os x/i.test(ua)) {
-    return { os: 'mac-arm', label: 'macOS (Apple Silicon M 系列) .dmg' };
-  }
+  if (/win/i.test(plat) || /windows/i.test(ua)) return { id: 'winPortable', name: 'Windows 版' };
+  if (/mac/i.test(plat) || /mac os x/i.test(ua)) return { id: 'macArm', name: 'macOS 版 (M 芯片)' };
   if (/linux|kylin|uos/i.test(plat) || /linux|kylin|uos/i.test(ua)) {
-    const isArm = /aarch64|arm64/i.test(ua);
-    return { os: isArm ? 'kylin-arm' : 'kylin-x64', label: isArm ? '麒麟 / Linux ARM64 (.deb)' : '麒麟 / Linux x64 (.deb)' };
+    return /aarch64|arm64/i.test(ua)
+      ? { id: 'kylinArm', name: '麒麟 ARM64 版' }
+      : { id: 'kylinX64', name: '麒麟 / Linux 版' };
   }
-  return { os: 'win', label: '桌面端安装包' };
+  return { id: 'winPortable', name: '桌面端' };
 }
 
-(async function init() {
-  const det = detectPlatform();
-  const primaryBtn = document.getElementById('primary-dl');
-  const noteEl = document.getElementById('detected-note');
-  const verBadge = document.getElementById('ver-badge');
-  primaryBtn.textContent = `下载 ${det.label}`;
-  noteEl.textContent = `已自动识别当前系统：${det.label}`;
+function isLikelyChina() {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+  return /^Asia\/(Shanghai|Chongqing|Harbin|Urumqi)$/i.test(tz) || (navigator.language || '').toLowerCase() === 'zh-cn';
+}
 
+let route = isLikelyChina() ? 'cn' : 'global';
+let tag = '';
+let rawLinks = {
+  winPortable: FALLBACK, winSetup: FALLBACK,
+  macArm: FALLBACK, macX64: FALLBACK,
+  kylinX64: FALLBACK, kylinArm: FALLBACK
+};
+
+function resolveUrl(key) {
+  const direct = rawLinks[key] || FALLBACK;
+  if (route === 'cn') {
+    if (CN_DIRECT_LINKS[key]) return CN_DIRECT_LINKS[key];
+    if (direct.startsWith('https://github.com/') && direct.includes('/releases/download/')) {
+      return CN_MIRROR_PREFIX + direct;
+    }
+  }
+  return direct;
+}
+
+const det = detectOS();
+const cta = document.getElementById('primary-dl');
+const meta = document.getElementById('sub-meta');
+const ver = document.getElementById('ver');
+const btnCn = document.getElementById('btn-cn');
+const btnGlobal = document.getElementById('btn-global');
+
+function render() {
+  btnCn.classList.toggle('active', route === 'cn');
+  btnGlobal.classList.toggle('active', route === 'global');
+  cta.textContent = `下载 ${det.name}`;
+  cta.href = resolveUrl(det.id);
+  const routeLabel = route === 'cn' ? '国内高速线路' : 'GitHub 国际线路';
+  ver.textContent = tag ? `毛桃桌面宠物 ${tag} · 开源免费` : '毛桃桌面宠物 · 开源免费';
+  meta.textContent = `已自动识别为 ${det.name} · 当前：${routeLabel}`;
+  document.getElementById('alt-links').innerHTML = [
+    `<a href="${resolveUrl('winPortable')}">Windows 便携版</a>`,
+    `<a href="${resolveUrl('winSetup')}">Windows 安装版</a>`,
+    `<a href="${resolveUrl('macArm')}">macOS M 芯片</a>`,
+    `<a href="${resolveUrl('macX64')}">macOS Intel</a>`,
+    `<a href="${resolveUrl('kylinX64')}">麒麟 x64</a>`,
+    `<a href="${resolveUrl('kylinArm')}">麒麟 ARM64</a>`,
+    `<a href="${FALLBACK}" target="_blank" rel="noopener">全部版本 ↗</a>`
+  ].join('<span class="sep">·</span>');
+}
+
+btnCn.onclick = () => { route = 'cn'; render(); };
+btnGlobal.onclick = () => { route = 'global'; render(); };
+render();
+
+(async function loadRelease() {
   try {
     const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`);
-    if (!res.ok) throw new Error('no release');
+    if (!res.ok) throw 0;
     const rel = await res.json();
-    const tag = rel.tag_name || '最新版本';
-    verBadge.textContent = `最新版本 ${tag}`;
+    tag = rel.tag_name || '';
     const assets = rel.assets || [];
-    const pick = re => assets.find(a => re.test(a.name))?.browser_download_url;
-
-    const winPortable = pick(/Portable.*x64\.exe$/i) || FALLBACK;
-    const winSetup = pick(/Setup.*x64\.exe$/i) || FALLBACK;
-    const macArm = pick(/macOS.*arm64\.dmg$/i) || FALLBACK;
-    const macX64 = pick(/macOS.*x64\.dmg$/i) || FALLBACK;
-    const kylinX64 = pick(/Kylin.*x64\.deb$/i) || pick(/amd64\.deb$/i) || FALLBACK;
-    const kylinArm = pick(/Kylin.*arm64\.deb$/i) || FALLBACK;
-    const kylinApp = pick(/\.AppImage$/i) || FALLBACK;
-
-    document.getElementById('links-win').innerHTML = `
-      <a href="${winPortable}">绿色便携版 (${tag} .exe)</a>
-      <a href="${winSetup}">标准安装版 (${tag} .exe)</a>`;
-    document.getElementById('links-mac').innerHTML = `
-      <a href="${macArm}">Apple Silicon M1–M4 (.dmg)</a>
-      <a href="${macX64}">Intel 芯片 (.dmg)</a>`;
-    document.getElementById('links-kylin').innerHTML = `
-      <a href="${kylinX64}">麒麟 / Linux x64 (.deb)</a>
-      <a href="${kylinArm}">飞腾 / 鲲鹏 ARM64 (.deb)</a>
-      <a href="${kylinApp}">通用便携包 (.AppImage)</a>`;
-
-    const primaryMap = {
-      win: winPortable,
-      'mac-arm': macArm,
-      'kylin-x64': kylinX64,
-      'kylin-arm': kylinArm
+    const pick = re => assets.find(a => re.test(a.name))?.browser_download_url || FALLBACK;
+    rawLinks = {
+      winPortable: pick(/Portable.*x64\.exe$/i),
+      winSetup: pick(/Setup.*x64\.exe$/i),
+      macArm: pick(/macOS.*arm64\.dmg$/i),
+      macX64: pick(/macOS.*x64\.dmg$/i),
+      kylinX64: pick(/Kylin.*x64\.deb$/i),
+      kylinArm: pick(/Kylin.*arm64\.deb$/i)
     };
-    primaryBtn.href = primaryMap[det.os] || FALLBACK;
-    noteEl.textContent = `已自动识别当前系统：${det.label} · ${tag}`;
+    render();
   } catch {
-    verBadge.textContent = '最新版';
-    primaryBtn.href = FALLBACK;
+    render();
   }
 })();
 </script>
