@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('maotao', Object.freeze({
   closeMenu: () => ipcRenderer.send('menu:close'),
   onPreferences: callback => on('pet:preferences', callback),
   onCursor: callback => on('pet:cursor', callback),
+  onDragMove: callback => on('pet:drag-move', callback),
   onInput: callback => on('pet:input', callback),
   onAction: callback => on('pet:action', callback)
 }));
