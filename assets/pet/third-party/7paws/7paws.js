@@ -248,6 +248,7 @@ const deskShadow = (() => {
   mesh.rotation.x = -Math.PI * 0.5;
   mesh.position.set(0.02, 0.004, 1.18);
   mesh.renderOrder = 0;
+  mesh.visible = false;
   return mesh;
 })();
 scene.add(deskShadow);
@@ -420,8 +421,8 @@ const faceTriangle = (g, center, top, bottom, halfWidth, color) => {
     drawV(-0.8, 0.97, 1.2);
   }
 };
-function paintCoat(c) {
-  const b = bodyTex.g, h = headTex.g, pat = c.pattern || '';
+function paintCoat(c, bTarget = bodyTex, hTarget = headTex) {
+  const b = bTarget.g, h = hTarget.g, pat = c.pattern || '';
   b.fillStyle = c.fur; b.fillRect(0, 0, TEX, TEX);
   h.fillStyle = c.faceFur || c.fur; h.fillRect(0, 0, TEX, TEX);
   const bib = (g, center, color) => {
@@ -587,7 +588,7 @@ function paintCoat(c) {
   if (c.faceMark === 'triangle') faceTriangle(h, 0.25, 0.56, 0.24, 0.155, c.chest || c.patch);
   if (c.chest !== false) bib(b, 0.25, c.chest || c.patch);
   if (c.chin && pat !== 'tabby' && pat !== 'siamese' && c.faceMark !== 'triangle') blob(h, 0.25, 0.36, 0.15, 0.11, c.chin);
-  bodyTex.t.needsUpdate = headTex.t.needsUpdate = true;
+  bTarget.t.needsUpdate = hTarget.t.needsUpdate = true;
 }
 add(head, ball(1, M.head, HEAD_R[0], HEAD_R[1], HEAD_R[2]), 0, 0, 0);
 for (const k of ['eye', 'eyeAlt', 'pupil', 'nose', 'stripe', 'inner']) M[k].side = THREE.DoubleSide;
@@ -1467,6 +1468,660 @@ function runDemo(t) {
   keyDown(code, t); demoHold = code; demoNext = t + rnd(80, 130); if (demoI >= DEMO.length) { demoI = 0; demoRest = true; }
 }
 
+/* ---------- coat handover (shift-change) 3D animation (1:1 unified with main cat model) ---------- */
+// Dedicated quadruped torso coat painter:
+// u wraps around the torso cross-section: 0.25 = dorsal spine (+Y), 0.75 = belly (-Y), 0/0.5 = left/right flanks
+// v runs lengthwise from rump/tail-base (0) to chest/neck (1)
+function paintWalkerBody(c, target) {
+  const g = target.g, pat = c.pattern || '';
+  g.fillStyle = c.fur;
+  g.fillRect(0, 0, TEX, TEX);
+
+  if (pat === 'tabby') {
+    const stripe = c.stripe || '#727471';
+    const belly = c.chest || c.patch || '#fbf8ee';
+    // Soft dorsal spine shading from rump to neck
+    softCloud(g, 0.25, 0.50, 0.13, 0.46, stripe, 0, 0.55);
+    // Natural curved vertical tabby stripes wrapping from spine down both flanks
+    [0.18, 0.34, 0.50, 0.66, 0.80].forEach((vPos, idx) => {
+      const wV = idx === 2 ? 0.042 : 0.034;
+      blob(g, 0.25, vPos, 0.27, wV, stripe, 0, 0.78);
+      blob(g, 0.08, vPos - 0.02, 0.12, wV * 0.85, stripe, 0.22, 0.52);
+      blob(g, 0.42, vPos - 0.02, 0.12, wV * 0.85, stripe, -0.22, 0.52);
+    });
+    // Creamy belly (u=0.75) & front chest tip (v>0.86) — never on the rump!
+    softCloud(g, 0.75, 0.56, 0.22, 0.40, belly, 0, 0.92);
+    softCloud(g, 0.75, 0.90, 0.30, 0.16, belly, 0, 0.88);
+  } else if (pat === 'calico') {
+    const orange = c.patchA || '#e48b3b';
+    const ink = c.patchB || '#262426';
+    const white = c.patch || '#fffaf1';
+    g.fillStyle = white;
+    g.fillRect(0, 0, TEX, TEX);
+    // Realistic calico saddle: warm orange & ink-black patches across back, hips, and flanks (no blank white rump)
+    blob(g, 0.20, 0.24, 0.24, 0.24, ink, 0.16, 0.96);
+    blob(g, 0.36, 0.30, 0.18, 0.20, orange, -0.18, 0.95);
+    blob(g, 0.12, 0.64, 0.22, 0.24, orange, 0.12, 0.96);
+    blob(g, 0.38, 0.68, 0.20, 0.22, ink, -0.15, 0.95);
+    blob(g, 0.25, 0.46, 0.20, 0.18, orange, 0.05, 0.92);
+    // Keep belly & lower chest crisp white
+    softCloud(g, 0.75, 0.55, 0.24, 0.44, white, 0, 0.96);
+  } else if (pat === 'tuxedo') {
+    const ink = c.patchB || '#1b1a1c';
+    const white = c.fur || '#faf7f0';
+    g.fillStyle = white;
+    g.fillRect(0, 0, TEX, TEX);
+    // Full glossy black cape wrapping spine, shoulders, flanks, and rump
+    blob(g, 0.25, 0.48, 0.32, 0.54, ink, 0, 0.99);
+    blob(g, 0.25, 0.16, 0.30, 0.26, ink, 0, 0.99);
+    blob(g, 0.04, 0.46, 0.15, 0.38, ink, 0, 0.96);
+    blob(g, 0.46, 0.46, 0.15, 0.38, ink, 0, 0.96);
+    // Crisp white belly & front chest bib
+    softCloud(g, 0.75, 0.58, 0.22, 0.44, white, 0, 0.98);
+    softCloud(g, 0.75, 0.92, 0.28, 0.18, white, 0, 0.98);
+  } else if (pat === 'siamese') {
+    // Warm toasted cream back & rump shading (realistic seal-point body, no white rump)
+    const toast = '#c8aa8a';
+    const point = c.point || '#49332d';
+    softCloud(g, 0.25, 0.48, 0.28, 0.44, toast, 0, 0.52);
+    softCloud(g, 0.25, 0.14, 0.24, 0.20, point, 0, 0.28);
+    softCloud(g, 0.75, 0.55, 0.22, 0.38, c.chest || '#fff3df', 0, 0.62);
+  } else if (pat === 'ragdoll') {
+    const saddle = c.saddle || '#9c887b';
+    const point = c.point || '#5f4b41';
+    // Soft seal-brown saddle along back and hips, snowy white belly & chest
+    softCloud(g, 0.25, 0.46, 0.28, 0.42, saddle, 0, 0.74);
+    softCloud(g, 0.25, 0.18, 0.22, 0.22, point, 0, 0.42);
+    softCloud(g, 0.75, 0.55, 0.24, 0.44, '#ffffff', 0, 0.96);
+  }
+  target.t.needsUpdate = true;
+}
+
+function createWalkerCat(coatPreset, eyeColorPref = 'auto') {
+  const c = coatPreset || COATS[0];
+  const pat = c.pattern || '';
+  const isLiquidBlack = c.id === 'solidblack' && eyeColorPref === 'auto';
+  const geos = [], mats = [], texs = [];
+  const trackG = g => { geos.push(g); return g; };
+  const trackM = m => { mats.push(m); return m; };
+  const mFlat = color => trackM(new THREE.MeshBasicMaterial({ color }));
+  const mFace = (color, k = 1) => trackM(new THREE.MeshBasicMaterial({
+    color, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4 * k, polygonOffsetUnits: -4 * k
+  }));
+
+  // Head uses the exact same paintCoat() pipeline as the main seated cat;
+  // torso uses the quadruped-oriented paintWalkerBody() for accurate real-cat markings.
+  const wBodyTex = mkTex(), wHeadTex = mkTex();
+  texs.push(wBodyTex.t, wHeadTex.t);
+  paintCoat(c, wBodyTex, wHeadTex);
+  paintWalkerBody(c, wBodyTex);
+
+  const bodyMat = trackM(new THREE.MeshBasicMaterial({ map: wBodyTex.t, color: '#ffffff' }));
+  const headMat = trackM(new THREE.MeshBasicMaterial({ map: wHeadTex.t, color: '#ffffff' }));
+  const earLMat = trackM(new THREE.MeshBasicMaterial({ color: c.earL || c.ear || c.fur, side: THREE.DoubleSide }));
+  const earRMat = trackM(new THREE.MeshBasicMaterial({ color: c.earR || c.ear || c.fur, side: THREE.DoubleSide }));
+  const innerMat = trackM(new THREE.MeshBasicMaterial({ color: c.inner || c.fur, side: THREE.DoubleSide }));
+  const legColor = pat === 'siamese' ? (c.leg || c.point || '#49332d')
+    : pat === 'tuxedo' ? (c.patchB || '#1b1a1c')
+    : pat === 'calico' || pat === 'ragdoll' ? (c.patch || '#fffaf1')
+    : c.fur;
+  const legMat = mFlat(legColor);
+  const hindLegMat = pat === 'tuxedo' ? mFlat(c.fur) : legMat;
+  const pawMat = mFlat(pat === 'siamese' ? (c.leg || c.point || '#49332d') : (c.patch || c.fur));
+  const neckColor = pat === 'tuxedo' ? (c.patchB || '#1b1a1c')
+    : pat === 'calico' ? (c.patch || '#fffaf1')
+    : c.fur;
+  const neckMat = mFlat(neckColor);
+  const eyePreset = EYE_PRESETS[eyeColorPref];
+  const eyeLMat = mFace(eyePreset ? eyePreset[0] : (c.eye || '#b9d36b'), 1);
+  const eyeRMat = mFace(eyePreset ? eyePreset[1] : (c.eyeAlt || c.eye || '#b9d36b'), 1);
+  const pupilMat = mFace('#0b0b0b', 2);
+  const noseMat = mFace(c.nose || '#d98d87', 3);
+  const mouthMat = mFace('#e28696', 3);
+  const stripeMat = trackM(new THREE.MeshBasicMaterial({
+    color: c.faceStripe || c.stripe || c.fur,
+    side: THREE.DoubleSide, transparent: true, vertexColors: true, depthWrite: false,
+    polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4
+  }));
+
+  const sphereG = trackG(new THREE.SphereGeometry(1, 36, 26));
+
+  const put = (parent, geo, mat, x, y, z, sx = 1, sy = 1, sz = 1) => {
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, y, z);
+    mesh.scale.set(sx, sy, sz);
+    parent.add(mesh);
+    return mesh;
+  };
+  const makePatchOn = (parent, mat, order) => {
+    const g = trackG(new THREE.BufferGeometry()), idx = [];
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array((1 + PR * PS) * 3), 3));
+    for (let k = 0; k < PS; k++) idx.push(0, 1 + k, 1 + (k + 1) % PS);
+    for (let r = 1; r < PR; r++) for (let k = 0; k < PS; k++) {
+      const a = 1 + (r - 1) * PS + k, b = 1 + (r - 1) * PS + (k + 1) % PS, c0 = a + PS, d0 = b + PS;
+      idx.push(a, c0, b, b, c0, d0);
+    }
+    g.setIndex(idx);
+    const mesh = new THREE.Mesh(g, mat);
+    mesh.renderOrder = order; mesh.frustumCulled = false;
+    parent.add(mesh);
+    return mesh;
+  };
+
+  const root = new THREE.Group();
+  root.scale.setScalar(PET_SCALE);
+
+  const bodyPivot = new THREE.Group();
+  root.add(bodyPivot);
+
+  // Flowing, organic quadruped cat torso (rounded rump -> gentle waist -> lifted chest/neck seamlessly meeting head)
+  const torsoGeo = trackG(new THREE.ParametricGeometry((u, v, out) => {
+    const a = u * Math.PI * 2; // u=0.25 -> +Y dorsal spine, u=0.75 -> -Y belly
+    const z = mix(-0.88, 0.90, v);
+    const endCap = Math.sqrt(Math.max(0, 1 - Math.pow(v * 2 - 1, 2)));
+    const waist = 1 - 0.06 * Math.exp(-Math.pow((v - 0.45) / 0.24, 2));
+    const rumpBoost = 1 + 0.07 * Math.exp(-Math.pow((v - 0.22) / 0.20, 2));
+    const chestBoost = 1 + 0.08 * Math.exp(-Math.pow((v - 0.78) / 0.20, 2));
+    const rx = 0.64 * endCap * waist * rumpBoost * chestBoost;
+    const ry = 0.58 * endCap * (1 - 0.04 * Math.exp(-Math.pow((v - 0.46) / 0.25, 2))) * rumpBoost;
+    const archY = 0.88 + 0.07 * Math.sin(v * Math.PI) + 0.13 * Math.pow(v, 1.8);
+    out.set(Math.cos(a) * rx, archY + Math.sin(a) * ry, z);
+  }, 48, 36));
+  bodyPivot.add(new THREE.Mesh(torsoGeo, bodyMat));
+
+  // Four flexible Bezier-curve sausage legs (short, chubby, deeply anchored inside torso so zero seam ever shows!)
+  const legVertMat = trackM(new THREE.MeshBasicMaterial({ color: '#ffffff', vertexColors: true }));
+  const legRef = V(1, 0, 0);
+  const legRadius = t => mix(0.23, 0.175, smooth(0.10, 0.86, t)) * (1 + 0.08 * smooth(0.82, 1.0, t));
+  const paintWalkerLeg = (mesh, topHex, pawHex) => {
+    const colors = mesh.geometry.attributes.color;
+    const cTop = new THREE.Color(topHex), cPaw = new THREE.Color(pawHex), tmp = new THREE.Color();
+    for (let r = 0; r < RINGS; r++) {
+      const f = Math.min(1, r / SEG);
+      const sock = pat === 'siamese'
+        ? smooth(0.15, 0.62, f)
+        : smooth(0.70, 0.92, f);
+      tmp.copy(cTop).lerp(cPaw, sock);
+      for (let k = 0; k < SIDES; k++) {
+        colors.setXYZ(r * SIDES + k, tmp.r, tmp.g, tmp.b);
+      }
+    }
+    colors.needsUpdate = true;
+  };
+
+  const legSpecs = [
+    ['FL', -0.25, 0.86,  0.42, false, 0],
+    ['FR',  0.25, 0.86,  0.42, false, Math.PI],
+    ['BL', -0.24, 0.86, -0.36, true,  Math.PI + 0.22],
+    ['BR',  0.24, 0.86, -0.36, true,  0.22],
+  ];
+  const legs = legSpecs.map(([key, hx, hy, hz, isHind, phaseOffset]) => {
+    const mesh = makeSausage(legVertMat, 1);
+    trackG(mesh.geometry);
+    const topColor = pat === 'siamese' ? c.fur
+      : isHind && pat === 'tuxedo' ? (c.fur || '#faf7f0')
+      : legColor;
+    const tipColor = pat === 'siamese' ? (c.leg || c.point || '#49332d')
+      : (c.patch || c.fur);
+    paintWalkerLeg(mesh, topColor, tipColor);
+    bodyPivot.add(mesh);
+    const curve = new THREE.QuadraticBezierCurve3(V(hx, hy, hz), V(hx, hy * 0.5, hz), V(hx, 0.12, hz));
+    return { key, mesh, curve, hx, hy, hz, isHind, phaseOffset };
+  });
+
+  // Smooth curved upright tail with coat-accurate markings (tabby rings, calico tri-color, siamese fade)
+  const tailPivot = new THREE.Group();
+  tailPivot.position.set(0, 0.96, -0.82);
+  bodyPivot.add(tailPivot);
+  const tailCurveW = new THREE.CatmullRomCurve3([
+    V(0, 0, 0),
+    V(0, 0.46, -0.34),
+    V(0, 1.06, -0.44),
+    V(0, 1.48, -0.16),
+  ]);
+  const tailGeo = trackG(new THREE.TubeGeometry(tailCurveW, 24, 0.138, 14, false));
+  const tailBaseC = new THREE.Color(c.tail || c.fur);
+  const tailRingC = new THREE.Color(c.stripe || c.point || c.tail || c.fur);
+  const tPos = tailGeo.attributes.position;
+  const tColors = new Float32Array(tPos.count * 3);
+  const tmpC = new THREE.Color();
+  for (let i = 0; i < tPos.count; i++) {
+    const ty = clamp(tPos.getY(i) / 1.48, 0, 1);
+    if (pat === 'tabby') {
+      const band = Math.pow(0.5 + 0.5 * Math.sin(ty * Math.PI * 11), 2) * (c.tailStripeStrength || 0.72);
+      tmpC.copy(tailBaseC).lerp(tailRingC, band * 0.68);
+    } else if (pat === 'calico') {
+      // Tri-color calico tail matching the seated calico cat (black base -> warm orange mid -> black tip)
+      const cBlack = new THREE.Color(c.patchB || '#262426');
+      const cOrange = new THREE.Color(c.patchA || '#e48b3b');
+      const cWhite = new THREE.Color(c.patch || '#fffaf1');
+      if (ty < 0.32) tmpC.copy(cBlack).lerp(cOrange, smooth(0.18, 0.32, ty));
+      else if (ty < 0.74) tmpC.copy(cOrange).lerp(cWhite, smooth(0.62, 0.74, ty) * 0.55);
+      else tmpC.copy(cOrange).lerp(cBlack, smooth(0.74, 0.88, ty));
+    } else if (pat === 'siamese') {
+      tmpC.copy(new THREE.Color(c.fur)).lerp(tailBaseC, smooth(0.05, 0.55, ty));
+    } else {
+      tmpC.copy(tailBaseC);
+    }
+    tColors[i * 3] = tmpC.r; tColors[i * 3 + 1] = tmpC.g; tColors[i * 3 + 2] = tmpC.b;
+  }
+  tailGeo.setAttribute('color', new THREE.BufferAttribute(tColors, 3));
+  const tailMat = trackM(new THREE.MeshBasicMaterial({ color: '#ffffff', vertexColors: true }));
+  tailPivot.add(new THREE.Mesh(tailGeo, tailMat));
+  put(tailPivot, sphereG, mFlat(c.tail || c.fur), 0, 1.48, -0.16, 0.138, 0.138, 0.138);
+
+  // Head: exact 1:1 HEAD_R ellipsoid + paintCoat head texture + main cat head scale
+  const headPivot = new THREE.Group();
+  headPivot.position.set(0, 1.54, 0.70);
+  bodyPivot.add(headPivot);
+  const headWrap = new THREE.Group();
+  headWrap.scale.set(P.headSize * P.headW, P.headSize * P.headH, P.headSize);
+  headPivot.add(headWrap);
+  put(headWrap, sphereG, headMat, 0, 0, 0, HEAD_R[0], HEAD_R[1], HEAD_R[2]);
+
+  // Ears: reuse the exact soft rounded earGeo & earInnerGeo from the main cat
+  const makeEar = (side, mat) => {
+    const piv = new THREE.Group();
+    piv.position.set(side * 0.48, 0.32, -0.02);
+    piv.rotation.z = -side * 0.14;
+    headWrap.add(piv);
+    const ear = new THREE.Mesh(earGeo, mat);
+    ear.scale.z = EAR_T;
+    piv.add(ear);
+    const inner = new THREE.Mesh(earInnerGeo, innerMat);
+    inner.renderOrder = 3;
+    piv.add(inner);
+    return piv;
+  };
+  const earL = makeEar(-1, earLMat);
+  const earR = makeEar(1, earRMat);
+
+  // Tabby forehead & cheek markings (exact same layout as main cat)
+  if (pat === 'tabby') {
+    [
+      { x: -0.2, w: 0.046, h: 0.17, turn: -0.12, strength: 0.86 },
+      { x: 0, w: 0.054, h: 0.19, turn: 0, strength: 0.9 },
+      { x: 0.2, w: 0.046, h: 0.17, turn: 0.12, strength: 0.86 }
+    ].forEach(st => {
+      const m = softenMark(makePatchOn(headWrap, stripeMat, 3), st.strength);
+      fillPatch(m, st.x * 0.8, clamp(P.eyeY + 0.23, 0.38, 0.55) - Math.abs(st.x) * 0.16, st.w, st.h, st.turn, 0.008);
+    });
+    [[-0.54, 0.11, 0], [-0.59, -0.055, 0], [0.54, 0.11, 0], [0.59, -0.055, 0]].forEach(([x, y, turn]) => {
+      const m = softenMark(makePatchOn(headWrap, stripeMat, 3), 0.84);
+      fillPatch(m, x, y, 0.22, 0.044, turn, 0.009);
+    });
+  }
+
+  // Surface-wrapped eyes, pupils, glints, nose & talking mouth (1:1 main cat fillPatch)
+  const wEyes = [-1, 1].map((s, idx) => ({
+    s,
+    iris: makePatchOn(headWrap, idx === 0 ? eyeLMat : eyeRMat, 3),
+    pupil: makePatchOn(headWrap, pupilMat, 4),
+    glintMain: makePatchOn(headWrap, eyeGlintMat, 5),
+    glintSub: makePatchOn(headWrap, eyeGlintMat, 5),
+  }));
+  const wNose = makePatchOn(headWrap, noseMat, 6);
+  fillPatch(wNose, 0, -0.05, 0.044, 0.036, 0, 0.02);
+  const wMouth = makePatchOn(headWrap, mouthMat, 6);
+  wMouth.visible = false;
+
+  const lowSeatedHeadY = (2.3 * P.bodyH + P.neck) * (1 - 0.275);
+
+  function setPose({ walkPhase = 0, walkAmp = 0, crouch = 0, angry = 0, talk = 0, headYaw = 0, lookX = 0, surprise = 0, tailWag = 0, tailFuzz = 0, tuck = 0 } = {}) {
+    const tk = clamp(tuck, 0, 1);
+    const bob = Math.abs(Math.sin(walkPhase)) * 0.075 * walkAmp * (1 - tk);
+
+    bodyPivot.position.set(0, bob - crouch * 0.22 - tk * 0.06, -tk * 0.12);
+    bodyPivot.rotation.x = crouch * 0.14;
+    bodyPivot.scale.set(
+      mix(1, 1.08, tk),
+      1 - crouch * 0.04,
+      mix(1, 0.82, tk)
+    );
+
+    // Organic feline gait: paws plant cleanly on the ground during stance & bend knee/elbow during swing!
+    const groundY = 0.17 - (bob - crouch * 0.18 - tk * 0.06);
+    for (const leg of legs) {
+      const ph = walkPhase + leg.phaseOffset;
+      const stride = Math.sin(ph) * 0.22 * walkAmp * (1 - tk);
+      const lift = Math.max(0, Math.cos(ph)) * 0.12 * walkAmp * (1 - tk);
+      const crouchZ = leg.isHind ? -0.09 * crouch : 0.10 * crouch;
+      const baseFootZ = leg.isHind ? leg.hz - 0.10 : leg.hz + 0.06;
+      const pawZ = baseFootZ + stride + crouchZ;
+      const pawY = Math.max(0.15, groundY + lift);
+      const bendDir = leg.isHind ? 1 : -1;
+      const bendAmt = (0.08 + lift * 0.55 + crouch * 0.12) * bendDir;
+      const footX = leg.hx * 1.16; // anchor deep inside torso, paws plant naturally wider
+      leg.curve.v0.set(leg.hx, leg.hy, leg.hz);
+      leg.curve.v1.set(mix(leg.hx, footX, 0.5), mix(leg.hy, pawY, 0.52), mix(leg.hz, pawZ, 0.50) + bendAmt);
+      leg.curve.v2.set(footX, pawY, pawZ + 0.02);
+      shapeSausage(leg.mesh, leg.curve, legRadius, legRef);
+    }
+
+    // Smoothly align head to the exact main-cat low-settled coordinate (0, lowSeatedHeadY, 0.44) as tuck -> 1
+    headPivot.position.set(
+      0,
+      mix(1.54 - crouch * 0.22, lowSeatedHeadY + 0.06, tk),
+      mix(0.70 + crouch * 0.08, 0.44 + 0.12, tk) / mix(1, 0.82, tk)
+    );
+    headPivot.scale.set(1 / mix(1, 1.08, tk), 1, 1 / mix(1, 0.82, tk));
+    headPivot.rotation.set(
+      (crouch * 0.10 + talk * 0.08) * (1 - tk),
+      headYaw * (1 - tk) + (talk > 0.05 ? Math.sin(walkPhase * 2.4) * 0.07 * talk : 0),
+      talk > 0.05 ? Math.cos(walkPhase * 1.9) * 0.05 * talk : 0
+    );
+
+    // Airplane ears when angry
+    earL.rotation.z = 0.14 + angry * 0.56;
+    earR.rotation.z = -0.14 - angry * 0.56;
+    earL.rotation.x = -angry * 0.20;
+    earR.rotation.x = -angry * 0.20;
+
+    // Exact main-cat eye & angry upper-clip geometry
+    const ex = 0.37 * P.eyeSpread, ey = P.eyeY, er = 0.205 * P.eyeSize, irx = er * 0.94, iry = er * 1.15;
+    const angerClip = clamp(angry, 0, 1);
+    const pScale = surprise > 0.1 ? (1 - surprise * 0.18) : 1;
+    for (const e of wEyes) {
+      const h = iry;
+      const eyeTurn = e.s * (P.eyeTilt + 0.38 * angerClip);
+      const clipTop = angerClip > 0.02 ? mix(h * 1.05, h * 0.10, angerClip) : Infinity;
+      const clipCurve = angerClip > 0.02 ? h * 0.08 * angerClip : 0;
+      fillPatch(e.iris, e.s * ex, ey, irx * 0.98, h * 0.98, eyeTurn, 0.008, clipTop, clipCurve);
+      const pupilRx = irx * (isLiquidBlack ? 0.72 : 0.56) * (1 - 0.06 * angerClip) * pScale;
+      const pupilRy = Math.min(h * 0.82, iry * (isLiquidBlack ? 0.72 : 0.56) * (1 - 0.06 * angerClip) * pScale);
+      const dx = clamp(lookX, -1, 1) * irx * 0.22 * (1 - 0.45 * angerClip);
+      const coE = Math.cos(eyeTurn), siE = Math.sin(eyeTurn);
+      const pOffU = -e.s * irx * 0.04 * angerClip;
+      const pOffV = h * 0.08 * angerClip;
+      const px = e.s * ex + dx + (pOffU * coE - pOffV * siE);
+      const py = ey + (pOffU * siE + pOffV * coE);
+      const pClipTop = clipTop < Infinity ? clipTop - pOffV : Infinity;
+      fillPatch(e.pupil, px, py, pupilRx, pupilRy, eyeTurn, 0.013, pClipTop, clipCurve * 0.85);
+      e.glintMain.visible = angerClip < 0.35 && !isLiquidBlack;
+      e.glintSub.visible = !isLiquidBlack;
+      if (e.glintMain.visible) {
+        fillPatch(e.glintMain, px - pupilRx * 0.31, py + pupilRy * 0.33, pupilRx * 0.25, pupilRy * 0.23, 0.2, 0.016);
+      }
+      if (e.glintSub.visible) {
+        fillPatch(e.glintSub, px + pupilRx * 0.3, py - pupilRy * 0.3, pupilRx * 0.12, pupilRy * 0.12, 0, 0.016);
+      }
+    }
+
+    // Talking mouth patch on the face
+    wMouth.visible = talk > 0.12;
+    if (wMouth.visible) {
+      fillPatch(wMouth, 0, -0.18, 0.068, 0.032 + talk * 0.055, 0, 0.018);
+    }
+
+    // Tail upright sway / confrontation bristle quiver
+    tailPivot.rotation.z = tailWag;
+    tailPivot.rotation.x = -crouch * 0.14;
+    const ts = 1 + tailFuzz * 0.16;
+    tailPivot.scale.set(ts, 1 + tailFuzz * 0.06, ts);
+  }
+
+  function dispose() {
+    if (root.parent) root.parent.remove(root);
+    geos.forEach(g => g.dispose());
+    mats.forEach(m => m.dispose());
+    texs.forEach(t => t.dispose());
+  }
+
+  return { root, setPose, dispose };
+}
+
+const handover = {
+  active: false,
+  startedAt: 0,
+  stage: 'none',
+  fromId: '',
+  toId: '',
+  incoming: null,
+  outgoing: null,
+  onStage: null,
+  firedEvents: new Set(),
+};
+
+function emitHandoverEvent(name) {
+  if (handover.firedEvents.has(name)) return;
+  handover.firedEvents.add(name);
+  try { handover.onStage?.(name, { from: handover.fromId, to: handover.toId }); } catch {}
+}
+
+function cancelHandover(applyFinal = true) {
+  if (!handover.active) return;
+  const targetId = handover.toId;
+  handover.incoming?.dispose();
+  handover.outgoing?.dispose();
+  handover.incoming = null;
+  handover.outgoing = null;
+  handover.active = false;
+  handover.stage = 'none';
+  handover.firedEvents.clear();
+  S.handoverYaw = 0;
+  S.handoverLow = 0;
+  cat.visible = true;
+  cat.scale.setScalar(PET_SCALE);
+  if (applyFinal && targetId) {
+    const idx = Math.max(0, COATS.findIndex(c => c.id === targetId));
+    setCoat(idx);
+  }
+}
+
+function startHandover(toCoatId) {
+  const targetIdx = Math.max(0, COATS.findIndex(c => c.id === toCoatId));
+  const targetCoat = COATS[targetIdx];
+  const fromCoat = handover.active
+    ? (COATS.find(c => c.id === handover.toId) || currentCoat)
+    : currentCoat;
+  if (!targetCoat || fromCoat.id === targetCoat.id || S.dragging || reduceMotion) {
+    cancelHandover(false);
+    setCoat(targetIdx);
+    return false;
+  }
+  cancelHandover(false);
+  const t = performance.now();
+  wake(t);
+  S.act = null;
+  S.anger = 0;
+  S.angerUntil = 0;
+  S.happyUntil = 0;
+  yarn.visible = false;
+  butterfly.visible = false;
+  // Ensure seated main cat displays the outgoing coat during phase 1
+  const fromIdx = Math.max(0, COATS.findIndex(c => c.id === fromCoat.id));
+  setCoat(fromIdx);
+
+  handover.active = true;
+  handover.startedAt = t;
+  handover.stage = 'enter';
+  handover.fromId = fromCoat.id;
+  handover.toId = targetCoat.id;
+  handover.firedEvents.clear();
+  handover.incoming = createWalkerCat(targetCoat, currentEyeColor);
+  handover.outgoing = createWalkerCat(fromCoat, currentEyeColor);
+  handover.incoming.root.position.set(-3.55, 0, 0.02);
+  handover.incoming.root.rotation.y = Math.PI / 2;
+  handover.outgoing.root.position.set(0.15, 0, 0.02);
+  handover.outgoing.root.rotation.y = -Math.PI / 2;
+  handover.outgoing.root.visible = false;
+  scene.add(handover.incoming.root);
+  scene.add(handover.outgoing.root);
+  cat.visible = true;
+  emitHandoverEvent('enter');
+  return true;
+}
+
+function updateHandover(t, dt) {
+  if (!handover.active) { S.handoverYaw = 0; S.handoverLow = 0; return; }
+  const e = (t - handover.startedAt) / 1000;
+  const inCat = handover.incoming;
+  const outCat = handover.outgoing;
+  if (!inCat || !outCat) { cancelHandover(true); return; }
+
+  const T_ENTER = 1.25;
+  const T_ARGUE_END = 3.70;
+  const T_EXIT_END = 4.95;
+  const T_TOTAL = 6.30;
+
+  if (e < T_ENTER) {
+    // Phase 1: incoming walks in from left; seated main cat turns left & smoothly lowers into ready stance
+    handover.stage = 'enter';
+    const p = smooth(0, T_ENTER, e);
+    cat.visible = true;
+    outCat.root.visible = false;
+    S.handoverYaw = -0.58 * smooth(0.18, 0.85, p);
+    S.handoverLow = smooth(0.92, T_ENTER, e);
+    inCat.root.position.set(mix(-3.65, -1.46, p), 0, 0.02);
+    inCat.root.rotation.y = Math.PI * 0.44;
+    inCat.setPose({
+      walkPhase: e * 11.2,
+      walkAmp: 1 - smooth(0.84, 1.0, p),
+      headYaw: -0.42,
+      lookX: 0.72,
+      tailWag: Math.sin(e * 6.5) * 0.24,
+    });
+  } else if (e < T_ARGUE_END) {
+    // Phase 2: outgoing steps smoothly out from low ready stance & faces incoming; both crouch, airplane-ear & argue!
+    handover.stage = 'argue';
+    cat.visible = false;
+    outCat.root.visible = true;
+    S.handoverYaw = 0;
+    S.handoverLow = 0;
+    const local = e - T_ENTER;
+    const standP = smooth(0, 0.36, local);
+    const crouchP = smooth(0.14, 0.50, local);
+    const outX = mix(0.08, 1.46, standP);
+    const inX = -1.46;
+
+    // Sync mouth beats with the 2.4s "老吴老吴老吴 — 嗷呜" audio clip
+    const inTalk = (local > 0.12 && local < 1.52)
+      ? (0.52 + 0.48 * Math.sin(local * 28))
+      : 0;
+    const outTalk = (local > 1.48 && local < 2.38)
+      ? (0.52 + 0.48 * Math.sin(local * 18))
+      : 0;
+    if (local > 0.08) emitHandoverEvent('argue-in');
+    if (local > 1.48) emitHandoverEvent('argue-out');
+
+    inCat.root.position.set(inX + inTalk * 0.06, 0, 0.02);
+    inCat.root.rotation.y = Math.PI * 0.42;
+    inCat.setPose({
+      walkPhase: e * 12,
+      walkAmp: 0,
+      crouch: crouchP,
+      angry: crouchP,
+      talk: inTalk,
+      headYaw: -0.48,
+      lookX: 0.85,
+      tailWag: Math.sin(e * 22) * 0.14,
+      tailFuzz: crouchP,
+    });
+
+    outCat.root.position.set(outX - outTalk * 0.06, 0, mix(0.08, 0.02, standP));
+    outCat.root.rotation.y = mix(0, -Math.PI * 0.42, standP);
+    outCat.setPose({
+      walkPhase: e * 12,
+      walkAmp: standP < 0.96 ? 0.75 * standP : 0,
+      tuck: 1 - standP,
+      crouch: crouchP,
+      angry: crouchP,
+      talk: outTalk,
+      headYaw: 0.48 * standP,
+      lookX: -0.85 * standP,
+      tailWag: Math.sin(e * 21 + 1.2) * 0.14,
+      tailFuzz: crouchP,
+    });
+  } else if (e < T_EXIT_END) {
+    // Phase 3: both straighten up wide-eyed; outgoing turns and trots away to the right; incoming watches
+    handover.stage = 'exit';
+    emitHandoverEvent('exit');
+    cat.visible = false;
+    outCat.root.visible = true;
+    S.handoverLow = 0;
+    const local = e - T_ARGUE_END;
+    const riseP = 1 - smooth(0, 0.28, local);
+    const turnP = smooth(0.10, 0.38, local);
+    const runP = smooth(0.28, T_EXIT_END - T_ARGUE_END, local);
+
+    outCat.root.position.set(mix(1.46, 3.85, runP), 0, 0.02);
+    outCat.root.rotation.y = mix(-Math.PI * 0.42, Math.PI * 0.44, turnP);
+    outCat.setPose({
+      walkPhase: e * 15.5,
+      walkAmp: runP > 0.01 ? 1.05 : 0.3,
+      crouch: riseP,
+      angry: riseP,
+      surprise: 1 - riseP,
+      headYaw: mix(0.48, -0.44, turnP),
+      lookX: mix(-0.85, 0.72, turnP),
+      tailWag: Math.sin(e * 11) * 0.28,
+    });
+
+    inCat.root.position.set(-1.46, 0, 0.02);
+    inCat.root.rotation.y = Math.PI * 0.42;
+    inCat.setPose({
+      walkPhase: e * 6,
+      walkAmp: 0,
+      crouch: riseP,
+      angry: riseP,
+      headYaw: -0.46,
+      lookX: 0.85,
+      tailWag: Math.sin(e * 5) * 0.18,
+    });
+  } else if (e < T_TOTAL) {
+    // Phase 4: incoming trots to center, turns front & aligns head with low-seated main cat,
+    // then main cat rises smoothly (loaf-like continuous ease 1 -> 0) with ZERO jump!
+    handover.stage = 'settle';
+    emitHandoverEvent('settle');
+    outCat.root.visible = false;
+    const local = e - T_EXIT_END;
+    const walkDur = 0.52;
+    const swapAt = 0.68;
+    const totalDur = T_TOTAL - T_EXIT_END;
+
+    if (local < swapAt) {
+      cat.visible = false;
+      inCat.root.visible = true;
+      S.handoverLow = 1;
+      const walkP = smooth(0, walkDur, local);
+      const turnP = smooth(walkDur - 0.16, swapAt, local);
+      const tuckP = smooth(walkDur - 0.06, swapAt, local);
+      inCat.root.position.set(mix(-1.46, 0, walkP), 0, mix(0.02, 0.08, walkP));
+      inCat.root.rotation.y = mix(Math.PI * 0.42, 0, turnP);
+      inCat.setPose({
+        walkPhase: e * 11.2,
+        walkAmp: (1 - smooth(0.75, 1.0, walkP)) * (1 - tuckP),
+        tuck: tuckP,
+        headYaw: mix(-0.46, 0, turnP),
+        lookX: mix(0.7, 0, turnP),
+        tailWag: Math.sin(e * 5.5) * 0.18 * (1 - tuckP),
+      });
+    } else {
+      if (!handover.firedEvents.has('land-swap')) {
+        handover.firedEvents.add('land-swap');
+        const idx = Math.max(0, COATS.findIndex(c => c.id === handover.toId));
+        setCoat(idx);
+      }
+      inCat.root.visible = false;
+      cat.visible = true;
+      cat.position.y = 0;
+      cat.scale.setScalar(PET_SCALE);
+      // Smooth continuous rise from low-seated (1) to upright seated (0) — identical smoothness to sleep -> sit!
+      S.handoverLow = 1 - smooth(swapAt, totalDur, local);
+    }
+  } else {
+    // Complete: restore exact neutral state
+    const targetId = handover.toId;
+    cancelHandover(true);
+    cat.position.y = 0;
+    cat.scale.setScalar(PET_SCALE);
+    S.lastInput = t;
+    S.nextAct = t + 8000;
+    emitHandoverEvent('done');
+    if (stageEl) stageEl.dataset.coat = targetId;
+  }
+}
+
 /* ---------- frame ---------- */
 const shoulderW = V(0, 0, 0), proj = V(0, 0, 0), tmpGoal = V(0, 0, 0), angerAnchor = V(0, 0, 0), tailImpactAt = V(0, 0, 0);
 function frame() {
@@ -1532,11 +2187,13 @@ function frame() {
   S.low = (S.low || 0) + ((stretching ? 1 : crouch ? 0.55 : 0) - (S.low || 0)) * ease(crouch ? 9 : 5);
   S.dragBlend = (S.dragBlend || 0) + ((S.dragging ? 1 : 0) - (S.dragBlend || 0)) * ease(16);
   const drag = S.dragBlend;
-  const loaf = S.loaf, squat = 1 - 0.52 * loaf - 0.16 * S.low;       // asleep: curled on its side into a compact sleeping ball
+  updateHandover(t, dt);
+  const hl = S.handoverLow || 0;
+  const loaf = S.loaf, squat = 1 - 0.52 * loaf - 0.16 * S.low - 0.275 * hl;       // asleep / handover low-settle smooth continuous morph
   const hideDesk = S.dragging || asleep;
   activeLayout.group.visible = showKeyboard && !hideDesk;
   mouseGroup.visible = showMousePref && !hideDesk;
-  deskShadow.visible = showKeyboard && !hideDesk;
+  deskShadow.visible = false;
   sleepCushion.visible = !S.dragging && loaf > 0.05;
   if (sleepCushion.visible) {
     const cs = smooth(0.05, 0.72, loaf);
@@ -1704,10 +2361,10 @@ function frame() {
   [S.nod, S.nodV] = springStep(S.nod, S.nodV, nodT, 52, 11.8);
   [S.tilt, S.tiltV] = springStep(S.tilt, S.tiltV, tiltT, 44, 10.6);
   { const w = (t - (S.wokeAt || -1e9)) / 750; S.shake = w > 0.15 && w < 1 ? Math.sin(w * 26) * 0.16 * (1 - w) : 0; }
-  head.rotation.set(S.nod + S.thump * (0.05 + 0.05 * fast), S.turn + S.shake, S.tilt);
+  head.rotation.set(S.nod + S.thump * (0.05 + 0.05 * fast), S.turn + S.shake + (S.handoverYaw || 0), S.tilt);
   head.position.x = -0.36 * loaf;
-  head.position.z = 0.1 - fwd * 0.5 + 0.58 * loaf;
-  head.position.y = (2.3 * P.bodyH + P.neck) * (1 - 0.6 * loaf - 0.16 * S.low) + breath * (0.018 + 0.016 * loaf) + bounce * 0.09 - 0.18 * loaf - S.thump * 0.02 - 0.04 * S.anger;
+  head.position.z = 0.1 - fwd * 0.5 + 0.58 * loaf + 0.34 * hl;
+  head.position.y = (2.3 * P.bodyH + P.neck) * (1 - 0.6 * loaf - 0.16 * S.low - 0.275 * hl) + breath * (0.018 + 0.016 * loaf) + bounce * 0.09 - 0.18 * loaf - S.thump * 0.02 - 0.04 * S.anger;
   { const py = head.position.y; headFix.matrix.set(1, -sx, 0, sx * py,  0, 1, 0, 0,  0, -fwd, 1, fwd * py,  0, 0, 0, 1); }
   if (angerMark && angry) {
     angerAnchor.set(-0.68, 0.72, 0.14);
@@ -1902,7 +2559,8 @@ function frame() {
 
   renderer.render(scene, camera);
   stageEl.dataset.toyVisible = yarn.visible ? 'true' : 'false';
-  stageEl.dataset.idleAct = S.act || (asleep ? 'sleep' : 'none');
+  stageEl.dataset.idleAct = handover.active ? 'handover' : (S.act || (asleep ? 'sleep' : 'none'));
+  stageEl.dataset.handover = handover.active ? handover.stage : 'none';
   const nosePoint = projectNose();
   stageEl.dataset.nosePoint = `${nosePoint.x.toFixed(1)},${nosePoint.y.toFixed(1)}`;
   // Labels above the keys that were hit.
@@ -2012,7 +2670,13 @@ return {
     if ('followKeys' in o) { followKeys = !!o.followKeys; if (!followKeys) { [...S.down.keys()].forEach(keyUp); shownKeys = new Set(); downAt.clear(); } }
     if ('focusMode' in o) this.setFocusMode(!!o.focusMode);
     if ('leftMouse' in o) setHanded(!!o.leftMouse);
-    if ('coat' in o) setCoat(coatIndex(o.coat));
+    if ('coat' in o) {
+      const nextId = o.coat || COATS[0].id;
+      if (!(handover.active && handover.toId === nextId)) {
+        cancelHandover(false);
+        setCoat(coatIndex(nextId));
+      }
+    }
     if ('eyeColor' in o) { currentEyeColor = o.eyeColor || 'auto'; applyEyeColor(); }
     if ('accessory' in o) setAccessory(o.accessory || 'none');
     if ('accessoryColor' in o) setAccessoryColor(o.accessoryColor || 'auto');
@@ -2028,6 +2692,7 @@ return {
     if (S.dragging === next) return;
     S.dragging = next;
     if (next) {
+      cancelHandover(true);
       S.dragStartedAt = performance.now();
       this.clear();
       wake(performance.now());
@@ -2167,6 +2832,15 @@ return {
     S.nextAct = t + durationMs + 5000;
     if (act === 'play') kickYarn(false);
   },
-  destroy() { dead = true; clearInterval(letGo); cancelAnimationFrame(raf); offs.forEach(f => f()); S.chips.forEach(c => c.el.remove()); zzz.remove(); angerMark?.classList.remove('visible'); tailImpactMark?.classList.remove('hit'); renderer.domElement.remove(); renderer.dispose(); },
+  switchCoatWithHandover(coatId) {
+    return startHandover(coatId);
+  },
+  isHandoverActive() {
+    return Boolean(handover.active);
+  },
+  setOnHandoverStage(cb) {
+    handover.onStage = typeof cb === 'function' ? cb : null;
+  },
+  destroy() { cancelHandover(false); dead = true; clearInterval(letGo); cancelAnimationFrame(raf); offs.forEach(f => f()); S.chips.forEach(c => c.el.remove()); zzz.remove(); angerMark?.classList.remove('visible'); tailImpactMark?.classList.remove('hit'); renderer.domElement.remove(); renderer.dispose(); },
 };
 };

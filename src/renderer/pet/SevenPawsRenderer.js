@@ -25,20 +25,30 @@ export class SevenPawsRenderer {
     this.buttonTimers = new Map();
     this.preferences = {};
     this.lastMouseSignal = 0;
+    this.initialized = false;
+    this.currentCoat = preferences.coat || 'solidblack';
     this.setPreferences(preferences);
+    this.initialized = true;
   }
 
   setPreferences(preferences) {
+    const nextCoat = preferences.coat || 'solidblack';
+    const coatChanged = this.initialized && nextCoat !== this.currentCoat;
+    this.currentCoat = nextCoat;
     this.preferences = preferences;
     this.standbyMode = Boolean(preferences.standbyMode);
     this.privacyMode = Boolean(preferences.privacyMode);
+    if (coatChanged) {
+      this.clearInput();
+      this.api.switchCoatWithHandover?.(nextCoat);
+    }
     this.api.setOptions({
       showKeyboard: !!preferences.keyboard,
       showMouse: !!preferences.keyboard,
       followKeys: !!preferences.keyboard && !this.standbyMode && !this.privacyMode,
       showKeyLabels: false,
       leftMouse: !!preferences.leftMouse,
-      coat: preferences.coat || 'solidblack',
+      coat: nextCoat,
       eyeColor: preferences.eyeColor || 'auto',
       accessory: preferences.accessory || 'none',
       accessoryColor: preferences.accessoryColor || 'auto',
@@ -48,8 +58,16 @@ export class SevenPawsRenderer {
     this.api.setLayout(preferences.numpad ? '104' : '65');
     this.api.setFocusMode(!!preferences.focusMode);
     this.api.setStandbyMode?.(this.standbyMode);
-    this.host.dataset.coat = preferences.coat || 'solidblack';
+    this.host.dataset.coat = nextCoat;
     if (!preferences.keyboard) this.clearInput();
+  }
+
+  setOnHandoverStage(cb) {
+    this.api.setOnHandoverStage?.(cb);
+  }
+
+  isHandoverActive() {
+    return Boolean(this.api.isHandoverActive?.());
   }
 
   regions() {

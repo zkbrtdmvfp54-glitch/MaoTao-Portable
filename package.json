@@ -1,6 +1,6 @@
 {
   "name": "maotao-desktop-pet",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "private": true,
   "description": "毛桃桌面宠物",
   "author": "MAOTAO Desktop Pet",
@@ -20,7 +20,7 @@
     "productName": "MAOTAO Desktop Pet",
     "executableName": "MAOTAO",
     "directories": {"output": "dist"},
-    "files": ["src/**/*", "assets/pet/manifest.json", "assets/pet/processed/**/*", "assets/pet/animations/**/*", "assets/pet/third-party/7paws/**/*"],
+    "files": ["src/**/*", "assets/pet/manifest.json", "assets/pet/audio/**/*", "assets/pet/processed/**/*", "assets/pet/animations/**/*", "assets/pet/third-party/7paws/**/*"],
     "asarUnpack": ["node_modules/uiohook-napi/prebuilds/**"],
     "npmRebuild": false,
     "toolsets": {"nsis": "1.2.1"},

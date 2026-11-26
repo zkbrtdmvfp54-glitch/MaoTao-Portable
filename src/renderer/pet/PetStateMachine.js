@@ -44,6 +44,10 @@ export class PetStateMachine {
   }
   setModel(model) {
     this.model = model;
+    this.model?.setOnHandoverStage?.(stage => {
+      if (stage === 'argue-in') this.sound.playHandoverArgue?.('incoming');
+      else if (stage === 'argue-out') this.sound.playHandoverArgue?.('outgoing');
+    });
   }
   setDragging(enabled) {
     const next = Boolean(enabled);
@@ -312,7 +316,7 @@ export class PetStateMachine {
   }
   frameInterval(now) {
     const active = this.dragging || this.poke || this.petEnergy || this.typeEnergy
-      || this.focusMode
+      || this.focusMode || this.model?.isHandoverActive?.()
       || this.leftPaw.timer || this.rightPaw.timer || this.lean > 0.08 || now < this.wakeUntil
       || (now >= this.nextBlink && now < this.nextBlink + 190 && !this.sleeping)
       || this.effects.floatingLetters.length || (this.effects.mouseClicks?.length ?? 0) || now - this.lastVisual < 135;

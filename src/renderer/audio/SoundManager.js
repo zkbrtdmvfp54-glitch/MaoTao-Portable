@@ -8,6 +8,17 @@ export class SoundManager {
     this.lastClick = -Infinity;
     this.keyEnabled = true;
     this.volume = 0.7;
+    this.handoverAudio = null;
+    this.handoverAudioReady = false;
+    if (typeof Audio !== 'undefined') {
+      try {
+        const src = new URL('../../../assets/pet/audio/handover-laowu.mp3', import.meta.url).href;
+        const audio = new Audio(src);
+        audio.preload = 'auto';
+        audio.addEventListener('canplaythrough', () => { this.handoverAudioReady = true; }, { once: true });
+        this.handoverAudio = audio;
+      } catch {}
+    }
   }
 
   ensure() {
@@ -207,5 +218,113 @@ export class SoundManager {
     lfo.start(now);
     osc.stop(now + 0.36);
     lfo.stop(now + 0.36);
+  }
+
+  /** 换花色接班时的“老吴老吴老吴”双猫对峙原声音效（带 Web Audio 兜底） */
+  playHandoverArgue(role = 'incoming') {
+    if (!this.enabled) return;
+    if (this.handoverAudio) {
+      if (role !== 'incoming') return; // 完整 2.4s 原声已涵盖新猫“老吴老吴老吴”与旧猫回怼
+      try {
+        this.handoverAudio.pause();
+        this.handoverAudio.currentTime = 0;
+        this.handoverAudio.volume = Math.max(0, Math.min(1, this.volume));
+        const p = this.handoverAudio.play();
+        if (p && typeof p.catch === 'function') p.catch(() => this._playHandoverSynth(role));
+        return;
+      } catch {}
+    }
+    this._playHandoverSynth(role);
+  }
+
+  _playHandoverSynth(role = 'incoming') {
+    if (!this.enabled) return;
+    this.ensure();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const lfo = this.ctx.createOscillator();
+    const lfoGain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+    const gain = this.ctx.createGain();
+
+    osc1.type = 'sawtooth';
+    osc2.type = 'triangle';
+    filter.type = 'bandpass';
+    filter.Q.setValueAtTime(2.6, now);
+
+    if (role === 'incoming') {
+      // 新猫气势十足的连珠炮 "哇呜-哇呜-哇呜!"
+      const dur = 0.68;
+      osc1.frequency.setValueAtTime(490, now);
+      osc1.frequency.exponentialRampToValueAtTime(760, now + 0.14);
+      osc1.frequency.exponentialRampToValueAtTime(560, now + 0.34);
+      osc1.frequency.exponentialRampToValueAtTime(820, now + 0.50);
+      osc1.frequency.exponentialRampToValueAtTime(580, now + dur);
+
+      osc2.frequency.setValueAtTime(980, now);
+      osc2.frequency.exponentialRampToValueAtTime(1420, now + 0.16);
+      osc2.frequency.exponentialRampToValueAtTime(1120, now + dur);
+
+      lfo.type = 'sine';
+      lfo.frequency.setValueAtTime(11.5, now);
+      lfoGain.gain.setValueAtTime(52, now);
+      lfo.connect(lfoGain).connect(osc1.frequency);
+
+      filter.frequency.setValueAtTime(1150, now);
+      filter.frequency.linearRampToValueAtTime(1750, now + 0.22);
+      filter.frequency.linearRampToValueAtTime(1250, now + dur);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.095, now + 0.05);
+      gain.gain.setValueAtTime(0.088, now + dur - 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+      osc1.connect(filter);
+      osc2.connect(filter);
+      filter.connect(gain).connect(this.output);
+      osc1.start(now);
+      osc2.start(now);
+      lfo.start(now);
+      osc1.stop(now + dur + 0.03);
+      osc2.stop(now + dur + 0.03);
+      lfo.stop(now + dur + 0.03);
+    } else {
+      // 旧猫不服气但逐渐认怂的拖长音 "嗷呜呜~"
+      const dur = 0.62;
+      osc1.frequency.setValueAtTime(420, now);
+      osc1.frequency.exponentialRampToValueAtTime(640, now + 0.15);
+      osc1.frequency.exponentialRampToValueAtTime(340, now + dur);
+
+      osc2.frequency.setValueAtTime(840, now);
+      osc2.frequency.exponentialRampToValueAtTime(1180, now + 0.15);
+      osc2.frequency.exponentialRampToValueAtTime(680, now + dur);
+
+      lfo.type = 'sine';
+      lfo.frequency.setValueAtTime(8.5, now);
+      lfoGain.gain.setValueAtTime(36, now);
+      lfo.connect(lfoGain).connect(osc1.frequency);
+
+      filter.frequency.setValueAtTime(980, now);
+      filter.frequency.linearRampToValueAtTime(1420, now + 0.16);
+      filter.frequency.linearRampToValueAtTime(820, now + dur);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.09, now + 0.06);
+      gain.gain.setValueAtTime(0.08, now + dur - 0.16);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+      osc1.connect(filter);
+      osc2.connect(filter);
+      filter.connect(gain).connect(this.output);
+      osc1.start(now);
+      osc2.start(now);
+      lfo.start(now);
+      osc1.stop(now + dur + 0.03);
+      osc2.stop(now + dur + 0.03);
+      lfo.stop(now + dur + 0.03);
+    }
   }
 }

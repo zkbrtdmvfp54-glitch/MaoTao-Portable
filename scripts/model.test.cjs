@@ -174,3 +174,59 @@ test('preferences survive reloading while stats reset on the local date', () => 
   assert.equal(new SettingsStore(directory).prefs.size, 'medium');
 });
 
+test('coat switch triggers handover animation, argue sounds, and full-fps rendering', async () => {
+  const { PetStateMachine } = await import('../src/renderer/pet/PetStateMachine.js');
+  const { KeyboardRenderer } = await import('../src/renderer/interaction/KeyboardRenderer.js');
+  const { SevenPawsRenderer } = await import('../src/renderer/pet/SevenPawsRenderer.js');
+
+  const handovers = [];
+  let stageCb = null;
+  let active = false;
+  const fakeCanvas = { id: '3d-canvas', width: 420, height: 340 };
+  const fakeHost = { dataset: {}, querySelectorAll: () => [fakeCanvas] };
+  global.window = {
+    THREE: {},
+    createCat: () => ({
+      setOptions() {},
+      setLayout() {},
+      setFocusMode() {},
+      setStandbyMode() {},
+      clear() {},
+      switchCoatWithHandover(coatId) { handovers.push(coatId); active = true; return true; },
+      isHandoverActive() { return active; },
+      setOnHandoverStage(cb) { stageCb = cb; }
+    })
+  };
+  try {
+    const renderer = new SevenPawsRenderer(fakeHost, { coat: 'siamese', keyboard: true });
+    assert.deepEqual(handovers, []);
+    renderer.setPreferences({ coat: 'siamese', keyboard: true });
+    assert.deepEqual(handovers, []);
+    renderer.setPreferences({ coat: 'solidblack', keyboard: true });
+    assert.deepEqual(handovers, ['solidblack']);
+
+    const argueRoles = [];
+    const sound = {
+      configure() {}, playKeyClick() {}, playMouseClick() {}, playMeow() {}, playPurr() {},
+      playHandoverArgue(role) { argueRoles.push(role); }
+    };
+    const effects = {
+      theme: 'cream', floatingLetters: [], keyRipples: [], mouseClicks: [],
+      addKeyRipple() {}, spawnParticle() {}, update() {}
+    };
+    const machine = new PetStateMachine(assets, new KeyboardRenderer(assets.layers.keyboard), sound, effects, () => {});
+    machine.setModel(renderer);
+    assert.equal(typeof stageCb, 'function');
+    stageCb('argue-in');
+    stageCb('argue-out');
+    assert.deepEqual(argueRoles, ['incoming', 'outgoing']);
+    const idleNow = machine.lastVisual + 5000;
+    assert.equal(machine.frameInterval(idleNow), 15);
+    active = false;
+    assert.ok(machine.frameInterval(idleNow) > 15);
+  } finally {
+    delete global.window;
+  }
+});
+
+
