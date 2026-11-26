@@ -1,7 +1,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { app, BrowserWindow, ipcMain, net, protocol, session, dialog, powerMonitor } = require('electron');
+const { app, BrowserWindow, ipcMain, net, protocol, session, dialog, powerMonitor, globalShortcut } = require('electron');
 const { PetWindow, restrictContents, webOptions } = require('./window');
 const { MenuWindow } = require('./menu-window');
 const { SettingsStore } = require('./settings');
@@ -42,6 +42,79 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   let pet, tray, store, hook, typing, menu, menuWin, quitting = false;
+  const pomodoro = { phase: 'idle', paused: false, remainingSec: 25 * 60, rounds: 0, timer: null };
+  function clearPomodoroTimer() {
+    if (pomodoro.timer) { clearInterval(pomodoro.timer); pomodoro.timer = null; }
+  }
+  function syncPomodoroIdleDuration() {
+    if (pomodoro.phase === 'idle') {
+      pomodoro.remainingSec = (store?.prefs?.focusMinutes || 25) * 60;
+    }
+  }
+  function startPomodoroTick() {
+    clearPomodoroTimer();
+    pomodoro.timer = setInterval(() => {
+      if (pomodoro.phase === 'idle' || pomodoro.paused) return;
+      pomodoro.remainingSec = Math.max(0, pomodoro.remainingSec - 1);
+      if (pomodoro.remainingSec <= 0) {
+        if (pomodoro.phase === 'focus') {
+          pomodoro.rounds += 1;
+          pomodoro.phase = 'break';
+          pomodoro.remainingSec = (store.prefs.breakMinutes || 5) * 60;
+          store.set('focusMode', false);
+          pet?.send('pet:preferences', store.prefs);
+          pet?.send('pet:action', 'yarn');
+        } else {
+          pomodoro.phase = 'focus';
+          pomodoro.remainingSec = (store.prefs.focusMinutes || 25) * 60;
+          store.set('focusMode', true);
+          pet?.send('pet:preferences', store.prefs);
+        }
+      }
+      menuWin?.pushState();
+    }, 1000);
+  }
+  function startFocusSession() {
+    if (pomodoro.phase === 'idle') {
+      pomodoro.phase = 'focus';
+      pomodoro.remainingSec = (store.prefs.focusMinutes || 25) * 60;
+    }
+    pomodoro.paused = false;
+    if (store.prefs.standbyMode) store.set('standbyMode', false);
+    store.set('focusMode', pomodoro.phase === 'focus');
+    startPomodoroTick();
+    sendPrefs();
+  }
+  function pauseFocusSession() {
+    if (pomodoro.phase === 'idle') return;
+    pomodoro.paused = !pomodoro.paused;
+    menuWin?.pushState();
+  }
+  function skipFocusSession() {
+    if (pomodoro.phase === 'idle') return;
+    if (pomodoro.phase === 'focus') {
+      pomodoro.rounds += 1;
+      pomodoro.phase = 'break';
+      pomodoro.remainingSec = (store.prefs.breakMinutes || 5) * 60;
+      store.set('focusMode', false);
+      pet?.send('pet:action', 'yarn');
+    } else {
+      pomodoro.phase = 'focus';
+      pomodoro.remainingSec = (store.prefs.focusMinutes || 25) * 60;
+      store.set('focusMode', true);
+    }
+    pomodoro.paused = false;
+    startPomodoroTick();
+    sendPrefs();
+  }
+  function resetFocusSession() {
+    clearPomodoroTimer();
+    pomodoro.phase = 'idle';
+    pomodoro.paused = false;
+    pomodoro.remainingSec = (store.prefs.focusMinutes || 25) * 60;
+    if (store.prefs.focusMode) store.set('focusMode', false);
+    sendPrefs();
+  }
   const waylandSession = process.platform === 'linux' && (
     process.env.XDG_SESSION_TYPE?.toLowerCase() === 'wayland' ||
     (Boolean(process.env.WAYLAND_DISPLAY) && !process.env.DISPLAY)
@@ -66,9 +139,16 @@ if (!app.requestSingleInstanceLock()) {
   }
   function getMenuState() {
     store.rollover();
+    syncPomodoroIdleDuration();
     return {
       prefs: store.prefs,
       stats: store.stats,
+      pomodoro: {
+        phase: pomodoro.phase,
+        paused: pomodoro.paused,
+        remainingSec: pomodoro.remainingSec,
+        rounds: pomodoro.rounds
+      },
       listening: hook?.active ?? false,
       visible: pet?.win?.isVisible() ?? false,
       unavailableReason: inputUnavailableReason(),
@@ -99,10 +179,13 @@ if (!app.requestSingleInstanceLock()) {
         if (store.prefs.focusMode) store.set('focusMode', false);
       }
       store.set(key, value);
+      if (key === 'focusMinutes') syncPomodoroIdleDuration();
       if (key === 'top') pet.setTopmost(value);
-      if (key === 'size') pet.place(store.prefs.position ? 'restore' : 'dock');
+      if (key === 'size' || key === 'scale') pet.place(store.prefs.position ? 'restore' : 'dock');
+      if (key === 'clickThrough') pet.pollMouse();
       sendPrefs();
     },
+    openMenu() { updateMenu(); menuWin?.showNear(); },
     dock(side) {
       store.set('dock', side);
       store.set('position', null);
@@ -171,6 +254,8 @@ if (!app.requestSingleInstanceLock()) {
   app.on('window-all-closed', () => app.quit());
   app.on('before-quit', () => {
     quitting = true;
+    clearPomodoroTimer();
+    try { globalShortcut.unregisterAll(); } catch {}
     menuWin?.destroy();
     pet?.destroy();
     hook?.stop();
@@ -193,11 +278,15 @@ if (!app.requestSingleInstanceLock()) {
     tray.on('right-click', () => { updateMenu(); tray.popUpContextMenu(menu); });
     try {
       const { InputHook } = require('./input-hook');
-      hook = new InputHook(kind => (kind === 'mouse' ? !pet.ignored : pet.win.isFocused()) || Boolean(typing?.isFocused()), input => {
-        if (store.prefs.standbyMode) return;
-        store.count(input.kind === 'mouse' ? 'clicks' : 'keys');
-        pet.send('pet:input', input);
-      });
+      hook = new InputHook(
+        kind => (kind === 'mouse' ? !pet.ignored : pet.win.isFocused()) || Boolean(typing?.isFocused()),
+        input => {
+          if (store.prefs.standbyMode) return;
+          store.count(input.kind === 'mouse' ? 'clicks' : 'keys');
+          pet.send('pet:input', input);
+        },
+        () => Boolean(store?.prefs?.privacyMode)
+      );
     } catch {
       // Native input is optional and the desktop interactions keep working.
     }
@@ -224,6 +313,10 @@ if (!app.requestSingleInstanceLock()) {
         case 'toggle': actions.toggle(); break;
         case 'toggleInput': actions.toggleInput(); break;
         case 'perform': actions.perform(cmd.value); break;
+        case 'focusStart': startFocusSession(); break;
+        case 'focusPause': pauseFocusSession(); break;
+        case 'focusSkip': skipFocusSession(); break;
+        case 'focusReset': resetFocusSession(); break;
         case 'typing': actions.typing(); break;
         case 'quit': actions.quit(); break;
       }
@@ -264,6 +357,18 @@ if (!app.requestSingleInstanceLock()) {
       } catch {
         // Gracefully keep local desktop interactions working if OS permission is missing.
       }
+    }
+    try {
+      globalShortcut.register('Alt+Shift+P', () => {
+        if (!store || quitting) return;
+        actions.set('privacyMode', !store.prefs.privacyMode);
+      });
+      globalShortcut.register('Alt+Shift+L', () => {
+        if (!store || quitting) return;
+        actions.set('clickThrough', !store.prefs.clickThrough);
+      });
+    } catch {
+      // Global shortcuts are best-effort if already claimed by another app.
     }
     updateMenu();
   }).catch(error => {

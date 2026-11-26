@@ -3,7 +3,10 @@ const path = require('node:path');
 
 const defaults = Object.freeze({
   top: true, keyboard: true, sound: true, keySound: true, focusMode: false, standbyMode: false, volume: 0.7,
-  size: 'medium', dock: 'right', view: 'cat', keyboardStyle: 'cream', theme: 'cream', coat: 'maotao', eyeColor: 'auto', accessory: 'none', sleepMinutes: 5,
+  size: 'medium', scale: 1, dock: 'right', view: 'cat', keyboardStyle: 'cream', theme: 'cream',
+  coat: 'solidblack', eyeColor: 'auto', accessory: 'crown', accessoryColor: 'auto', sleepMinutes: 5,
+  leftMouse: false, numpad: false, showKeyChips: true, privacyMode: false, clickThrough: false,
+  focusMinutes: 25, breakMinutes: 5,
   hideOnClose: true, position: null
 });
 const choices = {
@@ -11,9 +14,10 @@ const choices = {
   dock: ['left', 'right'],
   view: ['cat', 'mirror'],
   keyboardStyle: ['cream', 'matcha', 'sakura', 'obsidian'],
-  coat: ['black', 'calico', 'siamese', 'maotao', 'orange', 'ragdoll', 'white', 'solidblack'],
+  coat: ['solidblack', 'maotao', 'calico', 'ragdoll', 'orange', 'black', 'siamese', 'white'],
   eyeColor: ['auto', 'blue', 'amber', 'emerald', 'violet', 'rose', 'odd'],
-  accessory: ['none', 'crown', 'sprout', 'beret', 'halo'],
+  accessory: ['none', 'crown', 'headphones', 'retro', 'bell', 'fish', 'scarf', 'wizard', 'star', 'shades', 'beret', 'sprout'],
+  accessoryColor: ['auto', 'sage', 'obsidian', 'cream', 'caramel', 'mist', 'sakura'],
   theme: ['cream', 'mint', 'night', 'green'],
   sleepMinutes: [2, 5, 10]
 };
@@ -25,6 +29,9 @@ function validate(key, value) {
   if (choices[key]) return choices[key].includes(value);
   if (typeof defaults[key] === 'boolean') return typeof value === 'boolean';
   if (key === 'volume') return Number.isFinite(value) && value >= 0 && value <= 1;
+  if (key === 'scale') return Number.isFinite(value) && value >= 0.75 && value <= 1.5;
+  if (key === 'focusMinutes') return Number.isInteger(value) && value >= 1 && value <= 120;
+  if (key === 'breakMinutes') return Number.isInteger(value) && value >= 1 && value <= 60;
   if (key === 'position') return value === null || (
     Number.isInteger(value?.x) && Number.isInteger(value?.y)
     && Math.abs(value.x) < 100000 && Math.abs(value.y) < 100000

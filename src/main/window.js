@@ -71,7 +71,8 @@ class PetWindow {
       : mode === 'primary' || mode === 'restore' ? screen.getPrimaryDisplay()
         : screen.getDisplayMatching(old);
     const work = display.workArea;
-    const scale = Math.min(sizes[this.store.prefs.size], work.width / WIDTH, work.height / HEIGHT);
+    const rawScale = Number.isFinite(this.store.prefs.scale) ? this.store.prefs.scale : (sizes[this.store.prefs.size] || 1);
+    const scale = Math.min(rawScale, work.width / WIDTH, work.height / HEIGHT);
     const width = Math.round(WIDTH * scale);
     const height = Math.round(HEIGHT * scale);
     const x = mode === 'center' ? work.x + Math.round((work.width - width) / 2)
@@ -134,7 +135,10 @@ class PetWindow {
         ...bounds, x: Math.round(bounds.x + point.x - cursor.x), y: Math.round(bounds.y + point.y - cursor.y)
       }, display.workArea);
       const current = this.win.getBounds();
-      if (current.x !== next.x || current.y !== next.y) this.win.setBounds(next);
+      if (current.x !== next.x || current.y !== next.y) {
+        this.win.setBounds(next);
+        this.send('pet:drag-move', { dx: next.x - current.x, dy: next.y - current.y });
+      }
       return;
     }
     const bounds = this.win.getContentBounds();
@@ -142,7 +146,7 @@ class PetWindow {
     const y = (point.y - bounds.y) * HEIGHT / bounds.height;
     const inside = x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT;
     const index = Math.floor(y / 4) * MASK_WIDTH + Math.floor(x / 4);
-    this.setIgnored(!inside || !this.mask?.[index]);
+    this.setIgnored(Boolean(this.store.prefs.clickThrough) || !inside || !this.mask?.[index]);
     if (this.lastPoint?.x === x && this.lastPoint?.y === y) return;
     this.lastPoint = { x, y };
     const now = Date.now();

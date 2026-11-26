@@ -21,10 +21,10 @@ function buildMenu(store, actions, listening, visible, unavailableReason = '') {
     label, type: 'checkbox', checked: prefs[key], click: item => actions.set(key, item.checked)
   });
   const coatMenu = [
-    choice('黑白奶牛猫', 'coat', 'black'), choice('三花猫', 'coat', 'calico'),
-    choice('暹罗猫', 'coat', 'siamese'), choice('灰白虎斑（毛桃）', 'coat', 'maotao'),
-    choice('橘猫', 'coat', 'orange'), choice('布偶猫', 'coat', 'ragdoll'),
-    choice('异瞳白猫', 'coat', 'white'), choice('纯黑猫', 'coat', 'solidblack')
+    choice('液态黑猫', 'coat', 'solidblack'), choice('灰白虎斑（毛桃）', 'coat', 'maotao'),
+    choice('三花猫', 'coat', 'calico'), choice('双色布偶猫', 'coat', 'ragdoll'),
+    choice('橘猫', 'coat', 'orange'), choice('黑白奶牛猫', 'coat', 'black'),
+    choice('暹罗猫', 'coat', 'siamese'), choice('异瞳白猫', 'coat', 'white')
   ];
   const eyeMenu = [
     choice('默认瞳色', 'eyeColor', 'auto'), choice('蓝宝石', 'eyeColor', 'blue'),
@@ -34,8 +34,12 @@ function buildMenu(store, actions, listening, visible, unavailableReason = '') {
   ];
   const accessoryMenu = [
     choice('无配饰', 'accessory', 'none'),
-    choice('小皇冠', 'accessory', 'crown'), choice('小嫩芽', 'accessory', 'sprout'),
-    choice('贝雷帽', 'accessory', 'beret'), choice('天使光环', 'accessory', 'halo')
+    choice('迷你小皇冠', 'accessory', 'crown'), choice('经典头戴耳机', 'accessory', 'headphones'),
+    choice('复古细梁耳机', 'accessory', 'retro'), choice('招财铃铛项圈', 'accessory', 'bell'),
+    choice('嘴叼小鱼干', 'accessory', 'fish'), choice('暖冬小红围巾', 'accessory', 'scarf'),
+    choice('迷你巫师尖帽', 'accessory', 'wizard'), choice('伴星发卡', 'accessory', 'star'),
+    choice('酷盖墨镜', 'accessory', 'shades'), choice('画家贝雷帽', 'accessory', 'beret'),
+    choice('小嫩芽', 'accessory', 'sprout')
   ];
   const sizeMenu = [choice('小', 'size', 'small'), choice('中', 'size', 'medium'), choice('大', 'size', 'large')];
   const interactMenu = [
@@ -92,12 +96,15 @@ function buildMenu(store, actions, listening, visible, unavailableReason = '') {
   store.rollover();
   return Menu.buildFromTemplate([
     { label: '毛桃桌面宠物', enabled: false },
+    { label: '打开控制面板…', click: () => actions.openMenu?.() },
     { type: 'separator' },
-    { label: prefs.standbyMode ? '退出待机' : '进入待机', type: 'checkbox', checked: Boolean(prefs.standbyMode),
-      click: () => actions.set('standbyMode', !prefs.standbyMode) },
     { label: '更换花色', submenu: coatMenu },
     toggle('专注模式（25 分钟）', 'focusMode'),
+    toggle('隐私模式 (Alt+Shift+P)', 'privacyMode'),
+    toggle('锁定点击穿透 (Alt+Shift+L)', 'clickThrough'),
     toggle('显示键盘与鼠标', 'keyboard'),
+    toggle('左手鼠标', 'leftMouse'),
+    toggle('数字键盘 (98%)', 'numpad'),
     { type: 'separator' },
     { label: '互动动作', submenu: interactMenu },
     { label: '外观与窗口', submenu: windowMenu },

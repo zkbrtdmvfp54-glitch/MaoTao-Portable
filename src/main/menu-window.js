@@ -2,7 +2,7 @@ const { BrowserWindow, screen } = require('electron');
 const { restrictContents, webOptions } = require('./window');
 
 const MENU_W = 372;
-const MENU_H = 568;
+const MENU_H = 612;
 
 class MenuWindow {
   constructor(menuUrl, getState) {
