@@ -3,221 +3,1358 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>毛桃桌面宠物 · 屏幕一角，安静陪你</title>
+<title>毛桃桌面宠物 · MaoTao Desk — 屏幕一角，安静陪你</title>
+<meta name="description" content="极简 3D 桌面陪伴小猫，八款花色与双猫接班动画、实时键鼠联动、番茄专注耳机与全身体钟摆物理。开源免费，支持 Windows / macOS / 麒麟 Linux。">
 <style>
   :root {
-    --bg: #fbf7ed;
-    --surface: #f1e9dc;
-    --card: #fffdf8;
-    --ink: #151412;
-    --ink-soft: #464039;
-    --ink-muted: #756b60;
-    --line: rgba(21, 20, 18, 0.10);
+    --bg: #faf6ee;
+    --surface: #f3ede1;
+    --surface-2: #ebe3d3;
+    --card: #fffdf9;
+    --dark: #171614;
+    --dark-soft: #262420;
+    --ink: #191816;
+    --ink-soft: #4e4840;
+    --ink-muted: #7d7367;
+    --line: rgba(25, 24, 22, 0.09);
+    --line-strong: rgba(25, 24, 22, 0.16);
+    --accent: #e07e26;
+    --accent-soft: rgba(224, 126, 38, 0.12);
     --green: #4c7d60;
+    --radius-xl: 28px;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --shadow-soft: 0 14px 40px rgba(25, 24, 22, 0.06);
+    --shadow-pop: 0 22px 54px rgba(25, 24, 22, 0.14);
   }
   * { box-sizing: border-box; }
-  html, body { height: 100%; }
+  html { scroll-behavior: smooth; }
   body {
     margin: 0;
     background: var(--bg);
     color: var(--ink);
-    font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", -apple-system, sans-serif;
+    font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
+    line-height: 1.6;
+  }
+  a { color: inherit; }
+
+  /* Top Nav */
+  .nav-wrap {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: rgba(250, 246, 238, 0.86);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(25, 24, 22, 0.05);
+  }
+  .nav {
+    max-width: 1120px;
+    margin: 0 auto;
+    height: 64px;
+    padding: 0 24px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+  }
+  .brand-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: var(--ink);
+    display: grid;
+    place-items: center;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .brand-sub {
+    font-weight: 600;
+    color: var(--ink-muted);
+    font-size: 13px;
+  }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 26px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+  }
+  .nav-links a { text-decoration: none; transition: color 120ms; }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-cta {
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
-    padding: 32px 20px;
+    height: 36px;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: #fff !important;
+    font-size: 13px;
+    font-weight: 700;
+    transition: transform 140ms, opacity 140ms;
   }
-  .page {
-    width: 100%;
-    max-width: 560px;
+  .nav-cta:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  /* Hero Interactive 3D Stage */
+  .hero {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 40px 24px 56px;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
-  .eyebrow {
+  .hero-badge {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    font-size: 13px;
+    padding: 5px 13px;
+    border-radius: 999px;
+    background: var(--surface);
+    font-size: 12.5px;
     font-weight: 700;
-    color: var(--ink-muted);
-    margin-bottom: 14px;
+    color: var(--ink-soft);
+    margin-bottom: 18px;
   }
-  .eyebrow i {
+  .hero-badge i {
     width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block;
   }
-  h1 {
+  .hero h1 {
     margin: 0 0 12px;
-    font-size: clamp(34px, 6vw, 48px);
+    font-size: clamp(36px, 6vw, 56px);
     font-weight: 900;
-    letter-spacing: -0.03em;
-    line-height: 1.15;
+    letter-spacing: -0.035em;
+    line-height: 1.12;
   }
-  .lead {
-    margin: 0 auto 28px;
-    max-width: 420px;
+  .hero-sub {
+    margin: 0 auto 14px;
+    max-width: 520px;
     font-size: 15px;
-    line-height: 1.65;
-    color: var(--ink-soft);
+    color: var(--ink-muted);
   }
-  .cta {
+
+  .stage-shell {
+    position: relative;
+    width: min(460px, 92vw);
+    aspect-ratio: 420 / 340;
+    margin: 4px auto 12px;
+    user-select: none;
+    cursor: pointer;
+  }
+  #pet-stage {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+  #pet-stage canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+  }
+  .stage-toast {
+    position: absolute;
+    left: 50%;
+    top: 10px;
+    transform: translateX(-50%) translateY(-6px);
+    padding: 5px 14px;
+    border-radius: 999px;
+    background: rgba(25, 24, 22, 0.84);
+    color: #fffaf2;
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms, transform 180ms;
+    white-space: nowrap;
+  }
+  .stage-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .keycap-float {
+    position: absolute;
+    left: 50%;
+    bottom: 22%;
+    transform: translate(-50%, 0);
+    padding: 3px 9px;
+    border-radius: 7px;
+    background: var(--card);
+    border: 1px solid var(--line-strong);
+    box-shadow: 0 6px 16px rgba(25, 24, 22, 0.08);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+    pointer-events: none;
+    animation: floatUp 620ms ease-out forwards;
+  }
+  @keyframes floatUp {
+    0% { opacity: 0; transform: translate(-50%, 8px) scale(0.92); }
+    18% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -34px) scale(0.98); }
+  }
+
+  /* Floating Control Dock */
+  .dock-wrap {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 25;
+  }
+  .dock {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 10px;
-    min-width: 256px;
-    height: 52px;
-    padding: 0 30px;
+    gap: 4px;
+    padding: 5px;
     border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    box-shadow: 0 8px 24px rgba(25, 24, 22, 0.06);
+  }
+  .dock-btn {
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    padding: 8px 18px;
+    border-radius: 999px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: background 140ms, color 140ms;
+  }
+  .dock-btn:hover { color: var(--ink); background: rgba(255, 255, 255, 0.55); }
+  .dock-btn.active {
+    background: var(--card);
+    color: var(--ink);
+    box-shadow: 0 2px 10px rgba(25, 24, 22, 0.08);
+  }
+  .dock-dot {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+    border: 1px solid rgba(25, 24, 22, 0.16);
+  }
+
+  /* Dock Popovers */
+  .popover {
+    position: absolute;
+    bottom: calc(100% + 12px);
+    left: 50%;
+    transform: translateX(-50%) translateY(6px);
+    width: min(390px, 90vw);
+    padding: 16px 18px;
+    border-radius: var(--radius-lg);
+    background: var(--card);
+    border: 1px solid var(--line-strong);
+    box-shadow: var(--shadow-pop);
+    text-align: left;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 150ms, transform 150ms;
+  }
+  .popover.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+  }
+  .pop-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--ink-muted);
+    letter-spacing: 0.04em;
+    margin: 0 0 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .pop-hint { font-weight: 600; color: var(--accent); font-size: 11.5px; }
+  .pill-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .chip-btn {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-soft);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 7px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 120ms;
+  }
+  .chip-btn:hover { border-color: var(--line-strong); color: var(--ink); }
+  .chip-btn.active {
     background: var(--ink);
     color: #fff;
-    text-decoration: none;
-    font-size: 16px;
-    font-weight: 800;
-    box-shadow: 0 10px 28px rgba(21, 20, 18, 0.14);
-    transition: transform 140ms, opacity 140ms;
+    border-color: var(--ink);
   }
-  .cta:hover { opacity: 0.9; transform: translateY(-1px); }
+  .swatch {
+    width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0;
+    border: 1px solid rgba(25, 24, 22, 0.18);
+  }
+  .ctrl-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+  }
+  .ctrl-row:first-of-type { border-top: none; padding-top: 2px; }
+  .ctrl-row select {
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: 10px;
+    padding: 5px 10px;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .toggle-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  /* Sections */
+  .section {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 64px 24px;
+  }
+  .eyebrow-num {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink-muted);
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
+  }
+  .sec-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 28px;
+  }
+  .sec-head h2 {
+    margin: 0;
+    font-size: clamp(26px, 4vw, 38px);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 1.18;
+  }
+  .sec-head p {
+    margin: 0;
+    max-width: 420px;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+
+  /* 01 Feature Showcase Card */
+  .feature-box {
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    padding: 32px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 36px;
+  }
+  .feat-item h3 {
+    margin: 10px 0 6px;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+  }
+  .feat-item p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.7;
+  }
+  .swatch-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+  .swatch-dot {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 1.5px solid rgba(25, 24, 22, 0.16);
+    cursor: pointer;
+    transition: transform 140ms;
+    padding: 0;
+  }
+  .swatch-dot:hover { transform: scale(1.2); }
+  .accent-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    text-decoration: none;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+  }
+  .accent-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .feat-tag {
+    display: inline-block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--ink-muted);
+    background: rgba(255, 253, 249, 0.8);
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+  }
+
+  /* 02 Download Dual Cards */
+  .dl-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 22px;
+    align-items: stretch;
+  }
+  .dl-card {
+    border-radius: var(--radius-xl);
+    padding: 30px 30px 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .dl-card.light {
+    background: var(--card);
+    border: 1px solid var(--line-strong);
+    box-shadow: var(--shadow-soft);
+  }
+  .dl-card.dark {
+    background: var(--dark);
+    color: #faf6ee;
+    box-shadow: 0 20px 46px rgba(23, 22, 20, 0.18);
+  }
+  .card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .card-title { font-size: 20px; font-weight: 800; margin: 0; }
+  .pill-badge {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 11px;
+    border-radius: 999px;
+  }
+  .light .pill-badge { background: var(--surface); color: var(--ink-soft); }
+  .dark .pill-badge { background: rgba(224, 126, 38, 0.2); color: #f5a65b; }
+  .price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .price-num { font-size: 36px; font-weight: 900; letter-spacing: -0.03em; line-height: 1; }
+  .price-sub { font-size: 13px; color: var(--ink-muted); }
+  .dark .price-sub { color: rgba(250, 246, 238, 0.65); }
+
   .route-switch {
-    margin: 14px auto 0;
     display: inline-flex;
     padding: 3px;
     gap: 3px;
     border-radius: 999px;
     background: var(--surface);
+    margin-bottom: 14px;
   }
   .route-btn {
     border: none;
     background: transparent;
     color: var(--ink-soft);
-    font-size: 12px;
+    font-family: inherit;
+    font-size: 12.5px;
     font-weight: 700;
-    padding: 5px 13px;
+    padding: 6px 14px;
     border-radius: 999px;
     cursor: pointer;
     transition: background 120ms, color 120ms;
   }
-  .route-btn.active {
+  .route-btn.active { background: var(--ink); color: #fff; }
+
+  .cta-main {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 50px;
+    border-radius: 999px;
     background: var(--ink);
+    color: #fff;
+    text-decoration: none;
+    font-size: 15.5px;
+    font-weight: 800;
+    transition: transform 140ms, opacity 140ms;
+  }
+  .cta-main:hover { opacity: 0.92; transform: translateY(-1px); }
+  .cta-amber {
+    background: var(--accent);
     color: #fff;
   }
   .sub-meta {
-    margin-top: 10px;
+    margin: 10px 0 18px;
     font-size: 12.5px;
     color: var(--ink-muted);
+    text-align: center;
   }
-  .alt-links {
-    margin-top: 26px;
-    padding-top: 20px;
+  .alt-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+  }
+  .alt-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 12px;
+    border-radius: 11px;
+    background: var(--surface);
+    text-decoration: none;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    transition: background 120ms, color 120ms;
+  }
+  .alt-btn:hover { background: var(--surface-2); color: var(--ink); }
+  .alt-btn span { font-size: 11px; color: var(--ink-muted); font-weight: 600; }
+
+  .bullet-list {
+    list-style: none;
+    margin: 8px 0 22px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    font-size: 13.5px;
+    color: rgba(250, 246, 238, 0.88);
+  }
+  .bullet-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .bullet-list li::before {
+    content: "";
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    margin-top: 8px;
+    flex-shrink: 0;
+  }
+
+  /* 03 Privacy Asymmetric 2-Column */
+  .split-sec {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 40px;
+    align-items: start;
+  }
+  .split-sec h2 {
+    margin: 0 0 12px;
+    font-size: clamp(26px, 3.8vw, 36px);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+  }
+  .split-sec .intro {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .rule-list { display: flex; flex-direction: column; }
+  .rule-item {
+    display: grid;
+    grid-template-columns: 38px 1fr;
+    gap: 12px;
+    padding: 18px 0;
+    border-top: 1px solid var(--line);
+  }
+  .rule-item:last-child { border-bottom: 1px solid var(--line); }
+  .rule-num {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink-muted);
+    padding-top: 2px;
+  }
+  .rule-item strong { display: block; font-size: 15px; margin-bottom: 4px; }
+  .rule-item p { margin: 0; font-size: 13.5px; color: var(--ink-soft); }
+
+  /* 04 FAQ Accordion */
+  .faq-list { display: flex; flex-direction: column; }
+  .faq-item {
+    border-top: 1px solid var(--line);
+  }
+  .faq-item:last-child { border-bottom: 1px solid var(--line); }
+  .faq-item summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 18px 0;
+    display: grid;
+    grid-template-columns: 36px 1fr 20px;
+    gap: 10px;
+    align-items: center;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-plus {
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--ink-muted);
+    text-align: right;
+    transition: transform 160ms;
+  }
+  .faq-item[open] .faq-plus { transform: rotate(45deg); color: var(--ink); }
+  .faq-body {
+    padding: 0 0 18px 46px;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.75;
+  }
+  .code-copy {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: var(--surface);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    word-break: break-all;
+  }
+  .copy-btn {
+    border: 1px solid var(--line-strong);
+    background: var(--card);
+    color: var(--ink);
+    border-radius: 7px;
+    padding: 4px 10px;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  kbd {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  /* Footer */
+  footer {
+    max-width: 1080px;
+    margin: 24px auto 0;
+    padding: 26px 24px 44px;
     border-top: 1px solid var(--line);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: center;
-    gap: 8px 16px;
+    justify-content: space-between;
+    gap: 14px;
     font-size: 13px;
-  }
-  .alt-links a {
-    color: var(--ink-soft);
-    text-decoration: none;
-    font-weight: 600;
-    transition: color 120ms;
-  }
-  .alt-links a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
-  .alt-links .sep { color: rgba(21, 20, 18, 0.22); }
-  .tips {
-    margin: 22px auto 0;
-    max-width: 460px;
-    text-align: left;
-  }
-  .tips summary {
-    cursor: pointer;
-    list-style: none;
-    text-align: center;
-    font-size: 12.5px;
-    font-weight: 600;
     color: var(--ink-muted);
   }
-  .tips summary::-webkit-details-marker { display: none; }
-  .tips-body {
-    margin-top: 12px;
-    padding: 14px 16px;
-    border-radius: 14px;
-    background: var(--card);
-    border: 1px solid var(--line);
-    font-size: 12.5px;
-    line-height: 1.7;
-    color: var(--ink-soft);
+  .foot-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
   }
-  .tips-body code {
-    display: block;
-    margin-top: 6px;
-    padding: 6px 9px;
-    border-radius: 8px;
-    background: var(--surface);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 11.5px;
-    word-break: break-all;
+  .foot-links a { text-decoration: none; font-weight: 600; }
+  .foot-links a:hover { color: var(--ink); }
+
+  @media (max-width: 820px) {
+    .nav-links a:not(.nav-cta) { display: none; }
+    .feature-box, .dl-grid, .split-sec { grid-template-columns: 1fr; }
+    .feature-box { padding: 24px 20px; }
+    .dl-card { padding: 24px 20px; }
+    .alt-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
-<body>
-<main class="page">
-  <div class="eyebrow"><i></i><span id="ver">毛桃桌面宠物 · 开源免费</span></div>
-  <h1>屏幕一角，安静陪你。</h1>
-  <p class="lead">极简 3D 桌面陪伴小猫，实时键鼠联动与番茄专注。纯本地内存运行，绝不记录或上传任何输入内容。</p>
+<body id="top">
 
-  <a id="primary-dl" class="cta" href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">立即下载</a>
-
-  <div>
-    <div class="route-switch" role="group" aria-label="下载线路">
-      <button id="btn-cn" class="route-btn" type="button">国内高速线路</button>
-      <button id="btn-global" class="route-btn" type="button">GitHub 国际线路</button>
+<header class="nav-wrap">
+  <nav class="nav">
+    <a class="brand" href="#top">
+      <span class="brand-icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M5 10L6.5 4.5L10.5 7.5C11.4 7.2 12.6 7.2 13.5 7.5L17.5 4.5L19 10C19.6 11.1 20 12.5 20 14C20 17.8 16.6 20 12 20C7.4 20 4 17.8 4 14C4 12.5 4.4 11.1 5 10Z" fill="#fff"/>
+          <circle cx="9.2" cy="13.5" r="1.5" fill="#191816"/>
+          <circle cx="14.8" cy="13.5" r="1.5" fill="#191816"/>
+        </svg>
+      </span>
+      <span>毛桃桌面宠物</span>
+      <span class="brand-sub">MaoTao Desk</span>
+    </a>
+    <div class="nav-links">
+      <a href="#features">特色与花色</a>
+      <a href="#privacy">隐私承诺</a>
+      <a href="#faq">常见问题</a>
+      <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable" target="_blank" rel="noopener">GitHub</a>
+      <a href="#download" class="nav-cta">免费下载</a>
     </div>
-  </div>
-  <div id="sub-meta" class="sub-meta">自动适配 Windows · macOS · 麒麟</div>
-
-  <nav class="alt-links" id="alt-links" aria-label="其他系统版本">
-    <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">Windows 便携版</a>
-    <span class="sep">·</span>
-    <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">Windows 安装版</a>
-    <span class="sep">·</span>
-    <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">macOS (M 芯片)</a>
-    <span class="sep">·</span>
-    <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">macOS (Intel)</a>
-    <span class="sep">·</span>
-    <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">麒麟 x64 / ARM64</a>
   </nav>
+</header>
 
-  <details class="tips">
-    <summary>隐私说明与 macOS 首次打开指引 ▾</summary>
-    <div class="tips-body">
-      <div><strong>隐私保护：</strong>键鼠仅在本地内存中驱动 3D 动画，随时按 <strong>Alt+Shift+P</strong> 一键切换隐私模式。</div>
-      <div style="margin-top:8px;"><strong>macOS 提示“无法验证/已损坏”：</strong>拖入「应用程序」后在终端执行一次：
-        <code>xattr -cr "/Applications/MAOTAO Desktop Pet.app"</code>
+<section class="hero">
+  <div class="hero-badge"><i></i><span id="ver">毛桃桌面宠物 · 开源免费 · 离线零联网</span></div>
+  <h1>屏幕一角，安静陪你。</h1>
+  <p class="hero-sub">直接敲键盘打字、摸摸小猫脑袋，或切换花色观看双猫「老吴」接班动画。</p>
+
+  <div class="stage-shell" id="stage-shell" title="点击摸摸小猫，或直接敲击键盘打字">
+    <div id="pet-stage"></div>
+    <div class="stage-toast" id="stage-toast"></div>
+  </div>
+
+  <div class="dock-wrap" id="dock-wrap">
+    <!-- Popover: Coat Switcher -->
+    <div class="popover" id="pop-coat" role="dialog" aria-label="切换花色">
+      <div class="pop-title">
+        <span>选择小猫花色</span>
+        <span class="pop-hint">切换触发双猫接班 ✨</span>
+      </div>
+      <div class="pill-grid" id="coat-pills"></div>
+    </div>
+
+    <!-- Popover: Interact & Focus -->
+    <div class="popover" id="pop-interact" role="dialog" aria-label="互动与专注">
+      <div class="pop-title">
+        <span>互动动作与专注模式</span>
+        <span class="pop-hint" id="focus-status">待机中</span>
+      </div>
+      <div class="pill-grid">
+        <button class="chip-btn" type="button" data-act="focus" id="btn-focus">🎧 专注耳机 (25:00)</button>
+        <button class="chip-btn" type="button" data-act="pet">💕 摸摸头</button>
+        <button class="chip-btn" type="button" data-act="yarn">🧶 玩毛线球</button>
+        <button class="chip-btn" type="button" data-act="butterfly">🦋 捉蝴蝶</button>
+        <button class="chip-btn" type="button" data-act="wash">🐾 舔爪洗脸</button>
+        <button class="chip-btn" type="button" data-act="sleep" id="btn-sleep">💤 侧躺睡觉</button>
       </div>
     </div>
-  </details>
-</main>
 
-<script>
+    <!-- Popover: Customize -->
+    <div class="popover" id="pop-custom" role="dialog" aria-label="自定义外观">
+      <div class="pop-title">
+        <span>外观与键鼠自定义</span>
+        <span class="pop-hint">实时生效</span>
+      </div>
+      <div class="ctrl-row">
+        <span>头部配饰 (10 款)</span>
+        <select id="sel-accessory">
+          <option value="none">无配饰</option>
+          <option value="crown" selected>迷你小皇冠</option>
+          <option value="bow">蝴蝶结</option>
+          <option value="clip">星星发卡</option>
+          <option value="tophat">绅士礼帽</option>
+          <option value="shades">酷盖墨镜</option>
+          <option value="beret">画家贝雷帽</option>
+          <option value="sprout">小嫩芽</option>
+          <option value="flower">小雏菊</option>
+          <option value="halo">天使光环</option>
+          <option value="scarf">暖暖围巾</option>
+        </select>
+      </div>
+      <div class="ctrl-row">
+        <span>键鼠主题 (4 款)</span>
+        <select id="sel-kbstyle">
+          <option value="cream" selected>经典奶白</option>
+          <option value="matcha">抹茶青白</option>
+          <option value="sakura">樱花粉白</option>
+          <option value="obsidian">曜石暗夜</option>
+        </select>
+      </div>
+      <div class="toggle-pills">
+        <button class="chip-btn" type="button" id="tog-numpad">98% 数字键盘</button>
+        <button class="chip-btn active" type="button" id="tog-leftmouse">左手鼠标</button>
+        <button class="chip-btn" type="button" id="tog-privacy">隐私模式</button>
+        <button class="chip-btn active" type="button" id="tog-sound">🔊 音效开启</button>
+      </div>
+    </div>
+
+    <div class="dock" role="toolbar" aria-label="小猫互动控制栏">
+      <button class="dock-btn" type="button" data-pop="pop-coat">
+        <span class="dock-dot" id="active-coat-dot" style="background:#c2c3c0"></span>
+        <span>花色</span>
+      </button>
+      <button class="dock-btn" type="button" data-pop="pop-interact">互动与专注</button>
+      <button class="dock-btn" type="button" data-pop="pop-custom">自定义</button>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="eyebrow-num">01 · 特色与花色</div>
+  <div class="sec-head">
+    <h2>八款萌猫，有脾气也有陪伴</h2>
+    <p>基于本地程序化 3D 模型构建，零贴图依赖、极低内存占用，每一款花色都拥有细腻渐变与完整动态表情。</p>
+  </div>
+  <div class="feature-box">
+    <div class="feat-item">
+      <div class="swatch-row" id="feature-swatches"></div>
+      <h3>八款柔顺渐变花色 · 双猫「老吴」接班</h3>
+      <p>内置灰白虎斑（毛桃）、液态黑猫、暹罗猫、三花猫、黑白奶牛猫、橘猫、布偶猫、异瞳白猫。切换花色时新猫从左侧走入，与旧猫对峙吵架交接后再平滑坐稳上岗。</p>
+      <button class="accent-link" type="button" id="try-handover-link">点此回舞台看双猫接班 →</button>
+    </div>
+    <div class="feat-item">
+      <span class="feat-tag">物理与触感</span>
+      <h3>全身体拎起 · 真实钟摆惯性</h3>
+      <p>桌面端支持从头部、鼻子、身体或尾巴任意位置拎起小猫，左右拖动时身体随真实拖动速度产生钟摆惯性甩动，并触发对应的无奈/委屈表情联动。</p>
+    </div>
+    <div class="feat-item">
+      <span class="feat-tag">键鼠联动</span>
+      <h3>1:1 真实键帽联动 · 十款精致配饰</h3>
+      <p>打字时双爪同步按压对应键位，空格键双爪协同，高速连续敲击会触发眯眼生气与尾巴拍桌反馈；支持 98% 数字键盘、左手鼠标、4 套键鼠主题与 10 款头部配饰。</p>
+    </div>
+    <div class="feat-item">
+      <span class="feat-tag">专注与治愈</span>
+      <h3>25 分钟番茄专注 · 治愈逗猫日常</h3>
+      <p>一键开启 25 分钟番茄钟，小猫自动佩戴 5 色随机太阳穴贴合耳机；闲暇时可抚摸呼噜、点击毛线球改变轨迹、召唤蝴蝶、舔爪洗脸，或侧躺蜷缩进入休眠。</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="download">
+  <div class="eyebrow-num">02 · 桌面端下载</div>
+  <div class="sec-head">
+    <h2>网页随手试玩，桌面端常驻陪伴</h2>
+    <p>全功能永久开源免费，无会员、无激活码、无设备数量限制；支持 Windows、macOS 与国产麒麟 Linux。</p>
+  </div>
+
+  <div class="dl-grid">
+    <div class="dl-card light">
+      <div>
+        <div class="card-top">
+          <h3 class="card-title">桌面端安装包</h3>
+          <span class="pill-badge" id="dl-ver-badge">自动匹配最新版</span>
+        </div>
+        <div class="route-switch" role="group" aria-label="下载线路">
+          <button id="btn-cn" class="route-btn" type="button">国内高速线路</button>
+          <button id="btn-global" class="route-btn" type="button">GitHub 国际线路</button>
+        </div>
+        <a id="primary-dl" class="cta-main" href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/latest">立即下载</a>
+        <div id="sub-meta" class="sub-meta">自动适配 Windows · macOS · 麒麟 Linux</div>
+      </div>
+      <div class="alt-grid" id="alt-links"></div>
+    </div>
+
+    <div class="dl-card dark">
+      <div>
+        <div class="card-top">
+          <h3 class="card-title">全功能开源版</h3>
+          <span class="pill-badge">MIT 开源协议</span>
+        </div>
+        <div class="price-row">
+          <span class="price-num">¥0</span>
+          <span class="price-sub">永久免费 · 不限设备 · 离线可用</span>
+        </div>
+        <ul class="bullet-list">
+          <li>全量解锁 8 款花色与双猫「老吴」换班动画</li>
+          <li>全量解锁 10 款头部配饰、4 套键鼠主题与 98% 键盘</li>
+          <li>内置 25 分钟番茄专注倒计时与 5 色自动耳机</li>
+          <li>支持 Windows 便携/安装、macOS (M/Intel) 与麒麟 Linux</li>
+          <li>100% 本地离线运行，源码完全公开可审计</li>
+        </ul>
+      </div>
+      <a class="cta-main cta-amber" href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable" target="_blank" rel="noopener">前往 GitHub 仓库查看源码 ↗</a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="privacy">
+  <div class="split-sec">
+    <div>
+      <div class="eyebrow-num">03 · 隐私承诺</div>
+      <h2>它听得见键盘，<br>所以先说清楚</h2>
+      <p class="intro">桌面宠物常驻屏幕角落，安全与透明是最基本的底线。毛桃的所有代码在 GitHub 公开，主进程主动拦截一切外网请求。</p>
+    </div>
+    <div class="rule-list">
+      <div class="rule-item">
+        <span class="rule-num">01</span>
+        <div>
+          <strong>纯内存驱动动画，绝不记录输入文本</strong>
+          <p>跨应用键鼠联动默认关闭，需你手动确认开启；开启后仅在内存中识别左右手区域与动作类别，松手即弃，不读取、不保存、不上传任何打字内容。</p>
+        </div>
+      </div>
+      <div class="rule-item">
+        <span class="rule-num">02</span>
+        <div>
+          <strong>100% 本地离线，零统计零遥测</strong>
+          <p>Electron 主进程主动阻断所有外部网络访问，无需登录账号，不包含任何埋点、广告或云端同步；网页试玩版同样完全在你的浏览器本地运行。</p>
+        </div>
+      </div>
+      <div class="rule-item">
+        <span class="rule-num">03</span>
+        <div>
+          <strong>一键切换隐私模式与点击穿透</strong>
+          <p>输入密码或录屏时，随时按 <kbd>Alt+Shift+P</kbd> 进入隐私模式（仅随机抬爪，不点亮具体键位），按 <kbd>Alt+Shift+L</kbd> 锁定点击穿透，完全不挡手。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="faq">
+  <div class="split-sec">
+    <div>
+      <div class="eyebrow-num">04 · 常见问题</div>
+      <h2>安装、权限与快捷键，<br>一页看清</h2>
+      <p class="intro">开源个人项目暂未购买昂贵的商业代码签名证书，首次运行遇到系统安全提示属于正常现象。</p>
+      <a class="accent-link" href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases" target="_blank" rel="noopener">查看全部版本与更新日志 ↗</a>
+    </div>
+    <div class="faq-list">
+      <details class="faq-item" open>
+        <summary>
+          <span class="rule-num">01</span>
+          <span>Windows 提示“已保护你的电脑”怎么办？</span>
+          <span class="faq-plus">+</span>
+        </summary>
+        <div class="faq-body">
+          因未购买商业 EV 签名证书，Windows SmartScreen 首次打开会弹出蓝色提示。点击弹窗中的<strong>「更多信息」→「仍要运行」</strong>即可正常启动。推荐优先下载<strong>便携版（Portable）</strong>，免安装双击即用。
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>
+          <span class="rule-num">02</span>
+          <span>macOS 提示“无法验证开发者 / 已损坏”？</span>
+          <span class="faq-plus">+</span>
+        </summary>
+        <div class="faq-body">
+          将应用拖入「应用程序」文件夹后，打开「终端」执行一次下方命令移除隔离标记，即可正常打开：
+          <div class="code-copy">
+            <code id="mac-cmd">xattr -cr "/Applications/MAOTAO Desktop Pet.app"</code>
+            <button class="copy-btn" type="button" id="copy-mac-cmd">复制</button>
+          </div>
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>
+          <span class="rule-num">03</span>
+          <span>macOS 跨应用打字联动需要什么权限？</span>
+          <span class="faq-plus">+</span>
+        </summary>
+        <div class="faq-body">
+          首次开启跨应用键鼠联动时，请前往「系统设置 → 隐私与安全性 → 输入监控」勾选 <strong>MAOTAO Desktop Pet</strong> 并重启应用即可生效。
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>
+          <span class="rule-num">04</span>
+          <span>麒麟 / Linux 支持哪些桌面环境？</span>
+          <span class="faq-plus">+</span>
+        </summary>
+        <div class="faq-body">
+          提供 <code>x64 .AppImage</code> 与 <code>x64 / ARM64 .deb</code> 安装包。在 X11 会话下支持全局键鼠联动与窗口置顶；Wayland 会话下会自动禁用全局钩子，窗口内本地互动与专注模式均可正常使用。
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary>
+          <span class="rule-num">05</span>
+          <span>如何防止误点小猫或找回拖出屏幕的小猫？</span>
+          <span class="faq-plus">+</span>
+        </summary>
+        <div class="faq-body">
+          玩游戏或全屏看视频时，按 <kbd>Alt+Shift+L</kbd> 可一键锁定点击穿透；右键系统托盘图标可随时选择「居中」或「复位到主屏」找回小猫，也可随时打开三栏暖纸风控制面板。
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div><strong>毛桃桌面宠物 MaoTao</strong> · 极简 3D 桌面陪伴 · MIT 开源免费</div>
+  <div class="foot-links">
+    <a href="#top">回到舞台</a>
+    <a href="#download">三端下载</a>
+    <a href="#privacy">隐私承诺</a>
+    <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases" target="_blank" rel="noopener">更新日志</a>
+    <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</footer>
+
+<script src="./demo/three.min.js"></script>
+<script src="./demo/7paws.js"></script>
+<script type="module">
+import { SoundManager } from './demo/sound.js';
+
+const COATS = [
+  { id: 'maotao', name: '灰白虎斑（毛桃）', color: '#c2c3c0' },
+  { id: 'solidblack', name: '液态黑猫', color: '#181818' },
+  { id: 'siamese', name: '暹罗猫', color: '#e6d0b3' },
+  { id: 'calico', name: '三花猫', color: '#e48b3b' },
+  { id: 'black', name: '黑白奶牛猫', color: '#38363a' },
+  { id: 'orange', name: '橘猫', color: '#ebb064' },
+  { id: 'ragdoll', name: '布偶猫', color: '#9c887b' },
+  { id: 'white', name: '异瞳白猫', color: '#f5f2eb' },
+];
+
+const sound = new SoundManager();
+let soundOn = true;
+let privacyOn = false;
+let focusOn = false;
+let sleepingOn = false;
+let currentCoat = 'maotao';
+let focusSec = 25 * 60;
+let focusTimer = null;
+
+const stageEl = document.getElementById('pet-stage');
+const stageShell = document.getElementById('stage-shell');
+const toastEl = document.getElementById('stage-toast');
+const activeCoatDot = document.getElementById('active-coat-dot');
+const focusStatus = document.getElementById('focus-status');
+const btnFocus = document.getElementById('btn-focus');
+const btnSleep = document.getElementById('btn-sleep');
+
+let toastTimer = null;
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2000);
+}
+
+function spawnKeycap(label) {
+  if (!label || privacyOn) return;
+  const el = document.createElement('div');
+  el.className = 'keycap-float';
+  el.textContent = label;
+  el.style.left = (40 + Math.random() * 20) + '%';
+  stageShell.appendChild(el);
+  setTimeout(() => el.remove(), 650);
+}
+
+let catApi = null;
+try {
+  catApi = window.createCat(stageEl, {
+    coat: currentCoat,
+    eyeColor: 'auto',
+    accessory: 'crown',
+    keyboardStyle: 'cream',
+    focusMode: false
+  });
+  catApi?.setOptions({
+    showKeyboard: true,
+    showMouse: true,
+    followKeys: true,
+    showKeyLabels: false,
+    leftMouse: true,
+    accessory: 'crown',
+    keyboardStyle: 'cream'
+  });
+  catApi?.setOnHandoverStage?.(stage => {
+    if (stage === 'enter') showToast('新伙伴来接班啦…');
+    if (stage === 'argue-in') {
+      showToast('“老吴老吴老吴！”');
+      if (soundOn) sound.playHandoverArgue('incoming');
+    }
+    if (stage === 'argue-out' && soundOn) sound.playHandoverArgue('outgoing');
+    if (stage === 'done') showToast('接班完成，开始值班！');
+  });
+} catch (err) {
+  console.warn('3D 舞台初始化降级', err);
+}
+
+// Coat switcher UI (both in dock popover and in feature card swatches)
+const coatPills = document.getElementById('coat-pills');
+const featureSwatches = document.getElementById('feature-swatches');
+const coatButtons = [];
+
+function switchCoat(id, scrollTop = false) {
+  if (scrollTop) window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (id === currentCoat) return;
+  currentCoat = id;
+  const info = COATS.find(c => c.id === id) || COATS[0];
+  activeCoatDot.style.background = info.color;
+  coatButtons.forEach(b => b.classList.toggle('active', b.dataset.id === id));
+  sleepingOn = false;
+  btnSleep.classList.remove('active');
+  catApi?.switchCoatWithHandover?.(id);
+}
+
+COATS.forEach(c => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'chip-btn' + (c.id === currentCoat ? ' active' : '');
+  b.dataset.id = c.id;
+  b.innerHTML = `<span class="swatch" style="background:${c.color}"></span>${c.name}`;
+  b.onclick = () => switchCoat(c.id);
+  coatPills.appendChild(b);
+  coatButtons.push(b);
+
+  const dot = document.createElement('button');
+  dot.type = 'button';
+  dot.className = 'swatch-dot';
+  dot.style.background = c.color;
+  dot.title = `切换为 ${c.name}`;
+  dot.onclick = () => switchCoat(c.id, true);
+  featureSwatches.appendChild(dot);
+});
+
+document.getElementById('try-handover-link').onclick = () => {
+  const next = COATS[(COATS.findIndex(c => c.id === currentCoat) + 1) % COATS.length];
+  switchCoat(next.id, true);
+};
+
+// Popover toggle logic
+const dockBtns = [...document.querySelectorAll('.dock-btn[data-pop]')];
+const pops = [...document.querySelectorAll('.popover')];
+function closePops() {
+  pops.forEach(p => p.classList.remove('open'));
+  dockBtns.forEach(b => b.classList.remove('active'));
+}
+dockBtns.forEach(btn => {
+  btn.onclick = e => {
+    e.stopPropagation();
+    const target = document.getElementById(btn.dataset.pop);
+    const willOpen = !target.classList.contains('open');
+    closePops();
+    if (willOpen) {
+      target.classList.add('open');
+      btn.classList.add('active');
+    }
+  };
+});
+pops.forEach(p => p.addEventListener('click', e => e.stopPropagation()));
+document.addEventListener('click', closePops);
+
+// Interactive stage: mouse gaze, pet on click, real keyboard typing!
+const downKeys = new Set();
+window.addEventListener('pointermove', e => {
+  if (!catApi) return;
+  const r = stageEl.getBoundingClientRect();
+  if (!r.width || !r.height) return;
+  const nx = Math.max(-1.4, Math.min(1.4, ((e.clientX - r.left) / r.width) * 2 - 1));
+  const ny = Math.max(-1.4, Math.min(1.4, 1 - ((e.clientY - r.top) / r.height) * 2));
+  catApi.setPointerNdc?.(nx, ny);
+});
+
+stageShell.addEventListener('click', e => {
+  if (!catApi) return;
+  const r = stageEl.getBoundingClientRect();
+  const x = ((e.clientX - r.left) / r.width) * 420;
+  const y = ((e.clientY - r.top) / r.height) * 340;
+  if (catApi.toyVisible?.() && catApi.pickToy?.(x, y)) {
+    catApi.playToy?.();
+    showToast('追毛线球！');
+    return;
+  }
+  if (sleepingOn) {
+    sleepingOn = false;
+    btnSleep.classList.remove('active');
+    catApi.wakeUp?.();
+    showToast('小猫醒来啦');
+    return;
+  }
+  catApi.petHappy?.(1900);
+  if (soundOn) sound.playPurr?.();
+  showToast('呼噜呼噜 ~ ♡');
+});
+
+window.addEventListener('keydown', e => {
+  if (!catApi || e.repeat || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+  if (catApi.isHandoverActive?.()) return;
+  if (sleepingOn) {
+    sleepingOn = false;
+    btnSleep.classList.remove('active');
+    catApi.wakeUp?.();
+  }
+  if (privacyOn) {
+    catApi.tap?.(Math.random() < 0.5 ? 'Left' : 'Right');
+  } else {
+    const code = e.code;
+    if (/^[A-Za-z0-9]+$/.test(code)) {
+      downKeys.add(code);
+      catApi.setInput?.(new Set(downKeys), new Set());
+      const label = code === 'Space' ? 'SPACE' : code.replace(/^Key|^Digit/, '');
+      spawnKeycap(label);
+    }
+  }
+  if (soundOn) sound.playKeyClick?.((Math.random() - 0.5) * 1.4, 2, e.code === 'Space');
+});
+
+window.addEventListener('keyup', e => {
+  if (!catApi || !downKeys.has(e.code)) return;
+  downKeys.delete(e.code);
+  catApi.setInput?.(new Set(downKeys), new Set());
+});
+
+// Subtle idle auto-typing demo when visitor hasn't typed yet
+let userInteracted = false;
+window.addEventListener('keydown', () => { userInteracted = true; }, { once: true });
+const demoKeys = ['KeyM', 'KeyA', 'KeyO', 'KeyT', 'KeyA', 'KeyO', 'Space'];
+let demoStep = 0;
+setInterval(() => {
+  if (!catApi || userInteracted || document.hidden || catApi.isHandoverActive?.() || sleepingOn || focusOn) return;
+  const code = demoKeys[demoStep++ % demoKeys.length];
+  catApi.setInput?.(new Set([code]), new Set());
+  setTimeout(() => { if (!userInteracted) catApi.setInput?.(new Set(), new Set()); }, 110);
+}, 680);
+
+// Interact popover actions
+function updateFocusUI() {
+  const m = String(Math.floor(focusSec / 60)).padStart(2, '0');
+  const s = String(focusSec % 60).padStart(2, '0');
+  focusStatus.textContent = focusOn ? `专注中 ${m}:${s}` : '待机中';
+  btnFocus.textContent = focusOn ? `⏹ 结束专注 (${m}:${s})` : '🎧 专注耳机 (25:00)';
+  btnFocus.classList.toggle('active', focusOn);
+}
+
+document.querySelectorAll('[data-act]').forEach(btn => {
+  btn.onclick = () => {
+    const act = btn.dataset.act;
+    if (act === 'focus') {
+      focusOn = !focusOn;
+      catApi?.setFocusMode?.(focusOn);
+      clearInterval(focusTimer);
+      if (focusOn) {
+        sleepingOn = false;
+        btnSleep.classList.remove('active');
+        focusSec = 25 * 60;
+        focusTimer = setInterval(() => {
+          focusSec = Math.max(0, focusSec - 1);
+          updateFocusUI();
+          if (focusSec === 0) { focusOn = false; catApi?.setFocusMode?.(false); clearInterval(focusTimer); updateFocusUI(); }
+        }, 1000);
+        showToast('已佩戴专注耳机 · 25:00');
+      } else {
+        showToast('已退出专注模式');
+      }
+      updateFocusUI();
+    } else if (act === 'pet') {
+      catApi?.petHappy?.(1900);
+      if (soundOn) sound.playPurr?.();
+      showToast('呼噜呼噜 ~ ♡');
+    } else if (act === 'yarn') {
+      sleepingOn = false; btnSleep.classList.remove('active');
+      catApi?.playToy?.();
+      showToast('点击毛线球可以改变滚动方向');
+    } else if (act === 'butterfly') {
+      sleepingOn = false; btnSleep.classList.remove('active');
+      catApi?.playButterfly?.();
+      showToast('捉蝴蝶！');
+    } else if (act === 'wash') {
+      sleepingOn = false; btnSleep.classList.remove('active');
+      catApi?.playWash?.();
+      showToast('认真舔爪洗脸中…');
+    } else if (act === 'sleep') {
+      sleepingOn = !sleepingOn;
+      btnSleep.classList.toggle('active', sleepingOn);
+      if (sleepingOn) { catApi?.fastForwardToSleep?.(true); showToast('侧躺蜷缩入睡 Zzz'); }
+      else { catApi?.wakeUp?.(); showToast('小猫醒来啦'); }
+    }
+  };
+});
+
+// Customize popover controls
+document.getElementById('sel-accessory').onchange = e => {
+  catApi?.setOptions?.({ accessory: e.target.value });
+};
+document.getElementById('sel-kbstyle').onchange = e => {
+  catApi?.setOptions?.({ keyboardStyle: e.target.value });
+};
+const togNumpad = document.getElementById('tog-numpad');
+let numpadOn = false;
+togNumpad.onclick = () => {
+  numpadOn = !numpadOn;
+  togNumpad.classList.toggle('active', numpadOn);
+  catApi?.setLayout?.(numpadOn ? '104' : '65');
+};
+const togLeftMouse = document.getElementById('tog-leftmouse');
+let leftMouseOn = true;
+togLeftMouse.onclick = () => {
+  leftMouseOn = !leftMouseOn;
+  togLeftMouse.classList.toggle('active', leftMouseOn);
+  catApi?.setOptions?.({ leftMouse: leftMouseOn });
+};
+const togPrivacy = document.getElementById('tog-privacy');
+togPrivacy.onclick = () => {
+  privacyOn = !privacyOn;
+  togPrivacy.classList.toggle('active', privacyOn);
+  catApi?.setOptions?.({ followKeys: !privacyOn });
+  showToast(privacyOn ? '已开启隐私模式（随机抬爪）' : '已恢复 1:1 键帽联动');
+};
+const togSound = document.getElementById('tog-sound');
+togSound.onclick = () => {
+  soundOn = !soundOn;
+  togSound.classList.toggle('active', soundOn);
+  togSound.textContent = soundOn ? '🔊 音效开启' : '🔇 音效静音';
+  sound.configure({ sound: soundOn, keySound: soundOn, volume: 0.72 });
+};
+
+// Copy macOS command button
+document.getElementById('copy-mac-cmd').onclick = async e => {
+  const btn = e.currentTarget;
+  try {
+    await navigator.clipboard.writeText(document.getElementById('mac-cmd').textContent);
+    btn.textContent = '已复制';
+    setTimeout(() => { btn.textContent = '复制'; }, 1600);
+  } catch {
+    btn.textContent = '请手动复制';
+  }
+};
+
+// --- Download route & GitHub Release dynamic resolver (preserved & enhanced) ---
 const REPO = 'zkbrtdmvfp54-glitch/MaoTao-Portable';
 const FALLBACK = `https://github.com/${REPO}/releases/latest`;
 const CN_MIRROR_PREFIX = 'https://ghfast.top/';
-
-// 如已上传至 123云盘 / Gitee Releases，可在此填入直链，国内线路将优先使用这里的链接：
 const CN_DIRECT_LINKS = {
-  winPortable: '',
-  winSetup: '',
-  macArm: '',
-  macX64: '',
-  kylinX64: '',
-  kylinArm: ''
+  winPortable: '', winSetup: '', macArm: '', macX64: '', kylinX64: '', kylinArm: ''
 };
 
 function detectOS() {
   const ua = navigator.userAgent || '';
   const plat = (navigator.userAgentData?.platform || navigator.platform || '').toLowerCase();
-  if (/win/i.test(plat) || /windows/i.test(ua)) return { id: 'winPortable', name: 'Windows 版' };
+  if (/win/i.test(plat) || /windows/i.test(ua)) return { id: 'winPortable', name: 'Windows 便携版' };
   if (/mac/i.test(plat) || /mac os x/i.test(ua)) return { id: 'macArm', name: 'macOS 版 (M 芯片)' };
   if (/linux|kylin|uos/i.test(plat) || /linux|kylin|uos/i.test(ua)) {
     return /aarch64|arm64/i.test(ua)
@@ -255,31 +1392,32 @@ const det = detectOS();
 const cta = document.getElementById('primary-dl');
 const meta = document.getElementById('sub-meta');
 const ver = document.getElementById('ver');
+const dlVerBadge = document.getElementById('dl-ver-badge');
 const btnCn = document.getElementById('btn-cn');
 const btnGlobal = document.getElementById('btn-global');
 
-function render() {
+function renderDownloads() {
   btnCn.classList.toggle('active', route === 'cn');
   btnGlobal.classList.toggle('active', route === 'global');
   cta.textContent = `下载 ${det.name}`;
   cta.href = resolveUrl(det.id);
   const routeLabel = route === 'cn' ? '国内高速线路' : 'GitHub 国际线路';
-  ver.textContent = tag ? `毛桃桌面宠物 ${tag} · 开源免费` : '毛桃桌面宠物 · 开源免费';
+  ver.textContent = tag ? `毛桃桌面宠物 ${tag} · 开源免费 · 离线零联网` : '毛桃桌面宠物 · 开源免费 · 离线零联网';
+  dlVerBadge.textContent = tag ? `最新 ${tag}` : '自动匹配最新版';
   meta.textContent = `已自动识别为 ${det.name} · 当前：${routeLabel}`;
   document.getElementById('alt-links').innerHTML = [
-    `<a href="${resolveUrl('winPortable')}">Windows 便携版</a>`,
-    `<a href="${resolveUrl('winSetup')}">Windows 安装版</a>`,
-    `<a href="${resolveUrl('macArm')}">macOS M 芯片</a>`,
-    `<a href="${resolveUrl('macX64')}">macOS Intel</a>`,
-    `<a href="${resolveUrl('kylinX64')}">麒麟 x64</a>`,
-    `<a href="${resolveUrl('kylinArm')}">麒麟 ARM64</a>`,
-    `<a href="${FALLBACK}" target="_blank" rel="noopener">全部版本 ↗</a>`
-  ].join('<span class="sep">·</span>');
+    `<a class="alt-btn" href="${resolveUrl('winPortable')}">Windows 便携版<span>.exe</span></a>`,
+    `<a class="alt-btn" href="${resolveUrl('winSetup')}">Windows 安装版<span>Setup</span></a>`,
+    `<a class="alt-btn" href="${resolveUrl('macArm')}">macOS M 芯片<span>arm64</span></a>`,
+    `<a class="alt-btn" href="${resolveUrl('macX64')}">macOS Intel<span>x64</span></a>`,
+    `<a class="alt-btn" href="${resolveUrl('kylinX64')}">麒麟 Linux x64<span>.deb</span></a>`,
+    `<a class="alt-btn" href="${resolveUrl('kylinArm')}">麒麟 ARM64<span>.deb</span></a>`,
+  ].join('');
 }
 
-btnCn.onclick = () => { route = 'cn'; render(); };
-btnGlobal.onclick = () => { route = 'global'; render(); };
-render();
+btnCn.onclick = () => { route = 'cn'; renderDownloads(); };
+btnGlobal.onclick = () => { route = 'global'; renderDownloads(); };
+renderDownloads();
 
 (async function loadRelease() {
   try {
@@ -297,9 +1435,9 @@ render();
       kylinX64: pick(/Kylin.*x64\.deb$/i),
       kylinArm: pick(/Kylin.*arm64\.deb$/i)
     };
-    render();
+    renderDownloads();
   } catch {
-    render();
+    renderDownloads();
   }
 })();
 </script>
