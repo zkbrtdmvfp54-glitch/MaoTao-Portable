@@ -1544,16 +1544,23 @@ function frame() {
   }
   cat.position.y = drag * 0.42 + loaf * 0.16;
   const dragHoldMs = S.dragging ? (t - (S.dragStartedAt || t)) : 0;
-  const dragSwing = drag > 0.005 ? Math.sin(t / 260) * 0.24 * drag : 0;
+  // Real pendulum spring driven by actual left/right window drag velocity (dx) + subtle ambient sway.
+  S.dragAngle = S.dragAngle || 0;
+  S.dragVel = S.dragVel || 0;
+  const dragSpringAcc = -S.dragAngle * 38 - S.dragVel * 5.2;
+  S.dragVel += dragSpringAcc * dt;
+  S.dragAngle = clamp(S.dragAngle + S.dragVel * dt, -0.56, 0.56);
+  if (drag < 0.01) { S.dragAngle *= Math.exp(-dt * 12); S.dragVel *= Math.exp(-dt * 12); }
+  const dragSwing = drag > 0.005 ? (S.dragAngle + Math.sin(t / 310) * 0.07) * drag : 0;
   cat.rotation.z = dragSwing;
-  cat.position.x = drag > 0.005 ? Math.sin(dragSwing) * 0.45 : 0;
-  // Dangle & gently kick hind feet when scruff-lifted.
+  cat.position.x = drag > 0.005 ? Math.sin(dragSwing) * 0.52 : 0;
+  // Dangle & swing hind feet reactively with pendulum inertia when scruff-lifted.
   hindFeet.forEach((g, i) => {
     const s = i ? 1 : -1;
-    const kick = drag > 0.02 ? Math.sin(t / 190 + i * 2.1) * 0.14 * drag : 0;
-    g.position.set(s * 0.54 * P.bodyW - dragSwing * 0.18, 0.1 - 0.18 * drag + kick * 0.25, 0.25 - 0.12 * drag);
+    const kick = drag > 0.02 ? (Math.sin(t / 190 + i * 2.1) * 0.14 + S.dragVel * 0.06) * drag : 0;
+    g.position.set(s * 0.54 * P.bodyW - dragSwing * 0.28, 0.1 - 0.18 * drag + kick * 0.25, 0.25 - 0.12 * drag);
     g.rotation.x = 0.65 * drag + kick;
-    g.rotation.z = -dragSwing * 0.6 + s * 0.08 * drag;
+    g.rotation.z = -dragSwing * 0.85 + s * 0.08 * drag;
   });
   torso.scale.set(
     P.bodyW * (1 + 0.36 * loaf + breath * (0.012 + 0.02 * loaf) - bounce * 0.03 - 0.11 * drag),
@@ -1618,7 +1625,7 @@ function frame() {
   const tailAmpTarget = drag > 0.05 ? 0 : flicking ? 1.0 : angry ? 0.25 : crouch ? 0.5 : typing ? (0.28 + fast * 0.34) : idleTail ? 0.52 : 0.14;
   S.tailAmp = (S.tailAmp || 0.4) + (tailAmpTarget - (S.tailAmp || 0.4)) * ease(5);
   const tailWag = drag > 0.05
-    ? -Math.sin(t / 260 - 0.55) * 1.15 * drag
+    ? clamp(-dragSwing * 3.4 - S.dragVel * 0.28, -2.1, 2.1) * drag
     : Math.sin(S.tailPhase) * S.tailAmp * (flicking ? Math.sin(clamp(1 - actLeft / 1400, 0, 1) * Math.PI) : 1);
   poseTail(S.tailDown < 0.003 ? 0 : S.tailDown > 0.997 ? 1 : S.tailDown, tailWag, drag);
   tail.rotation.z = Math.sin(S.tailPhase * 0.72) * (0.032 + 0.035 * fast) * (1 - S.tailDown) * (1 - drag);
@@ -1745,7 +1752,7 @@ function frame() {
     S.blinkUntil = t + 125;
     S.blinkAt = t + (Math.random() < 0.2 ? 250 : rnd(2400, 5200)); // natural occasional double-blink
   }
-  const dragResigned = drag > 0.45 && dragHoldMs > 420;
+  const dragResigned = drag > 0.45 && (dragHoldMs > 420 || Math.abs(S.dragVel || 0) > 1.25 || Math.abs(S.dragAngle || 0) > 0.22);
   S.lidDir = happy && !asleep && !dragResigned ? -1 : 1; // happy: ^ ^ arch; blink/sleep/scruff-resigned: downward curved close
   const lidT = asleep || dragResigned || t < S.blinkUntil || happy || licking || stretching || yawn > 0.25 ? 1 : 0; S.lid += (lidT - S.lid) * (1 - Math.exp(-realDt * (lidT > S.lid ? 34 : 16)));   // eyelids keep real time even if frames are dropped
   const gx = gazeTarget ? clamp(pdx * 2.2, -1, 1) : mousing ? -0.8 * DESK_DIR : looking ? (S.lastSide === 'L' ? -0.5 : 0.5) : 0, gy = gazeTarget ? clamp(pdy * 2.2, -1, 1) : looking || mousing ? 1 : 0;
@@ -1810,8 +1817,10 @@ function frame() {
     if (drag > 0.08) {
       p.mode = 'drag';
       const s = side === 'L' ? -1 : 1;
-      // Limp tucked paws hanging cleanly IN FRONT of the belly (z=0.66 so zero clipping on light coats like maotao/calico).
-      tmpGoal.set(s * 0.36 - Math.sin(t / 260 - 0.35) * 0.08 * drag, 0.36 + Math.cos(t / 210 + s * 1.4) * 0.045 * drag, 0.66);
+      const swayX = -dragSwing * 0.42 - (S.dragVel || 0) * 0.03;
+      const swayY = Math.cos(t / 190 + s * 1.4) * 0.055 * drag + Math.abs(dragSwing) * 0.14;
+      // Limp tucked paws hanging cleanly IN FRONT of the belly, lagging reactively behind the drag pendulum swing.
+      tmpGoal.set(s * 0.36 + swayX, 0.36 + swayY, 0.66);
       p.pos.lerp(tmpGoal, ease(16));
     } else if (since < STRIKE) {
       const progress = clamp(since / STRIKE, 0, 1), travel = progress * progress * (3 - 2 * progress);
@@ -2028,6 +2037,11 @@ return {
     }
     syncDeskVisibility();
     stageEl.dataset.dragging = next ? 'true' : 'false';
+  },
+  dragImpulse(dx = 0, dy = 0) {
+    if (!S.dragging) return;
+    // Dragging right (dx > 0) swings the hanging body left (positive z rotation) with real pendulum inertia.
+    S.dragVel = clamp((S.dragVel || 0) + clamp(dx, -60, 60) * 0.045, -4.5, 4.5);
   },
   setFocusMode(enabled) {
     const next = Boolean(enabled);
