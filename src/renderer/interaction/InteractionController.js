@@ -29,6 +29,9 @@ export class InteractionController {
       // opt-in keyboard hook and lets the cat track the cursor across the desktop.
       state.cursor(point.x, point.y, true);
     });
+    api.onDragMove?.(delta => {
+      if (delta && Number.isFinite(delta.dx)) state.dragMove?.(delta.dx, delta.dy || 0);
+    });
     api.onInput(input => this.input(input));
     api.onAction(action => {
       if (action === 'input-on') this.globalInput = true;
@@ -47,11 +50,9 @@ export class InteractionController {
     this.api.count('clicks');
     if (zone === 'toy') return this.state.playToy();
     if (zone === 'mouse') return this.state.mouse(true);
-    if (zone === 'nose') return this.state.poked('nose');
-    if (zone === 'head') return this.state.pet(true);
+    // Allow dragging from head, nose, body, tail or desk; quick click without drag triggers pet/poke.
     this.canvas.setPointerCapture(event.pointerId);
     this.pointer = { zone, point, id: event.pointerId, dragging: false };
-
   }
   beginDrag() {
     this.pointer.dragging = true;
@@ -88,6 +89,8 @@ export class InteractionController {
     const { zone, dragging } = this.pointer;
     this.pointer = null;
     if (dragging) this.api.dragEnd();
+    else if (clicked && zone === 'head') this.state.pet(true);
+    else if (clicked && zone === 'nose') this.state.poked('nose');
     else if (clicked && zone === 'body') this.state.poked('belly');
     else if (clicked && zone === 'tail') this.state.poked('tail');
     this.state.setDragging(false);
@@ -110,7 +113,11 @@ export class InteractionController {
     if (input.kind === 'local') return this.state.key(
       kb.resolveKey(input.code, input.key), labelFor(input.key, input.code)
     );
-    // Generic targets avoid revealing the physical key in another application.
+    // When not in privacy mode, map the exact in-memory keycap & label so paws and floating chips match the pressed key 1:1.
+    if (input.code && !this.state.prefs.privacyMode) {
+      return this.state.key(kb.resolveKey(input.code, input.label), input.label || labelFor('', input.code), true);
+    }
+    // Generic targets in privacy mode avoid revealing the physical key in another application.
     const code = input.category === 'space' ? 'Space'
       : input.category === 'number' ? input.side === 'left' ? 'Digit3' : 'Digit8'
       : input.side === 'left' ? 'KeyD' : 'KeyK';
