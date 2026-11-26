@@ -55,6 +55,10 @@ export class PetStateMachine {
     }
     this.model?.setDragging?.(next);
   }
+  dragMove(dx, dy) {
+    if (!this.dragging) return;
+    this.model?.dragImpulse?.(dx, dy);
+  }
   configure(prefs) {
     const wasFocusMode = this.focusMode;
     const wasStandbyMode = this.standbyMode;
@@ -70,11 +74,12 @@ export class PetStateMachine {
       this.effects.keyRipples.length = 0;
     }
     if (this.focusMode !== wasFocusMode) {
-      this.focusRemaining = 25 * 60;
+      const mins = Number.isInteger(prefs.focusMinutes) ? prefs.focusMinutes : 25;
+      this.focusRemaining = mins * 60;
       this.model?.setFocusMode(this.focusMode);
       if (this.focusMode) {
         this.wake();
-        this.status('专注模式开始 · 25:00');
+        this.status(`专注模式开始 · ${String(mins).padStart(2, '0')}:00`);
       }
     }
     if (this.keyboard.mode !== prefs.view) this.keyboard.setMode(prefs.view);
@@ -239,7 +244,8 @@ export class PetStateMachine {
     this.sound.playKeyClick(keyObj.uCenter, keyObj.row, space);
     this.keyboard.pressKey(keyObj);
     this.effects.spawnKeyRipple(keyObj.cx, keyObj.cy, keyObj.type);
-    const visualLabel = label || (linked ? this.linkedVisualLabel(keyObj) : null);
+    const allowChips = this.prefs.showKeyChips !== false && !this.prefs.privacyMode;
+    const visualLabel = allowChips ? (label || (linked ? this.linkedVisualLabel(keyObj) : null)) : null;
     if (visualLabel) {
       const kbBox = this.assets.layers.keyboard.box;
       const spread = linked ? (Math.random() - 0.5) * kbBox[2] * 0.28 : (Math.random() - 0.5) * 10;

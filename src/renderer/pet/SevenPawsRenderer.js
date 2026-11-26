@@ -8,9 +8,10 @@ export class SevenPawsRenderer {
     }
     this.host = host;
     this.api = window.createCat(host, {
-      coat: preferences.coat || 'maotao',
+      coat: preferences.coat || 'solidblack',
       eyeColor: preferences.eyeColor || 'auto',
-      accessory: preferences.accessory || 'none',
+      accessory: preferences.accessory || 'crown',
+      accessoryColor: preferences.accessoryColor || 'auto',
       keyboardStyle: preferences.keyboardStyle || 'cream',
       sleepMinutes: preferences.sleepMinutes,
       focusMode: !!preferences.focusMode
@@ -30,22 +31,24 @@ export class SevenPawsRenderer {
   setPreferences(preferences) {
     this.preferences = preferences;
     this.standbyMode = Boolean(preferences.standbyMode);
+    this.privacyMode = Boolean(preferences.privacyMode);
     this.api.setOptions({
       showKeyboard: !!preferences.keyboard,
       showMouse: !!preferences.keyboard,
-      followKeys: !!preferences.keyboard && !this.standbyMode,
+      followKeys: !!preferences.keyboard && !this.standbyMode && !this.privacyMode,
       showKeyLabels: false,
-      leftMouse: false,
-      coat: preferences.coat || 'maotao',
+      leftMouse: !!preferences.leftMouse,
+      coat: preferences.coat || 'solidblack',
       eyeColor: preferences.eyeColor || 'auto',
       accessory: preferences.accessory || 'none',
+      accessoryColor: preferences.accessoryColor || 'auto',
       keyboardStyle: preferences.keyboardStyle || 'cream',
       sleepMinutes: preferences.sleepMinutes
     });
-    this.api.setLayout(preferences.view === 'mirror' ? 'mirror' : 'cat');
+    this.api.setLayout(preferences.numpad ? '104' : '65');
     this.api.setFocusMode(!!preferences.focusMode);
     this.api.setStandbyMode?.(this.standbyMode);
-    this.host.dataset.coat = preferences.coat || 'maotao';
+    this.host.dataset.coat = preferences.coat || 'solidblack';
     if (!preferences.keyboard) this.clearInput();
   }
 
@@ -77,6 +80,10 @@ export class SevenPawsRenderer {
     this.api.setDragging?.(Boolean(enabled));
   }
 
+  dragImpulse(dx, dy) {
+    this.api.dragImpulse?.(dx, dy);
+  }
+
   pickToy(x, y) {
     return this.api.pickToy(x, y);
   }
@@ -103,6 +110,10 @@ export class SevenPawsRenderer {
 
   tapKey(code) {
     if (this.standbyMode || !this.preferences.keyboard || !/^[A-Za-z0-9]+$/.test(code)) return;
+    if (this.privacyMode) {
+      this.api.tap(Math.random() < 0.5 ? 'Left' : 'Right');
+      return;
+    }
     const codes = code === 'Space' ? ['Space', 'Space:second'] : [code];
     const repeated = codes.some(value => this.keys.has(value));
     if (repeated) {
@@ -137,9 +148,9 @@ export class SevenPawsRenderer {
     else if (action === 'manual-sleep') this.api.fastForwardToSleep(true);
     else if (action === 'wake') this.api.wakeUp?.();
     else if (action === 'anger') this.api.anger();
+    else if (action === 'pet') this.api.petHappy?.(1900);
     else {
       this.api.setMouseActive();
-      if (action === 'pet') this.api.tap('Left');
       if (action === 'poke') this.api.tap('Right');
     }
   }
