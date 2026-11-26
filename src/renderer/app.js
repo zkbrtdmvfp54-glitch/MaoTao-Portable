@@ -45,7 +45,7 @@ async function start() {
     }));
   };
   const configure = next => {
-    const updateMask = !renderer.mask || next.keyboard !== state.prefs.keyboard || next.view !== state.prefs.view;
+    const updateMask = !renderer.mask || next.keyboard !== state.prefs.keyboard || next.view !== state.prefs.view || next.leftMouse !== state.prefs.leftMouse || next.numpad !== state.prefs.numpad;
     status.dataset.theme = next.theme;
     model?.setPreferences(next);
     state.configure(next);
