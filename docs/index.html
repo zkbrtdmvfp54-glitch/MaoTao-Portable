@@ -209,6 +209,21 @@
     20% { opacity: 1; transform: translate(-50%, -6px) scale(1.1); }
     100% { opacity: 0; transform: translate(-50%, -46px) scale(0.92); }
   }
+  .anger-pop {
+    position: absolute;
+    top: 24%;
+    left: 60%;
+    font-size: 20px;
+    pointer-events: none;
+    animation: angerBounce 1.1s ease-out forwards;
+  }
+  @keyframes angerBounce {
+    0% { opacity: 0; transform: scale(0.4) rotate(-12deg); }
+    18% { opacity: 1; transform: scale(1.22) rotate(8deg); }
+    36% { opacity: 1; transform: scale(0.96) rotate(-6deg); }
+    65% { opacity: 1; transform: scale(1.08) rotate(4deg); }
+    100% { opacity: 0; transform: translateY(-14px) scale(0.85); }
+  }
   .stage-toast {
     position: absolute;
     left: 50%;
@@ -820,6 +835,7 @@
       <div class="pill-grid">
         <button class="chip-btn" type="button" data-act="focus" id="btn-focus">🎧 专注耳机 (25:00)</button>
         <button class="chip-btn" type="button" data-act="pet">💕 摸摸头</button>
+        <button class="chip-btn" type="button" data-act="anger">💢 惹生气</button>
         <button class="chip-btn" type="button" data-act="yarn">🧶 玩毛线球</button>
         <button class="chip-btn" type="button" data-act="butterfly">🦋 捉蝴蝶</button>
         <button class="chip-btn" type="button" data-act="wash">🐾 舔爪洗脸</button>
@@ -1129,6 +1145,23 @@ function spawnKeyEffect(label, code = '') {
   setTimeout(() => el.remove(), 650);
 }
 
+function spawnAngerPop() {
+  const el = document.createElement('div');
+  el.className = 'anger-pop';
+  el.textContent = '💢';
+  stageShell.appendChild(el);
+  setTimeout(() => el.remove(), 1120);
+}
+
+function triggerAnger() {
+  sleepingOn = false;
+  btnSleep.classList.remove('active');
+  catApi?.anger?.();
+  spawnAngerPop();
+  if (soundOn) sound.playMeow?.('surprised');
+  showToast('生气拍桌！哼 💢');
+}
+
 function spawnPetHearts() {
   [-16, 0, 16].forEach((dx, idx) => {
     setTimeout(() => {
@@ -1334,6 +1367,10 @@ stageShell.addEventListener('click', e => {
     showToast('小猫醒来啦');
     return;
   }
+  if (catApi.noseAt?.(x, y)) {
+    triggerAnger();
+    return;
+  }
   catApi.petHappy?.(1900);
   spawnPetHearts();
   if (soundOn) sound.playPurr?.();
@@ -1416,6 +1453,8 @@ document.querySelectorAll('[data-act]').forEach(btn => {
       spawnPetHearts();
       if (soundOn) sound.playPurr?.();
       showToast('呼噜呼噜 ~ ♡');
+    } else if (act === 'anger') {
+      triggerAnger();
     } else if (act === 'yarn') {
       sleepingOn = false; btnSleep.classList.remove('active');
       catApi?.playToy?.();
