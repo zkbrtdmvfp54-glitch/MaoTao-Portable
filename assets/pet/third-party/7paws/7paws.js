@@ -231,6 +231,27 @@ function applyKeyboardStyle(id) {
 }
 applyKeyboardStyle(options.keyboardStyle || 'cream');
 
+// Soft ground shadow ellipse beneath keyboard & mouse for crisp desktop grounding.
+const deskShadow = (() => {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 128;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(128, 64, 12, 128, 64, 120);
+  grad.addColorStop(0, 'rgba(21, 20, 18, 0.22)');
+  grad.addColorStop(0.55, 'rgba(21, 20, 18, 0.10)');
+  grad.addColorStop(1, 'rgba(21, 20, 18, 0)');
+  g.fillStyle = grad; g.fillRect(0, 0, 256, 128);
+  const tex = new THREE.CanvasTexture(c);
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(4.4, 2.0),
+    new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false })
+  );
+  mesh.rotation.x = -Math.PI * 0.5;
+  mesh.position.set(0.02, 0.004, 1.18);
+  mesh.renderOrder = 0;
+  return mesh;
+})();
+scene.add(deskShadow);
+
 // A yarn ball is a real scene object. During idle/standby play the cat tracks and chases it,
 // and clicking the ball redirects its trajectory across the desk.
 const YARN_SCALE = 1.42;
@@ -302,12 +323,12 @@ const cat = new THREE.Group(); cat.position.set(0, 0, 0.08); cat.scale.setScalar
 const ball = (r, mat, sx = 1, sy = 1, sz = 1) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 40, 28), mat); m.scale.set(sx, sy, sz); return m; };
 const add = (parent, mesh, x, y, z) => { mesh.position.set(x, y, z); parent.add(mesh); return mesh; };
 const spline = pts => { const c = new THREE.SplineCurve(pts.map(([a, b]) => new THREE.Vector2(a, b))); const table = c.getPoints(120); return y => { let k = 0; while (k < table.length - 2 && table[k + 1].x < y) k++; const a = table[k], b = table[k + 1], f = clamp((y - a.x) / Math.max(1e-6, b.x - a.x), 0, 1); return a.y + (b.y - a.y) * f; }; };
-// The body is a single lofted surface: at each height an ellipse with its own width, depth and forward offset.
-const BODY_H = 2.35;                                  // compact torso under a broader, clearly separated head
-const halfW = spline([[0, 0.94], [0.07, 1.0], [0.3, 1.11], [0.62, 1.18], [0.95, 1.13], [1.3, 0.92], [1.6, 0.68], [1.85, 0.48], [2.02, 0.38], [BODY_H, 0.32]]);
-// Front and back outlines seen from the side: an upright chest and a full, rounded back down to the rump.
-const frontZ = spline([[0, 0.4], [0.07, 0.43], [0.3, 0.5], [0.6, 0.54], [0.95, 0.52], [1.3, 0.48], [1.6, 0.46], [1.9, 0.42], [2.02, 0.4], [BODY_H, 0.36]]);
-const backZ = spline([[0, -1.14], [0.07, -1.19], [0.3, -1.32], [0.6, -1.38], [0.95, -1.24], [1.3, -1.0], [1.6, -0.76], [1.9, -0.56], [2.02, -0.5], [BODY_H, -0.44]]);
+// The body is a single lofted surface: smooth monotonic taper from hips up through a continuous neck into the head (zero cheek bulge).
+const BODY_H = 2.38;
+const halfW = spline([[0, 0.90], [0.12, 1.00], [0.40, 1.09], [0.76, 1.08], [1.14, 0.97], [1.50, 0.85], [1.82, 0.75], [2.06, 0.67], [2.24, 0.58], [BODY_H, 0.44]]);
+// Front and back outlines seen from the side: smooth continuous liquid-cat chest and rounded back.
+const frontZ = spline([[0, 0.42], [0.12, 0.45], [0.40, 0.51], [0.76, 0.52], [1.14, 0.50], [1.50, 0.48], [1.82, 0.45], [2.06, 0.42], [2.24, 0.39], [BODY_H, 0.34]]);
+const backZ = spline([[0, -1.08], [0.12, -1.14], [0.40, -1.24], [0.76, -1.24], [1.14, -1.10], [1.50, -0.92], [1.82, -0.76], [2.06, -0.64], [2.24, -0.54], [BODY_H, -0.44]]);
 const halfD = y => (frontZ(y) - backZ(y)) / 2, midZ = y => (frontZ(y) + backZ(y)) / 2;
 const upper = new THREE.Group(); cat.add(upper);            // chest and head lean; the feet and tail stay put
 const torso = new THREE.Group(); upper.add(torso);
@@ -315,7 +336,14 @@ let NECK_W = 1, SHOULDER_W = 1, builtNeck = -1;
 const bodyMesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: 0x101010, side: THREE.DoubleSide })); torso.add(bodyMesh); M.body = bodyMesh.material;
 function buildBody() {
   if (builtNeck === NECK_W + SHOULDER_W * 100) return; builtNeck = NECK_W + SHOULDER_W * 100; bodyMesh.geometry.dispose();
-  bodyMesh.geometry = new THREE.ParametricGeometry((u, v, out) => { const y = v * BODY_H, a = u * Math.PI * 2, close = Math.sqrt(1 - (1 - Math.min(1, y / 0.12)) ** 2), f = (1 + (NECK_W - 1) * smooth(1.15, 1.95, y)) * (1 + (SHOULDER_W - 1) * smooth(0.55, 1.4, y) * (1 - smooth(1.6, 2.25, y))) * (1 + 0.34 * smooth(1.72, 2.2, y)), g = 1 + (f / (1 + 0.34 * smooth(1.72, 2.2, y)) - 1) * 0.3; const top = 1 - 0.8 * smooth(2.17, 2.46, y);   /* the hidden top of the neck narrows to a point so it can never poke out of the head */ out.set(Math.cos(a) * halfW(y) * f * close * top, y, midZ(y) + 0.1 * (1 - top) + Math.sin(a) * halfD(y) * g * close * top); }, 56, 44);
+  bodyMesh.geometry = new THREE.ParametricGeometry((u, v, out) => {
+    const y = v * BODY_H, a = u * Math.PI * 2;
+    const close = Math.sqrt(1 - (1 - Math.min(1, y / 0.12)) ** 2);
+    const f = (1 + (NECK_W - 1) * smooth(1.2, 2.0, y)) * (1 + (SHOULDER_W - 1) * smooth(0.55, 1.4, y) * (1 - smooth(1.6, 2.25, y)));
+    const g = 1 + (f - 1) * 0.3;
+    const top = 1 - 0.82 * smooth(2.14, 2.44, y);
+    out.set(Math.cos(a) * halfW(y) * f * close * top, y, midZ(y) + 0.08 * (1 - top) + Math.sin(a) * halfD(y) * g * close * top);
+  }, 56, 44);
 }
 const chest = add(torso, ball(1, M.patch, 0.3, 0.5, 0.16), 0, 1.22, 0.4);
 const hindFeet = [-1, 1].map(s => { const g = new THREE.Group(); g.position.set(s * 0.6, 0.1, 0.25); cat.add(g); const rim = add(g, ball(1, M.line, 0.216, 0.118, 0.325), 0, -0.012, 0.022); const foot = add(g, ball(1, M.patch, 0.2, 0.11, 0.31), 0, 0, 0); foot.renderOrder = 1; rim.renderOrder = 0; return g; });
@@ -564,12 +592,12 @@ function paintCoat(c) {
 add(head, ball(1, M.head, HEAD_R[0], HEAD_R[1], HEAD_R[2]), 0, 0, 0);
 for (const k of ['eye', 'eyeAlt', 'pupil', 'nose', 'stripe', 'inner']) M[k].side = THREE.DoubleSide;
 
-// Ears: a solid rounded form whose base sits inside the head, so the outline runs from head to ear without a step.
-const earR = spline([[0, 0.3], [0.12, 0.285], [0.32, 0.22], [0.48, 0.13], [0.56, 0.062], [0.588, 0]]), EAR_H = 0.588, EAR_T = 0.5;
+// Ears: soft rounded-tip cat ears blending smoothly into the outer cheek silhouette.
+const earR = spline([[0, 0.33], [0.16, 0.31], [0.34, 0.255], [0.49, 0.18], [0.58, 0.115], [0.63, 0.055], [0.65, 0]]), EAR_H = 0.65, EAR_T = 0.52;
 const earGeo = new THREE.LatheGeometry(Array.from({ length: 29 }, (_, i) => new THREE.Vector2(Math.max(0, earR(i / 28 * EAR_H)), i / 28 * EAR_H)), 32);
 // The inner marking is a strip of the ear's own front surface, lifted a hair so it never floats.
 const earInnerGeo = new THREE.ParametricGeometry((u, v, out) => { const y = mix(0.1, 0.47, v), r = earR(y), a = (u - 0.5) * 2 * 0.72 * Math.sqrt(Math.max(0, 1 - v ** 5)) * (0.72 + 0.28 * Math.min(1, v * 6)); out.set(r * Math.sin(a), y, r * Math.cos(a) * EAR_T + 0.007); }, 20, 28);
-const ears = [-1, 1].map(s => { const g = new THREE.Group(); g.position.set(s * 0.46, 0.3, -0.04); g.rotation.z = -s * 0.24; head.add(g);
+const ears = [-1, 1].map(s => { const g = new THREE.Group(); g.position.set(s * 0.48, 0.32, -0.02); g.rotation.z = -s * 0.14; head.add(g);
   M.ear = M.ear || new THREE.MeshBasicMaterial({ color: 0x101010, side: THREE.DoubleSide });
   const earKey = s < 0 ? 'earL' : 'earR';
   M[earKey] = M[earKey] || new THREE.MeshBasicMaterial({ color: 0x101010, side: THREE.DoubleSide });
@@ -642,26 +670,216 @@ const setRandomHeadphones = () => {
 if (focusMode) { headphones.visible = true; setRandomHeadphones(); }
 headphones.renderOrder = 12;
 
-// Selectable lightweight 3D head accessories attached to the head group.
+// Selectable refined 3D accessories (head-mounted + neck-mounted on torso) with color tinting.
 const accessoriesGroup = new THREE.Group(); head.add(accessoriesGroup);
+const neckAccessoriesGroup = new THREE.Group(); torso.add(neckAccessoriesGroup);
 const accessoryMap = {};
+const accTintable = {}; // id -> [{ mat, defaultHex, darken }]
+const registerTint = (id, mat, defaultHex, darken = 0) => {
+  (accTintable[id] = accTintable[id] || []).push({ mat, defaultHex, darken });
+};
+const ACC_COLORS = {
+  sage: '#6fa382', obsidian: '#232220', cream: '#f3ede0',
+  caramel: '#eb8c34', mist: '#6d8fb3', sakura: '#e89bb0'
+};
+let wizardHaloRing = null;
 {
-  const crown = new THREE.Group(); crown.position.set(0, 0.74, 0.06); crown.rotation.x = 0.08;
-  const gold = flat('#f4c44e'), gem = flat('#e86a7c');
-  crown.add(new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.19, 0.14, 16), gold));
+  // 1. 迷你小皇冠 (crown)
+  const crown = new THREE.Group(); crown.position.set(0, 0.70, 0.06); crown.rotation.x = 0.08;
+  const gold = flat('#f5c547'), goldDark = flat('#c98d22'), gem = flat('#e04d65'), pearl = flat('#fff8dc');
+  registerTint('crown', gold, '#f5c547', 0);
+  registerTint('crown', goldDark, '#c98d22', 0.25);
+  crown.add(new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.20, 0.15, 20), gold));
+  const bandRim = new THREE.Mesh(new THREE.TorusGeometry(0.20, 0.022, 10, 20), goldDark);
+  bandRim.rotation.x = Math.PI * 0.5; bandRim.position.y = -0.065;
+  crown.add(bandRim);
   for (let i = 0; i < 5; i++) {
     const a = i / 5 * Math.PI * 2 - Math.PI * 0.5;
-    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.062, 0.16, 8), gold);
-    spike.position.set(Math.cos(a) * 0.18, 0.13, Math.sin(a) * 0.18);
+    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.068, 0.18, 10), gold);
+    spike.position.set(Math.cos(a) * 0.195, 0.14, Math.sin(a) * 0.195);
     crown.add(spike);
-    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 8), i === 0 ? gem : gold);
-    tip.position.set(Math.cos(a) * 0.18, 0.21, Math.sin(a) * 0.18);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.032, 10, 10), i === 0 ? gem : pearl);
+    tip.position.set(Math.cos(a) * 0.195, 0.23, Math.sin(a) * 0.195);
     crown.add(tip);
+  }
+  for (const ang of [-0.42, 0, 0.42]) {
+    const jewel = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 8), gem);
+    jewel.position.set(Math.sin(ang) * 0.22, -0.01, Math.cos(ang) * 0.22);
+    crown.add(jewel);
   }
   accessoriesGroup.add(crown); accessoryMap.crown = crown;
 
-  const sprout = new THREE.Group(); sprout.position.set(0, 0.70, 0.04);
+  // 2. 复古细梁耳机 (retro)
+  const retro = new THREE.Group();
+  const wireMat = flat('#cfd6dc'), retroPad = flat('#77a687'), retroRim = back('#242326');
+  registerTint('retro', retroPad, '#77a687', 0);
+  const retroBandCurve = new THREE.CatmullRomCurve3([
+    V(-0.90, 0.05, 0.02), V(-0.95, 0.36, 0.02), V(-0.84, 0.68, 0.02),
+    V(-0.52, 0.90, 0.02), V(0, 0.97, 0.02),
+    V(0.52, 0.90, 0.02), V(0.84, 0.68, 0.02), V(0.95, 0.36, 0.02), V(0.90, 0.05, 0.02)
+  ], false, 'centripetal', 0.5);
+  retro.add(new THREE.Mesh(new THREE.TubeGeometry(retroBandCurve, 56, 0.019, 10, false), wireMat));
+  const retroPadGeo = roundedSlab(0.11, 0.24, 0.04, 0.26);
+  retroPadGeo.rotateZ(Math.PI * 0.5);
+  for (const s of [-1, 1]) {
+    const cup = new THREE.Group(); cup.position.set(s * 0.92, 0.04, 0.04); cup.rotation.z = s * 0.08;
+    const pMesh = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.28, 0.22), retroPad);
+    const rMesh = new THREE.Mesh(new THREE.BoxGeometry(0.125, 0.305, 0.245), retroRim);
+    cup.add(pMesh, rMesh); retro.add(cup);
+  }
+  accessoriesGroup.add(retro); accessoryMap.retro = retro;
+
+  // 3. 招财铃铛项圈 (bell — attached to torso neck)
+  const bell = new THREE.Group(); bell.position.set(0, 1.72, 0.04);
+  const strapMat = flat('#d9463e'), bellGold = flat('#f2bf38'), bellDark = flat('#232022'), bellShine = flat('#ffffff');
+  registerTint('bell', strapMat, '#d9463e', 0);
+  const collarTorus = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.075, 14, 36), strapMat);
+  collarTorus.rotation.x = Math.PI * 0.52; collarTorus.scale.set(1.06, 0.88, 1);
+  bell.add(collarTorus);
+  const bellBall = new THREE.Mesh(new THREE.SphereGeometry(0.165, 22, 16), bellGold);
+  bellBall.position.set(0, -0.10, 0.62);
+  const bellRim = new THREE.Mesh(new THREE.SphereGeometry(0.185, 20, 14), back('#242326'));
+  bellRim.position.copy(bellBall.position);
+  const bellBand = new THREE.Mesh(new THREE.TorusGeometry(0.165, 0.018, 8, 22), flat('#c99520'));
+  bellBand.position.copy(bellBall.position); bellBand.rotation.x = Math.PI * 0.5;
+  const bellDot = new THREE.Mesh(new THREE.SphereGeometry(0.036, 10, 8), bellDark);
+  bellDot.position.set(0, -0.17, 0.76);
+  const bellSpec = new THREE.Mesh(new THREE.SphereGeometry(0.032, 10, 8), bellShine);
+  bellSpec.position.set(-0.055, -0.04, 0.76);
+  bell.add(bellBall, bellRim, bellBand, bellDot, bellSpec);
+  neckAccessoriesGroup.add(bell); accessoryMap.bell = bell;
+
+  // 4. 嘴叼小鱼干 (fish — gripped at right mouth corner)
+  const fish = new THREE.Group(); fish.position.set(0.18, -0.16, 0.72); fish.rotation.set(0.06, 0.24, -0.12);
+  const fishBodyMat = flat('#e39a4c'), fishFinMat = flat('#b56c2a'), fishEyeMat = flat('#231d19');
+  registerTint('fish', fishBodyMat, '#e39a4c', 0);
+  registerTint('fish', fishFinMat, '#b56c2a', 0.25);
+  const fTorso = new THREE.Mesh(new THREE.SphereGeometry(0.14, 18, 14), fishBodyMat);
+  fTorso.scale.set(1.75, 0.72, 0.52); fTorso.position.set(0.16, 0, 0);
+  const fRim = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 12), back('#3a2416'));
+  fRim.scale.set(1.86, 0.84, 0.62); fRim.position.copy(fTorso.position);
+  const fTailTop = new THREE.Mesh(new THREE.ConeGeometry(0.072, 0.18, 6), fishFinMat);
+  fTailTop.position.set(0.41, 0.055, 0); fTailTop.rotation.z = -1.15;
+  const fTailBot = new THREE.Mesh(new THREE.ConeGeometry(0.072, 0.18, 6), fishFinMat);
+  fTailBot.position.set(0.41, -0.055, 0); fTailBot.rotation.z = -1.98;
+  const fDorsal = new THREE.Mesh(new THREE.ConeGeometry(0.052, 0.09, 6), fishFinMat);
+  fDorsal.position.set(0.18, 0.10, 0); fDorsal.rotation.z = -0.35;
+  const fEye = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 8), fishEyeMat);
+  fEye.position.set(0.02, 0.02, 0.068);
+  fish.add(fTorso, fRim, fTailTop, fTailBot, fDorsal, fEye);
+  accessoriesGroup.add(fish); accessoryMap.fish = fish;
+
+  // 5. 暖冬小红围巾 (scarf — attached to torso neck)
+  const scarf = new THREE.Group(); scarf.position.set(0, 1.66, 0.04);
+  const scarfMat = flat('#d6453d'), scarfStripeMat = flat('#f7efe2');
+  registerTint('scarf', scarfMat, '#d6453d', 0);
+  const scarfWrap = new THREE.Mesh(new THREE.TorusGeometry(0.69, 0.165, 16, 36), scarfMat);
+  scarfWrap.rotation.x = Math.PI * 0.52; scarfWrap.scale.set(1.08, 0.90, 1.0);
+  const scarfWrapRim = new THREE.Mesh(new THREE.TorusGeometry(0.69, 0.185, 14, 36), back('#4a1c1a'));
+  scarfWrapRim.rotation.x = Math.PI * 0.52; scarfWrapRim.scale.set(1.08, 0.90, 1.0);
+  const tailPanel = new THREE.Group(); tailPanel.position.set(0.28, -0.34, 0.58); tailPanel.rotation.set(-0.22, 0.18, 0.22);
+  const sTail = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.54, 0.09), scarfMat);
+  const sTailRim = new THREE.Mesh(new THREE.BoxGeometry(0.285, 0.565, 0.115), back('#4a1c1a'));
+  const st1 = new THREE.Mesh(new THREE.BoxGeometry(0.268, 0.038, 0.098), scarfStripeMat); st1.position.y = -0.14;
+  const st2 = new THREE.Mesh(new THREE.BoxGeometry(0.268, 0.038, 0.098), scarfStripeMat); st2.position.y = -0.21;
+  tailPanel.add(sTail, sTailRim, st1, st2);
+  for (let i = -1; i <= 1; i++) {
+    const fringe = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.014, 0.10, 6), scarfStripeMat);
+    fringe.position.set(i * 0.075, -0.31, 0);
+    tailPanel.add(fringe);
+  }
+  scarf.add(scarfWrap, scarfWrapRim, tailPanel);
+  neckAccessoriesGroup.add(scarf); accessoryMap.scarf = scarf;
+
+  // 6. 迷你巫师尖帽 (wizard — bent indigo cone + gold band + orbiting star halo)
+  const wizard = new THREE.Group(); wizard.position.set(0.03, 0.66, 0.04); wizard.rotation.set(0.08, 0, -0.14);
+  const wizMat = flat('#2d3561'), wizBandMat = flat('#f2b938'), wizStarMat = flat('#fae078');
+  registerTint('wizard', wizMat, '#2d3561', 0);
+  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.54, 0.58, 0.055, 28), wizMat);
+  brim.scale.set(1.06, 1, 0.92);
+  const brimRim = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.60, 0.075, 24), back('#191d36'));
+  brimRim.scale.set(1.06, 1, 0.92);
+  const coneLow = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.34, 0.38, 22), wizMat);
+  coneLow.position.set(0.02, 0.21, 0); coneLow.rotation.z = -0.10;
+  const coneTop = new THREE.Mesh(new THREE.ConeGeometry(0.185, 0.44, 20), wizMat);
+  coneTop.position.set(0.12, 0.56, -0.02); coneTop.rotation.z = -0.44;
+  const wizBand = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.042, 10, 26), wizBandMat);
+  wizBand.rotation.x = Math.PI * 0.5; wizBand.position.y = 0.06;
+  wizardHaloRing = new THREE.Group(); wizardHaloRing.position.set(0.08, 0.46, 0); wizardHaloRing.rotation.set(0.32, 0, -0.25);
+  const ringMesh = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.012, 8, 32), new THREE.MeshBasicMaterial({ color: '#fae078', transparent: true, opacity: 0.72 }));
+  ringMesh.rotation.x = Math.PI * 0.5;
+  wizardHaloRing.add(ringMesh);
+  for (let i = 0; i < 3; i++) {
+    const a = i / 3 * Math.PI * 2;
+    const starDot = new THREE.Mesh(new THREE.OctahedronGeometry(0.045, 0), i === 1 ? flat('#d6b4fc') : wizStarMat);
+    starDot.position.set(Math.cos(a) * 0.38, 0, Math.sin(a) * 0.38);
+    wizardHaloRing.add(starDot);
+  }
+  wizard.add(brim, brimRim, coneLow, coneTop, wizBand, wizardHaloRing);
+  accessoriesGroup.add(wizard); accessoryMap.wizard = wizard;
+
+  // 7. 伴星发卡 (star — plump 5-point gold star clipped on left forehead)
+  const star = new THREE.Group(); star.position.set(-0.34, 0.50, 0.56); star.rotation.set(-0.18, -0.28, 0.22);
+  const starShape = new THREE.Shape();
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 === 0 ? 0.16 : 0.076;
+    const a = i / 10 * Math.PI * 2 + Math.PI * 0.5;
+    if (i === 0) starShape.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+    else starShape.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  starShape.closePath();
+  const starGeo = new THREE.ExtrudeGeometry(starShape, { depth: 0.045, bevelEnabled: true, bevelThickness: 0.016, bevelSize: 0.014, bevelSegments: 3 });
+  starGeo.center();
+  const starMat = flat('#f4c443'), clipMat = flat('#b5842a');
+  registerTint('star', starMat, '#f4c443', 0);
+  const starMesh = new THREE.Mesh(starGeo, starMat);
+  const clipBar = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.036, 0.025), clipMat);
+  clipBar.position.set(0.08, -0.01, -0.03);
+  star.add(starMesh, clipBar);
+  accessoriesGroup.add(star); accessoryMap.star = star;
+
+  // 8. 酷盖墨镜 (shades — retro round charcoal frames + translucent dark lenses + // glare)
+  const shades = new THREE.Group(); shades.position.set(0, 0.12, 0.72);
+  const frameMat = flat('#262628'), lensMat = new THREE.MeshBasicMaterial({ color: '#14161a', transparent: true, opacity: 0.72, side: THREE.DoubleSide });
+  const glareMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.78, side: THREE.DoubleSide });
+  const rivetMat = flat('#f0c24c');
+  registerTint('shades', frameMat, '#262628', 0);
+  for (const s of [-1, 1]) {
+    const lensGroup = new THREE.Group(); lensGroup.position.set(s * 0.31, 0, -0.02); lensGroup.rotation.y = s * 0.16;
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.034, 10, 26), frameMat);
+    rim.scale.set(1.06, 0.92, 1);
+    const lens = new THREE.Mesh(new THREE.CircleGeometry(0.21, 24), lensMat);
+    lens.scale.set(1.06, 0.92, 1);
+    const g1 = new THREE.Mesh(new THREE.PlaneGeometry(0.035, 0.22), glareMat);
+    g1.position.set(-0.05, 0.01, 0.012); g1.rotation.z = -0.45;
+    const g2 = new THREE.Mesh(new THREE.PlaneGeometry(0.018, 0.16), glareMat);
+    g2.position.set(0.02, -0.01, 0.012); g2.rotation.z = -0.45;
+    const rivet = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), rivetMat);
+    rivet.position.set(s * 0.23, 0.06, 0.02);
+    lensGroup.add(rim, lens, g1, g2, rivet);
+    shades.add(lensGroup);
+  }
+  const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.038, 0.035), frameMat);
+  bridge.position.set(0, 0.04, 0);
+  shades.add(bridge);
+  accessoriesGroup.add(shades); accessoryMap.shades = shades;
+
+  // 9. 画家贝雷帽 (beret — terracotta-crimson dome + dark stem + gold pin)
+  const beret = new THREE.Group(); beret.position.set(0.06, 0.70, -0.02); beret.rotation.set(0.12, 0, -0.22);
+  const beretMat = flat('#c4453d'), beretStem = flat('#7a2621'), pinMat = flat('#f4c44e');
+  registerTint('beret', beretMat, '#c4453d', 0);
+  registerTint('beret', beretStem, '#7a2621', 0.32);
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.46, 22, 16), beretMat); cap.scale.set(1.08, 0.36, 0.96);
+  const capRim = new THREE.Mesh(new THREE.SphereGeometry(0.48, 20, 14), back('#4a1c1a')); capRim.scale.set(1.08, 0.37, 0.96);
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.032, 0.12, 8), beretStem); stem.position.set(0.02, 0.18, 0); stem.rotation.z = -0.24;
+  const pin = new THREE.Mesh(new THREE.SphereGeometry(0.038, 10, 8), pinMat); pin.position.set(-0.24, -0.02, 0.36);
+  beret.add(cap, capRim, stem, pin);
+  accessoriesGroup.add(beret); accessoryMap.beret = beret;
+
+  // 10. 小嫩芽 (sprout)
+  const sprout = new THREE.Group(); sprout.position.set(0, 0.68, 0.04);
   const stemMat = flat('#5ca856'), leafMat = flat('#78c668');
+  registerTint('sprout', leafMat, '#78c668', 0);
   const stemCurve = new THREE.QuadraticBezierCurve3(V(0, 0, 0), V(0.03, 0.18, 0.02), V(0.01, 0.34, 0));
   sprout.add(new THREE.Mesh(new THREE.TubeGeometry(stemCurve, 12, 0.024, 6, false), stemMat));
   const leafGeo = new THREE.SphereGeometry(0.11, 14, 10);
@@ -669,29 +887,46 @@ const accessoryMap = {};
   const l2 = new THREE.Mesh(leafGeo, leafMat); l2.scale.set(1.25, 0.48, 0.34); l2.position.set(0.12, 0.33, 0.01); l2.rotation.z = -0.38;
   sprout.add(l1, l2);
   accessoriesGroup.add(sprout); accessoryMap.sprout = sprout;
-
-  const beret = new THREE.Group(); beret.position.set(0.08, 0.72, -0.02); beret.rotation.set(0.12, 0, -0.22);
-  const beretMat = flat('#d67c56'), beretStem = flat('#9a4e32');
-  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.46, 20, 14), beretMat); cap.scale.set(1.08, 0.36, 0.96);
-  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.032, 0.12, 8), beretStem); stem.position.set(0.02, 0.18, 0); stem.rotation.z = -0.24;
-  beret.add(cap, stem);
-  accessoriesGroup.add(beret); accessoryMap.beret = beret;
-
-  const halo = new THREE.Group(); halo.position.set(0, 0.96, 0);
-  const haloMesh = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.038, 12, 28), flat('#fae078'));
-  haloMesh.rotation.x = Math.PI * 0.5;
-  halo.add(haloMesh);
-  accessoriesGroup.add(halo); accessoryMap.halo = halo;
 }
-let currentAccessory = 'none';
+let currentAccessory = 'crown';
+let currentAccessoryColor = 'auto';
 let currentCoat = null;
+function applyAccessoryColor() {
+  const hex = ACC_COLORS[currentAccessoryColor];
+  for (const list of Object.values(accTintable)) {
+    for (const item of list) {
+      item.mat.color.set(hex || item.defaultHex);
+      if (hex && item.darken > 0) item.mat.color.lerp(padTintTarget, item.darken);
+    }
+  }
+  const hpHex = hex || '#f3ede3';
+  headsetColor.color.set(hpHex);
+  headsetPad.color.set(hpHex).lerp(padTintTarget, 0.28);
+  stageEl.dataset.accessoryColor = currentAccessoryColor;
+}
+function syncHeadwear() {
+  const showPhones = focusMode || currentAccessory === 'headphones';
+  headphones.visible = showPhones;
+  if (showPhones) applyAccessoryColor();
+  for (const [k, obj] of Object.entries(accessoryMap)) obj.visible = !showPhones && k === currentAccessory;
+  accessoriesGroup.visible = !showPhones && currentAccessory !== 'none' && Boolean(accessoryMap[currentAccessory]);
+  neckAccessoriesGroup.visible = currentAccessory === 'bell' || currentAccessory === 'scarf';
+  if (neckAccessoriesGroup.visible) {
+    accessoryMap.bell.visible = currentAccessory === 'bell';
+    accessoryMap.scarf.visible = currentAccessory === 'scarf';
+  }
+}
 function setAccessory(id) {
-  currentAccessory = accessoryMap[id] ? id : 'none';
-  for (const [k, obj] of Object.entries(accessoryMap)) obj.visible = k === currentAccessory;
-  accessoriesGroup.visible = !focusMode && currentAccessory !== 'none';
+  currentAccessory = (accessoryMap[id] || id === 'headphones') ? id : 'none';
+  syncHeadwear();
   stageEl.dataset.accessory = currentAccessory;
 }
-setAccessory(options.accessory || 'none');
+function setAccessoryColor(id) {
+  currentAccessoryColor = ACC_COLORS[id] ? id : 'auto';
+  applyAccessoryColor();
+}
+setAccessory(options.accessory || 'crown');
+setAccessoryColor(options.accessoryColor || 'auto');
 
 // Tiny cute pink tongue that peeks out ONLY while the cat is licking its paw.
 const catTongue = new THREE.Mesh(new THREE.SphereGeometry(0.085, 14, 10), flat('#f391a3'));
@@ -745,17 +980,62 @@ function fillPatch(mesh, cx, cy, rx, ry, turn, lift, clipTop = Infinity, clipCur
   pos.needsUpdate = true;
 }
 const nose = makePatch(M.nose, 6);
+// Soft pink cheek blushes that gently fade in during head-petting (shared across all coats).
+const blushMat = new THREE.MeshBasicMaterial({
+  color: '#f28fa2', transparent: true, opacity: 0, depthWrite: false,
+  side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -10, polygonOffsetUnits: -10
+});
+const blushes = [-1, 1].map(s => ({ s, mesh: makePatch(blushMat, 5) }));
+blushes.forEach(b => { b.mesh.visible = false; });
 const eyeGlintMat = new THREE.MeshBasicMaterial({
   color: '#d8d5cf', transparent: true, opacity: 0.38, depthWrite: false,
   side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -12, polygonOffsetUnits: -12
 });
-// One coat-colored eye-white surface with one black pupil and subtle low-contrast glassy catchlights.
+// True curved ribbon arc wrapped onto the head ellipsoid (for natural ^ ^ happy smile eyes with ZERO opaque face mask).
+const ARC_SEG = 20;
+function makeArcPatch(mat, order) {
+  const geo = new THREE.BufferGeometry(), index = [];
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((ARC_SEG + 1) * 2 * 3), 3));
+  for (let i = 0; i < ARC_SEG; i++) {
+    const a = i * 2, b = a + 1, c = a + 2, d = a + 3;
+    index.push(a, b, c, b, d, c);
+  }
+  geo.setIndex(index);
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.renderOrder = order; mesh.frustumCulled = false; mesh.visible = false;
+  head.add(mesh);
+  return mesh;
+}
+function fillArcPatch(mesh, cx, cy, rx, ry, thick, turn, lift) {
+  cx = clamp(cx, -0.78, 0.78); cy = clamp(cy, -0.58, 0.58);
+  const pos = mesh.geometry.attributes.position, inside = Math.max(0.03, 1 - (cx / HEAD_R[0]) ** 2 - (cy / HEAD_R[1]) ** 2), cz = HEAD_R[2] * Math.sqrt(inside);
+  let ax = 1, az = -(cx / HEAD_R[0] ** 2) / (cz / HEAD_R[2] ** 2), al = Math.hypot(ax, az); ax /= al; az /= al;
+  let by = 1, bz = -(cy / HEAD_R[1] ** 2) / (cz / HEAD_R[2] ** 2), bl = Math.hypot(by, bz); by /= bl; bz /= bl;
+  const co = Math.cos(turn), si = Math.sin(turn);
+  for (let i = 0; i <= ARC_SEG; i++) {
+    const f = i / ARC_SEG;
+    const ang = mix(Math.PI * 0.12, Math.PI * 0.88, f);
+    const taper = Math.sin(f * Math.PI); // softly tapered rounded tips
+    const w = thick * (0.35 + 0.65 * Math.pow(taper, 0.65));
+    const u0 = Math.cos(ang) * rx, v0 = Math.sin(ang) * ry - ry * 0.42;
+    const nx = Math.cos(ang), ny = Math.sin(ang);
+    for (let j = 0; j < 2; j++) {
+      const sign = j === 0 ? -0.5 : 0.5;
+      const u = u0 + nx * w * sign, v = v0 + ny * w * sign;
+      const lx = u * co - v * si, ly = u * si + v * co;
+      onHead(cx + ax * lx, cy + by * ly, cz + az * lx + bz * ly, lift, pos, i * 2 + j);
+    }
+  }
+  pos.needsUpdate = true;
+}
+// One coat-colored eye-white surface with one black pupil, subtle glassy catchlights, and a genuine arc smile mesh (zero mask cutout).
 const eyes = [-1, 1].map(s => ({
   s,
   iris: makePatch(M.eye, 3),
   pupil: makePatch(M.pupil, 4),
   glintMain: makePatch(eyeGlintMat, 5),
   glintSub: makePatch(eyeGlintMat, 5),
+  smileArc: makeArcPatch(M.shut, 6),
   lid: makePatch(M.lid, 6)
 }));
 const stripes = [
@@ -838,17 +1118,39 @@ function paintTail(c) {
 const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 const AX = V(1, 0, 0), AZ = V(0, 0, 1);
 
-// Tail: starts inside the hip so it grows out of the body, thick at the root and tapering to a round tip.
-const tailCurve = new THREE.CatmullRomCurve3([V(0.3, 0.36, -0.75), V(0.82, 0.2, -0.64), V(1.16, 0.3, -0.5), V(1.3, 0.58, -0.42), V(1.46, 0.8, -0.37), V(1.66, 0.87, -0.35)], false, 'catmullrom', 0.5);
+// Tail: tall, graceful liquid-cat "?" hook tail rising to shoulder height and curling inward at the tip.
+const tailCurve = new THREE.CatmullRomCurve3([
+  V(0.28, 0.36, -0.72),
+  V(0.92, 0.34, -0.58),
+  V(1.44, 0.72, -0.44),
+  V(1.64, 1.32, -0.35),
+  V(1.44, 1.74, -0.28),
+  V(1.04, 1.66, -0.24)
+], false, 'catmullrom', 0.5);
 const tail = makeSausage(M.tail, 1); cat.add(tail);
 let TAIL_K = 1;
-const buildTail = k => { TAIL_K = k; shapeSausage(tail, tailCurve, t => 0.16 * TAIL_K * (1 + 0.7 * (1 - smooth(0, 0.16, t)) ** 2), AZ); };
+const buildTail = k => { TAIL_K = k; shapeSausage(tail, tailCurve, t => 0.145 * TAIL_K * (1 + 0.52 * (1 - smooth(0, 0.18, t)) ** 2), AZ); };
 buildTail(1);
-// Asleep, the tail wraps tightly around the front of the curled-up body like a sleeping ball.
-const TAIL_UP = tailCurve.points.map(q => q.clone()), TAIL_DOWN = [V(0.3, 0.32, -0.72), V(0.95, 0.16, -0.48), V(1.24, 0.14, 0.02), V(1.02, 0.14, 0.58), V(0.55, 0.15, 0.86), V(0.05, 0.16, 0.88)];
+// Asleep, the tail wraps tightly around the front of the curled-up body; when scruff-lifted, it hangs down like a soft pendulum.
+const TAIL_UP = tailCurve.points.map(q => q.clone());
+const TAIL_DOWN = [V(0.3, 0.32, -0.72), V(0.95, 0.16, -0.48), V(1.24, 0.14, 0.02), V(1.02, 0.14, 0.58), V(0.55, 0.15, 0.86), V(0.05, 0.16, 0.88)];
+const TAIL_HANG = [V(0.24, 0.34, -0.58), V(0.42, 0.04, -0.46), V(0.46, -0.34, -0.34), V(0.38, -0.66, -0.22), V(0.20, -0.88, -0.14), V(-0.02, -0.96, -0.08)];
 let tailDown = 0;
 let tailWag = 0;
-const poseTail = (k, wag = 0) => { if (Math.abs(k - tailDown) < 0.002 && Math.abs(wag - tailWag) < 0.002) return; tailDown = k; tailWag = wag; const e = k * k * (3 - 2 * k), n = tailCurve.points.length; tailCurve.points.forEach((q, i) => { q.lerpVectors(TAIL_UP[i], TAIL_DOWN[i], e); const tip = Math.max(0, (i - (n - 3)) / 2); q.x += wag * 0.22 * tip * tip; q.y += Math.abs(wag) * 0.05 * tip; }); buildTail(TAIL_K); };
+let tailHang = 0;
+const poseTail = (k, wag = 0, hang = 0) => {
+  if (Math.abs(k - tailDown) < 0.002 && Math.abs(wag - tailWag) < 0.002 && Math.abs(hang - tailHang) < 0.002) return;
+  tailDown = k; tailWag = wag; tailHang = hang;
+  const e = k * k * (3 - 2 * k), h = hang * hang * (3 - 2 * hang), n = tailCurve.points.length;
+  tailCurve.points.forEach((q, i) => {
+    q.lerpVectors(TAIL_UP[i], TAIL_DOWN[i], e);
+    if (h > 0.001) q.lerp(TAIL_HANG[i], h);
+    const tip = Math.max(0, (i - (n - 4)) / 3);
+    q.x += wag * 0.24 * tip * tip;
+    q.y += Math.sin(wag * 1.4) * 0.08 * tip * (1 - h * 0.7);
+  });
+  buildTail(TAIL_K);
+};
 
 /* ---------- forelimbs: oval-ended legs from the shoulder to wherever the paw is ---------- */
 const SHOULDER = { L: V(-0.25, 1.35, 0.19), R: V(0.25, 1.35, 0.19) };    // world; L is screen left = the cat's right paw
@@ -867,7 +1169,7 @@ function drawLimb(p, shoulder, t) {
   // Shape the foreleg around a soft elbow so a long reach reads as a jointed limb, not a straight tube.
   const s = p.side === 'L' ? -1 : 1, tip = tmpC.copy(p.pos); p.foot.position.copy(p.pos); tip.y += 0.05 * FOOT; tip.z -= 0.1 * FOOT;
   const dx = tip.x - shoulder.x, dz = tip.z - shoulder.z, far = Math.hypot(dx, dz), reach = clamp(far / 1.45, 0, 1);
-  const bend = p.mode === 'mouse' ? 0.11 + 0.06 * reach : p.mode === 'key' ? 0.018 + 0.018 * reach : 0.008 + 0.012 * reach;
+  const bend = p.mode === 'mouse' ? 0.012 + 0.008 * reach : p.mode === 'key' ? 0.008 + 0.006 * reach : 0.005;
   curve.v0.copy(shoulder); curve.v2.copy(tip);
   elbowV.set(
     mix(shoulder.x, tip.x, 0.5) + s * bend,
@@ -948,7 +1250,7 @@ const COATS = [
   { id: 'orange', name: '橘猫', pattern: 'tabby', fur: '#ebb064', faceFur: '#f0b86e', faceLight: '#f8d89c', faceMidtone: '#de9a4c', faceWhite: '#fff8ec', faceShadow: '#c7833d', patch: '#fff7e8', chest: '#fff9ed', chin: '#fff7e8', line: '#b87c3e', eye: '#99b854', nose: '#df918d', whisker: '#fffaf0', whiskerOut: '#b87c3e', stripe: '#c97b34', faceStripe: '#cf823b', inner: '#efb09e', tail: '#ebb064', tailStripeStrength: 0.72 },
   { id: 'ragdoll', name: '布偶猫', pattern: 'ragdoll', fur: '#fcfaf5', faceFur: '#fcfaf5', patch: '#ffffff', chest: '#ffffff', chin: '#ffffff', point: '#5f4b41', saddle: '#9c887b', ear: '#5b473d', tail: '#5b473d', line: '#7d6b61', eye: '#3b8ee6', nose: '#e09fa6', whisker: '#ffffff', whiskerOut: '#8a7a70', stripe: '#fcfaf5', inner: '#ddb8ae' },
   { id: 'white', name: '异瞳白猫', fur: '#faf8f2', patch: '#fffdf8', chest: '#fffdf8', chin: '#fffdf8', line: '#c8c2b8', eye: '#45a3dc', eyeAlt: '#e6b839', nose: '#dca1aa', whisker: '#fffdf8', whiskerOut: '#aaa49a', stripe: '#faf8f2', inner: '#f2c5bc' },
-  { id: 'solidblack', name: '纯黑猫', fur: '#151416', patch: '#151416', chest: false, chin: false, line: '#77767a', eye: '#fffdf8', nose: '#f7f4ed', whisker: '#f6f1e8', whiskerOut: '#4b4649', stripe: '#151416', inner: '#302a2c' }
+  { id: 'solidblack', name: '液态黑猫', fur: '#111111', patch: '#111111', chest: false, chin: false, line: '#5f5d61', shut: '#ffffff', eye: '#ffffff', nose: '#ffffff', whisker: '#f6f1e8', whiskerOut: '#4b4649', stripe: '#111111', inner: '#111111' }
 ];
 const EYE_PRESETS = {
   blue: ['#45a3e5', '#45a3e5'],
@@ -979,7 +1281,7 @@ function setCoat(i) {
   M.earL.color.set(c.earL || c.ear || c.fur);
   M.earR.color.set(c.earR || c.ear || c.fur);
   M.lid.color.set(c.pattern === 'tuxedo' ? (c.patchB || '#1b1a1c') : c.fur);
-  M.shut.color.set(c.line);
+  M.shut.color.set(c.shut || c.line);
   M.nose.color.set(c.nose);
   M.angry.color.set(c.line);
   paintCoat(c);
@@ -999,12 +1301,12 @@ function setWall(i) { stageEl.dataset.wall = String(i); deskMat.color.set(WALLS[
 COATS.forEach((c, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = c.name; b.onclick = () => setCoat(i); $('coats').appendChild(b); });
 WALLS.forEach((w, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = w[0]; b.onclick = () => setWall(i); $('walls').appendChild(b); });
 
-/* ---------- body shape: a handful of proportions, the same ones a custom pet would set ---------- */
+/* ---------- body shape: smooth continuous liquid-cat proportions shared across all coats ---------- */
 const SHAPE = [
-  ['headSize', '头的大小', 0.75, 1.5, 0.98], ['headW', '头的宽度', 0.8, 1.35, 1.02], ['headH', '头的高度', 0.75, 1.25, 1.01], ['neck', '头的高低', -0.3, 0.3, 0.02], ['neckW', '脖子宽度', 0.8, 2.2, 1.02],
-  ['earSize', '耳朵大小', 0.5, 1.6, 1.05], ['earSpread', '耳朵间距', 0.6, 1.4, 0.95], ['eyeSize', '眼睛大小', 0.6, 1.8, 1.2], ['eyeSpread', '眼睛间距', 0.6, 1.5, 0.9], ['eyeY', '眼睛高低', -0.25, 0.4, 0.31], ['eyeTilt', '眼睛角度', -0.7, 0.7, -0.08],
-  ['bodyW', '身体宽度', 0.7, 1.5, 0.86], ['bodyH', '身体高度', 0.8, 1.3, 0.98],
-  ['legThick', '腿的粗细', 0.5, 1.7, 1.16], ['legGap', '两腿间距', 0.5, 1.8, 1], ['footSize', '脚的大小', 0.6, 1.7, 1.02], ['tailThick', '尾巴粗细', 0.4, 1.7, 1.0], ['shoulderW', '脖子下方宽度', 0.8, 1.6, 1.05]
+  ['headSize', '头的大小', 0.75, 1.5, 0.92], ['headW', '头的宽度', 0.8, 1.35, 1.02], ['headH', '头的高度', 0.75, 1.25, 0.98], ['neck', '头的高低', -0.3, 0.3, -0.05], ['neckW', '脖子宽度', 0.8, 2.2, 1.0],
+  ['earSize', '耳朵大小', 0.5, 1.6, 1.14], ['earSpread', '耳朵间距', 0.6, 1.4, 0.98], ['eyeSize', '眼睛大小', 0.6, 1.8, 1.16], ['eyeSpread', '眼睛间距', 0.6, 1.5, 0.82], ['eyeY', '眼睛高低', -0.25, 0.4, 0.12], ['eyeTilt', '眼睛角度', -0.7, 0.7, 0.11],
+  ['bodyW', '身体宽度', 0.7, 1.5, 0.82], ['bodyH', '身体高度', 0.8, 1.3, 1.04],
+  ['legThick', '腿的粗细', 0.5, 1.7, 0.96], ['legGap', '两腿间距', 0.5, 1.8, 1.0], ['footSize', '脚的大小', 0.6, 1.7, 1.0], ['tailThick', '尾巴粗细', 0.4, 1.7, 1.02], ['shoulderW', '脖子下方宽度', 0.8, 1.6, 1.0]
 ];
 const P = {}; SHAPE.forEach(([k, , , , d]) => P[k] = d);
 function applyShape() {
@@ -1014,7 +1316,8 @@ function applyShape() {
   stripes.forEach(st => fillPatch(st.mesh, st.x * 0.8, clamp(P.eyeY + 0.23, 0.38, 0.55) - Math.abs(st.x) * 0.16, st.w, st.h, st.turn, 0.008)); // three softly blended forehead bars
   browMarks.forEach(st => fillPatch(st.mesh, st.s * 0.53, P.eyeY + 0.2, 0.15, 0.04, st.s * 0.28, 0.008));
   angryBrows.forEach(st => fillPatch(st.mesh, st.s * 0.37, P.eyeY + 0.16, 0.17, 0.036, st.s * 0.2, 0.014));
-  fillPatch(nose, 0, 0.12, 0.068, 0.05, 0, 0.02);
+  fillPatch(nose, 0, -0.05, 0.044, 0.036, 0, 0.02);
+  blushes.forEach(b => fillPatch(b.mesh, b.s * (0.60 * P.eyeSpread), P.eyeY - 0.05, 0.082, 0.052, b.s * 0.14, 0.015));
   cheekStripes.forEach(st => fillPatch(st.mesh, st.x, st.y, 0.22, 0.044, st.turn, 0.009));
   hindFeet.forEach((g, i) => { g.position.x = (i ? 1 : -1) * 0.6 * P.bodyW; g.scale.setScalar(P.footSize); });
   LEG_R = 0.16 * P.legThick; FOOT = P.footSize; for (const side of ['L', 'R']) paws[side].foot.scale.setScalar(P.footSize);
@@ -1208,7 +1511,15 @@ function frame() {
 
   // keys
   const jolt = 0.03 * Math.exp(-(t - S.jolt) / 55); board.position.y = -jolt;
-  keys.forEach(k => { if (!k.down && k.glow > 0) k.glow = Math.max(0, k.glow - dt * 5); k.mesh.position.y = 0.145 - (k.down ? 0.045 : 0); k.mesh.material.color.copy(k.base); });
+  keys.forEach(k => {
+    if (!k.down && k.glow > 0) k.glow = Math.max(0, k.glow - dt * 5.2);
+    k.mesh.position.y = 0.145 - (k.down ? 0.048 : 0);
+    if (k.down || k.glow > 0.01) {
+      k.mesh.material.color.copy(k.base).lerp(KEYCAP.accent, k.down ? 0.82 : k.glow * 0.65);
+    } else {
+      k.mesh.material.color.copy(k.base);
+    }
+  });
 
   // body
   const act0 = S.act, stretching = act0 === 'stretch', licking = act0 === 'lick' || act0 === 'wash', yawning = act0 === 'yawn', flicking = act0 === 'tail', pouncing = act0 === 'pounce', playing = act0 === 'play', chasingButterfly = act0 === 'butterfly', actLeft = S.actUntil - t;
@@ -1225,13 +1536,25 @@ function frame() {
   const hideDesk = S.dragging || asleep;
   activeLayout.group.visible = showKeyboard && !hideDesk;
   mouseGroup.visible = showMousePref && !hideDesk;
+  deskShadow.visible = showKeyboard && !hideDesk;
   sleepCushion.visible = !S.dragging && loaf > 0.05;
   if (sleepCushion.visible) {
     const cs = smooth(0.05, 0.72, loaf);
     sleepCushion.scale.set(cs, cs, cs);
   }
-  cat.position.y = drag * 0.34 + loaf * 0.16;
-  cat.rotation.z = drag > 0.005 ? Math.sin(t / 195) * 0.095 * drag : 0;
+  cat.position.y = drag * 0.42 + loaf * 0.16;
+  const dragHoldMs = S.dragging ? (t - (S.dragStartedAt || t)) : 0;
+  const dragSwing = drag > 0.005 ? Math.sin(t / 260) * 0.24 * drag : 0;
+  cat.rotation.z = dragSwing;
+  cat.position.x = drag > 0.005 ? Math.sin(dragSwing) * 0.45 : 0;
+  // Dangle & gently kick hind feet when scruff-lifted.
+  hindFeet.forEach((g, i) => {
+    const s = i ? 1 : -1;
+    const kick = drag > 0.02 ? Math.sin(t / 190 + i * 2.1) * 0.14 * drag : 0;
+    g.position.set(s * 0.54 * P.bodyW - dragSwing * 0.18, 0.1 - 0.18 * drag + kick * 0.25, 0.25 - 0.12 * drag);
+    g.rotation.x = 0.65 * drag + kick;
+    g.rotation.z = -dragSwing * 0.6 + s * 0.08 * drag;
+  });
   torso.scale.set(
     P.bodyW * (1 + 0.36 * loaf + breath * (0.012 + 0.02 * loaf) - bounce * 0.03 - 0.11 * drag),
     P.bodyH * squat * (1 + breath * (0.012 + 0.018 * loaf) + bounce * 0.05 - S.thump * (0.012 + 0.02 * fast) + 0.15 * drag),
@@ -1246,7 +1569,7 @@ function frame() {
   S.fwd += ((asleep ? 0.08 : playing ? 0.22 : chasingButterfly ? 0.14 : mousing ? 0.2 : hover ? S.fwdGoal : 0) - S.fwd) * ease(7);
   const bfX = Math.sin(t / 720) * 0.82;
   const playLean = playing ? clamp(S.yarn.x * 0.16, -0.2, 0.2) : chasingButterfly ? clamp(bfX * 0.18, -0.2, 0.2) : 0;
-  S.sx += (clamp(reach * 0.13, -0.2, 0.2) - DESK_DIR * S.mouseLean * 0.24 + playLean - S.sx) * ease(9);
+  S.sx += (clamp(reach * 0.13, -0.2, 0.2) - DESK_DIR * S.mouseLean * 0.22 + playLean - S.sx) * ease(9);
   const sx = S.sx + S.thump * S.thumpSide * 0.012 + (crouch ? Math.sin(t / 55) * 0.02 : 0), fwd = S.fwd;
   upper.matrix.set(1, sx, 0, 0,  0, 1 - fwd * fwd * 0.35, 0, 0,  0, fwd, 1, 0,  0, 0, 0, 1);
   yarn.visible = playing && !asleep;
@@ -1283,18 +1606,22 @@ function frame() {
     bfWings[0].rotation.z = flap;
     bfWings[1].rotation.z = -flap;
   }
-  const tailTarget = asleep ? 1 : drag > 0.05 ? 0.55 * drag : angry ? 0.34 + angerBeat * 0.64 : 0;
+  const tailTarget = asleep ? 1 : angry ? 0.34 + angerBeat * 0.64 : 0;
   S.tailDown = (S.tailDown || 0) + (tailTarget - (S.tailDown || 0)) * ease(angry ? 20 : 2.6);
   const tailStrikeNow = angry && angerBeat > 0.72, tailImpact = tailStrikeNow && !S.tailStrike;
   if (tailImpact) { S.thump = Math.max(S.thump, 0.42); S.jolt = t; }
   S.tailStrike = tailStrikeNow;
   const idleTail = !typing && !asleep && !mousing && !S.pet && t >= S.happyUntil && !act0;
-  const tailWag = flicking ? Math.sin(t / 85) * Math.sin(clamp(1 - actLeft / 1400, 0, 1) * Math.PI)
-    : angry ? Math.sin(t / 70) * 0.12 * angerBeat
-      : crouch ? Math.sin(t / 60) * 0.5
-        : idleTail ? Math.sin(t / 430) * 0.62 : 0;
-  poseTail(S.tailDown < 0.003 ? 0 : S.tailDown > 0.997 ? 1 : S.tailDown, tailWag);
-  tail.rotation.z = Math.sin(t / 900) * 0.05 * (1 - S.tailDown) + (typing ? Math.sin(t / (160 - 70 * fast)) * (0.02 + 0.07 * fast) : idleTail ? Math.sin(t / 650) * 0.035 : 0);
+  // Continuous integrated phase for silky, jitter-free tail motion across all typing/idle speeds.
+  const tailFreq = angry ? 10.5 : crouch ? 9.0 : typing ? (2.2 + fast * 3.0) : 1.45;
+  S.tailPhase = (S.tailPhase || 0) + dt * tailFreq;
+  const tailAmpTarget = drag > 0.05 ? 0 : flicking ? 1.0 : angry ? 0.25 : crouch ? 0.5 : typing ? (0.28 + fast * 0.34) : idleTail ? 0.52 : 0.14;
+  S.tailAmp = (S.tailAmp || 0.4) + (tailAmpTarget - (S.tailAmp || 0.4)) * ease(5);
+  const tailWag = drag > 0.05
+    ? -Math.sin(t / 260 - 0.55) * 1.15 * drag
+    : Math.sin(S.tailPhase) * S.tailAmp * (flicking ? Math.sin(clamp(1 - actLeft / 1400, 0, 1) * Math.PI) : 1);
+  poseTail(S.tailDown < 0.003 ? 0 : S.tailDown > 0.997 ? 1 : S.tailDown, tailWag, drag);
+  tail.rotation.z = Math.sin(S.tailPhase * 0.72) * (0.032 + 0.035 * fast) * (1 - S.tailDown) * (1 - drag);
   if (tailImpactMark && tailStrikeNow) {
     scene.updateMatrixWorld(true); camera.updateMatrixWorld(true);
     tailImpactAt.copy(tailCurve.getPoint(1)); tail.localToWorld(tailImpactAt); tailImpactAt.project(camera);
@@ -1360,7 +1687,15 @@ function frame() {
   const baseNod = asleep ? 0.44 : yawning ? -0.3 * yawn : crouch ? 0.16 : happy ? -0.12 : licking ? (washRub ? 0.22 + Math.sin(t / 150) * 0.11 : 0.34 + Math.sin(t / 115) * 0.08) : stretching ? -0.18 : watchButterfly ? clamp(-pdy * 0.55 - 0.18, -0.42, 0.12) : watchYarn ? clamp(-pdy * 0.38 + 0.1, 0.08, 0.38) : gazeTarget ? clamp(pdy * 0.5, -0.28, 0.4) : looking ? 0.3 : mousing ? 0.22 : 0;
   const nodT = (!asleep && S.anger > 0.02) ? mix(baseNod, Math.max(0.24, baseNod), smooth(0.05, 0.45, S.anger)) : baseNod;
   const tiltT = asleep ? 0.52 : licking ? (washRub ? -0.20 + Math.cos(t / 170) * 0.09 : -0.10) : watchButterfly ? clamp(pdx * 0.35, -0.24, 0.24) : happy ? (S.petSide || -1) * 0.1 + Math.sin(t / 330) * 0.06 : 0;
-  S.turn += (turnT - S.turn) * ease(7); S.nod += (nodT - S.nod) * ease(6); S.tilt += (tiltT - S.tilt) * ease(5);
+  S.turnV = S.turnV || 0; S.nodV = S.nodV || 0; S.tiltV = S.tiltV || 0;
+  const springStep = (val, vel, target, stiffness, damping) => {
+    const acc = (target - val) * stiffness - vel * damping;
+    const nv = vel + acc * dt;
+    return [val + nv * dt, nv];
+  };
+  [S.turn, S.turnV] = springStep(S.turn, S.turnV, turnT, 58, 12.5);
+  [S.nod, S.nodV] = springStep(S.nod, S.nodV, nodT, 52, 11.8);
+  [S.tilt, S.tiltV] = springStep(S.tilt, S.tiltV, tiltT, 44, 10.6);
   { const w = (t - (S.wokeAt || -1e9)) / 750; S.shake = w > 0.15 && w < 1 ? Math.sin(w * 26) * 0.16 * (1 - w) : 0; }
   head.rotation.set(S.nod + S.thump * (0.05 + 0.05 * fast), S.turn + S.shake, S.tilt);
   head.position.x = -0.36 * loaf;
@@ -1374,62 +1709,99 @@ function frame() {
     angerMark.style.left = `${(angerAnchor.x + 1) * 0.5 * w}px`;
     angerMark.style.top = `${(1 - angerAnchor.y) * 0.5 * h}px`;
   }
+  // Occasional delicate single-ear micro-flick at idle + expressive ear dynamics.
+  if (!S.earFlickAt || t > S.earFlickAt) {
+    S.earFlickSide = Math.random() < 0.5 ? 0 : 1;
+    S.earFlickStart = t;
+    S.earFlickAt = t + rnd(4200, 9500);
+  }
+  const earMicro = (!asleep && t - (S.earFlickStart || -1e9) < 340)
+    ? Math.sin((t - S.earFlickStart) / 340 * Math.PI * 2) * 0.16 : 0;
   const flick = S.act === 'ear' ? Math.sin((S.actUntil - t) / 420 * Math.PI * 2) * 0.28 : 0;
-  { const relax = (S.lidDir < 0 ? 0.2 * smooth(0.5, 1, S.lid) : 0) + 0.18 * loaf + 0.24 * drag; ears[0].rotation.z = 0.24 + relax + flick; ears[1].rotation.z = -0.24 - relax - flick * 0.5; ears[0].rotation.x = ears[1].rotation.x = -0.32 * fast + 0.15 * drag; }
+  const keyTwitch = S.thump * 0.08;
+  const airplane = smooth(0.12, 0.72, S.anger);
+  {
+    const relax = (S.lidDir < 0 ? 0.24 * smooth(0.5, 1, S.lid) : 0) + 0.18 * loaf + 0.24 * drag + 0.56 * airplane;
+    ears[0].rotation.z = 0.14 + relax + flick + (S.earFlickSide === 0 ? earMicro : 0) + (S.thumpSide < 0 ? keyTwitch : 0);
+    ears[1].rotation.z = -0.14 - relax - flick * 0.5 - (S.earFlickSide === 1 ? earMicro : 0) - (S.thumpSide > 0 ? keyTwitch : 0);
+    ears[0].rotation.x = ears[1].rotation.x = -0.28 * fast + 0.15 * drag - 0.36 * airplane + S.nod * 0.12;
+  }
+  S.blush = (S.blush || 0) + (((happy && !asleep) ? 1 : 0) - (S.blush || 0)) * ease(10);
+  const showBlush = S.blush > 0.02;
+  blushMat.opacity = S.blush * 0.90;
+  blushes.forEach(b => { b.mesh.visible = showBlush; });
   catTongue.visible = licking && !washRub && !asleep;
   if (catTongue.visible) {
     const lickBeat = 0.5 + 0.5 * Math.sin(t / 105);
     catTongue.position.set(0.03, -0.17 - lickBeat * 0.045, 0.77 + lickBeat * 0.055);
     catTongue.scale.set(0.92, 0.9 + lickBeat * 0.28, 0.55);
   }
-  if (accessoryMap.halo && accessoryMap.halo.visible) {
-    accessoryMap.halo.position.y = 0.96 + Math.sin(t / 480) * 0.035;
+  if (wizardHaloRing && accessoryMap.wizard?.visible) {
+    wizardHaloRing.rotation.y = t / 1100;
   }
 
   // eyes
-  if (t > S.blinkAt) { S.blinkUntil = t + 130; S.blinkAt = t + rnd(2600, 5600); }
-  S.lidDir = 1;                      // happy: lower lid rises into an arch; blink and sleep: upper lid comes down
-  const lidT = asleep || t < S.blinkUntil || happy || licking || stretching || yawn > 0.25 ? 1 : 0; S.lid += (lidT - S.lid) * (1 - Math.exp(-realDt * (lidT > S.lid ? 34 : 16)));   // eyelids keep real time even if frames are dropped
+  if (t > S.blinkAt) {
+    S.blinkUntil = t + 125;
+    S.blinkAt = t + (Math.random() < 0.2 ? 250 : rnd(2400, 5200)); // natural occasional double-blink
+  }
+  const dragResigned = drag > 0.45 && dragHoldMs > 420;
+  S.lidDir = happy && !asleep && !dragResigned ? -1 : 1; // happy: ^ ^ arch; blink/sleep/scruff-resigned: downward curved close
+  const lidT = asleep || dragResigned || t < S.blinkUntil || happy || licking || stretching || yawn > 0.25 ? 1 : 0; S.lid += (lidT - S.lid) * (1 - Math.exp(-realDt * (lidT > S.lid ? 34 : 16)));   // eyelids keep real time even if frames are dropped
   const gx = gazeTarget ? clamp(pdx * 2.2, -1, 1) : mousing ? -0.8 * DESK_DIR : looking ? (S.lastSide === 'L' ? -0.5 : 0.5) : 0, gy = gazeTarget ? clamp(pdy * 2.2, -1, 1) : looking || mousing ? 1 : 0;
   S.gazeX += (gx - S.gazeX) * ease(9); S.gazeY += (gy - S.gazeY) * ease(9);
   stageEl.dataset.gazeX = S.gazeX.toFixed(3);
   stageEl.dataset.gazeY = S.gazeY.toFixed(3);
-  const ex = 0.37 * P.eyeSpread, ey = P.eyeY, er = 0.205 * P.eyeSize, iry = er, c = S.lid, dir = S.lidDir || 1;
+  const isLiquidBlack = currentCoat?.id === 'solidblack' && currentEyeColor === 'auto';
+  const ex = 0.37 * P.eyeSpread, ey = P.eyeY, er = 0.205 * P.eyeSize, irx = er * 0.94, iry = er * 1.15, c = S.lid, dir = S.lidDir || 1;
   const angerClip = smooth(0.06, 0.72, S.anger);
   for (const e of eyes) {
-    // Angry eyes clip the upper side of the oval eye geometry directly (no extra lid overlay on the face).
-    const pet = dir < 0, shut = c > 0.7;
-    const h = iry * mix(1, pet ? 0.7 : 0.3, smooth(0, 0.8, c));
-    const eyeTurn = e.s * (P.eyeTilt + (!shut ? 0.38 * angerClip : 0));
-    const eyc = ey + (dir * h * (pet ? 0.84 : 0.7) - iry) * smooth(0.35, 0.7, c);
+    // Smooth vertical squash-blink, true crescent arc ^ ^ smile (zero opaque face mask), and direct angry upper-clip.
+    const pet = dir < 0, shut = c > 0.68;
+    const showSmileArc = pet && shut;
+    e.smileArc.visible = showSmileArc;
+    e.iris.visible = !showSmileArc;
+    e.lid.visible = false;
+    const h = iry * (pet ? mix(1, 0.52, smooth(0, 0.75, c)) : mix(1, 0.08, smooth(0, 0.92, c)));
+    const eyeTurn = e.s * (P.eyeTilt + (!shut ? 0.36 * angerClip : 0));
+    const eyc = pet
+      ? ey + 0.01 * smooth(0.35, 0.7, c)
+      : ey - 0.05 * smooth(0.3, 0.9, c);
+    if (showSmileArc) {
+      fillArcPatch(e.smileArc, e.s * ex, eyc + 0.01, irx * 0.96, iry * 0.66, irx * 0.24, eyeTurn, 0.015);
+      e.pupil.visible = false;
+      e.glintMain.visible = false;
+      e.glintSub.visible = false;
+      continue;
+    }
     const clipTop = !shut && angerClip > 0.02 ? mix(h * 1.05, h * 0.14, angerClip) : Infinity;
     const clipCurve = !shut && angerClip > 0.02 ? h * 0.08 * angerClip : 0;
     e.iris.material = shut ? M.shut : (e.s < 0 ? M.eye : M.eyeAlt);
-    fillPatch(e.iris, e.s * ex, eyc, er * (shut ? (pet ? 0.8 : 0.92) : 0.98), h * 0.98, eyeTurn, 0.008, clipTop, clipCurve);
-    const pupilRadius = er * 0.56 * (1 - 0.06 * angerClip);
-    const pupilTravel = Math.max(0, h - pupilRadius - er * 0.04), gazeLength = Math.hypot(S.gazeX, S.gazeY);
+    fillPatch(e.iris, e.s * ex, eyc, irx * (shut ? 0.96 : 0.98), h * 0.98, eyeTurn, 0.008, clipTop, clipCurve);
+    const pupilRx = irx * (isLiquidBlack ? 0.72 : 0.56) * (1 - 0.06 * angerClip);
+    const pupilRy = Math.min(h * 0.82, iry * (isLiquidBlack ? 0.72 : 0.56) * (1 - 0.06 * angerClip));
+    const pupilTravel = Math.max(0, h - pupilRy - er * 0.03), gazeLength = Math.hypot(S.gazeX, S.gazeY);
     const gazeScale = gazeLength > 1 ? 1 / gazeLength : 1;
     const dx = S.gazeX * pupilTravel * gazeScale * (1 - 0.55 * angerClip);
     const dy = S.gazeY * pupilTravel * gazeScale * (1 - 0.55 * angerClip);
     const coE = Math.cos(eyeTurn), siE = Math.sin(eyeTurn);
-    const pOffU = -e.s * er * 0.04 * angerClip;
+    const pOffU = -e.s * irx * 0.04 * angerClip;
     const pOffV = h * 0.08 * angerClip;
     const px = e.s * ex + dx + (pOffU * coE - pOffV * siE);
     const py = eyc + dy + (pOffU * siE + pOffV * coE);
     const pClipTop = clipTop < Infinity ? clipTop - pOffV : Infinity;
-    fillPatch(e.pupil, px, py, pupilRadius, pupilRadius, eyeTurn, 0.013, pClipTop, clipCurve * 0.85);
-    const pupilVisible = c < 0.45;
+    fillPatch(e.pupil, px, py, pupilRx, pupilRy, eyeTurn, 0.013, pClipTop, clipCurve * 0.85);
+    const pupilVisible = c < 0.62;
     e.pupil.visible = pupilVisible;
-    e.glintMain.visible = pupilVisible && angerClip < 0.35;
-    e.glintSub.visible = pupilVisible;
+    // Liquid black cat keeps razor-clean hollow white ring eyes (no cloudy gray glints inside the black pupil).
+    e.glintMain.visible = pupilVisible && angerClip < 0.35 && !isLiquidBlack;
+    e.glintSub.visible = pupilVisible && !isLiquidBlack;
     if (e.glintMain.visible) {
-      fillPatch(e.glintMain, px - pupilRadius * 0.31, py + pupilRadius * 0.33, pupilRadius * 0.25, pupilRadius * 0.23, 0.2, 0.016);
+      fillPatch(e.glintMain, px - pupilRx * 0.31, py + pupilRy * 0.33, pupilRx * 0.25, pupilRy * 0.23, 0.2, 0.016);
     }
     if (e.glintSub.visible) {
-      fillPatch(e.glintSub, px + pupilRadius * 0.3, py - pupilRadius * 0.3, pupilRadius * 0.12, pupilRadius * 0.12, 0, 0.016);
+      fillPatch(e.glintSub, px + pupilRx * 0.3, py - pupilRy * 0.3, pupilRx * 0.12, pupilRy * 0.12, 0, 0.016);
     }
-    e.lid.visible = shut;
-    if (shut) fillPatch(e.lid, e.s * ex, eyc + dir * h * (pet ? 0.32 : 0.6), er * (pet ? 0.8 : 1.08), h, eyeTurn, 0.018);
   }
 
   // paws
@@ -1438,7 +1810,8 @@ function frame() {
     if (drag > 0.08) {
       p.mode = 'drag';
       const s = side === 'L' ? -1 : 1;
-      tmpGoal.set(s * 0.24 + Math.sin(t / 170 + s) * 0.055 * drag, 0.12 + Math.cos(t / 155 + s * 1.4) * 0.06 * drag, 0.44);
+      // Limp tucked paws hanging cleanly IN FRONT of the belly (z=0.66 so zero clipping on light coats like maotao/calico).
+      tmpGoal.set(s * 0.36 - Math.sin(t / 260 - 0.35) * 0.08 * drag, 0.36 + Math.cos(t / 210 + s * 1.4) * 0.045 * drag, 0.66);
       p.pos.lerp(tmpGoal, ease(16));
     } else if (since < STRIKE) {
       const progress = clamp(since / STRIKE, 0, 1), travel = progress * progress * (3 - 2 * progress);
@@ -1502,7 +1875,18 @@ function frame() {
         }
         p.pos.lerp(tmpGoal, ease(8));
       }
-      else if (since > STRIKE + 110) { p.mode = hover ? 'up' : 'rest'; const goal = hover ? tmpGoal.copy(UP[side]) : REST[side]; if (hover) goal.z += fwd * 0.6; p.pos.lerp(goal, ease(hover ? 20 : 9)); if (hover) p.pos.y += Math.sin(t / 240 + (side === 'L' ? 0 : 1.8)) * 0.004; }
+      else if (since > STRIKE + 110) {
+        if (hover) {
+          p.mode = 'up';
+          const goal = tmpGoal.copy(UP[side]);
+          goal.z += fwd * 0.6;
+          p.pos.lerp(goal, ease(20));
+          p.pos.y += Math.sin(t / 240 + (side === 'L' ? 0 : 1.8)) * 0.004;
+        } else {
+          p.mode = 'rest';
+          p.pos.lerp(REST[side], ease(9));
+        }
+      }
     }
     shoulderW.copy(SHOULDER[side]); shoulderW.x += sx * shoulderW.y - 0.14 * loaf; shoulderW.z += fwd * shoulderW.y + 0.12 * loaf; shoulderW.y = shoulderW.y * (1 - fwd * fwd * 0.35) * squat + breath * 0.02 + bounce * 0.06; drawLimb(p, shoulderW, t);
   }
@@ -1622,6 +2006,7 @@ return {
     if ('coat' in o) setCoat(coatIndex(o.coat));
     if ('eyeColor' in o) { currentEyeColor = o.eyeColor || 'auto'; applyEyeColor(); }
     if ('accessory' in o) setAccessory(o.accessory || 'none');
+    if ('accessoryColor' in o) setAccessoryColor(o.accessoryColor || 'auto');
     if ('keyboardStyle' in o) applyKeyboardStyle(o.keyboardStyle || 'cream');
     if ('sleepMinutes' in o && !VIEW.get('sleep')) SLEEP_AFTER = (+o.sleepMinutes > 0 ? clamp(+o.sleepMinutes, 1, 120) : 1e12) * 60000;
     if ('showKeyLabels' in o) {
@@ -1634,6 +2019,7 @@ return {
     if (S.dragging === next) return;
     S.dragging = next;
     if (next) {
+      S.dragStartedAt = performance.now();
       this.clear();
       wake(performance.now());
       S.act = null;
@@ -1647,8 +2033,6 @@ return {
     const next = Boolean(enabled);
     if (next === focusMode) return;
     focusMode = next;
-    headphones.visible = focusMode;
-    accessoriesGroup.visible = !focusMode && currentAccessory !== 'none';
     if (focusMode) {
       setRandomHeadphones();
       const t = performance.now();
@@ -1659,6 +2043,15 @@ return {
     } else {
       S.nextAct = performance.now() + rnd(3000, 6000);
     }
+    syncHeadwear();
+  },
+  petHappy(durationMs = 1900) {
+    const t = performance.now();
+    wake(t);
+    S.anger = 0;
+    S.angerUntil = 0;
+    S.petSide = Math.random() < 0.5 ? -1 : 1;
+    S.happyUntil = Math.max(S.happyUntil, t + durationMs);
   },
   setStandbyMode(enabled) {
     const next = Boolean(enabled);
