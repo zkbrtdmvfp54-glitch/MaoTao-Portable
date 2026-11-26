@@ -69,7 +69,7 @@ test('focus headset is a minimal two-part flat model with BackSide outline and a
   assert.match(model, /headsetColor\.color\.set\(colors\.color\)/);
   assert.match(model, /name: '珊瑚粉'/);
   assert.match(model, /iry = er/);
-  assert.match(model, /pupilRadius, pupilRadius/);
+  assert.match(model, /pupilRx, pupilRy/);
   const renderer = fs.readFileSync(path.join(root, 'src/renderer/pet/PetRenderer.js'), 'utf8');
   assert.match(renderer, /digitW = 14, digitH = 24, thick = 3/);
   assert.match(renderer, /const y = 38/);
@@ -84,7 +84,8 @@ test('standby is persistent, visible in the common menu, and disables global key
   const model = fs.readFileSync(path.join(root, 'assets/pet/third-party/7paws/7paws.js'), 'utf8');
   assert.match(settings, /standbyMode: false/);
   assert.match(tray, /label: '更换花色'/);
-  assert.match(tray, /prefs\.standbyMode \? '退出待机' : '进入待机'/);
+  assert.match(tray, /label: '打开控制面板…'/);
+  assert.match(tray, /prefs\.standbyMode \? '（待机中）'/);
   assert.match(tray, /label: '外观与窗口'/);
   assert.match(main, /if \(store\.prefs\.standbyMode\) return;/);
   assert.match(state, /key\(keyObj, label, linked = false\)/);
