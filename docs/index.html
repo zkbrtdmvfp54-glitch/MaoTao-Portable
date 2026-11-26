@@ -168,6 +168,39 @@
     height: 100% !important;
     display: block;
   }
+  #pet-stage .zzz,
+  #pet-stage .chip {
+    display: none !important;
+  }
+  .key-ripple {
+    position: absolute;
+    bottom: 13%;
+    width: 28px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    background: rgba(224, 126, 38, 0.22);
+    transform: translate(-50%, 50%) scale(0.45);
+    pointer-events: none;
+    animation: rippleOut 460ms ease-out forwards;
+  }
+  @keyframes rippleOut {
+    0% { opacity: 0.9; transform: translate(-50%, 50%) scale(0.45); }
+    100% { opacity: 0; transform: translate(-50%, 50%) scale(2.15); }
+  }
+  .heart-float {
+    position: absolute;
+    top: 26%;
+    font-size: 16px;
+    color: #e6788e;
+    pointer-events: none;
+    animation: heartUp 950ms ease-out forwards;
+  }
+  @keyframes heartUp {
+    0% { opacity: 0; transform: translate(-50%, 6px) scale(0.7); }
+    20% { opacity: 1; transform: translate(-50%, -6px) scale(1.1); }
+    100% { opacity: 0; transform: translate(-50%, -46px) scale(0.92); }
+  }
   .stage-toast {
     position: absolute;
     left: 50%;
@@ -745,7 +778,6 @@
       <a href="#features">特色与花色</a>
       <a href="#privacy">隐私承诺</a>
       <a href="#faq">常见问题</a>
-      <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable" target="_blank" rel="noopener">GitHub</a>
       <a href="#download" class="nav-cta">免费下载</a>
     </div>
   </nav>
@@ -907,10 +939,10 @@
           <li>全量解锁 10 款头部配饰、4 套键鼠主题与 98% 键盘</li>
           <li>内置 25 分钟番茄专注倒计时与 5 色自动耳机</li>
           <li>支持 Windows 便携/安装、macOS (M/Intel) 与麒麟 Linux</li>
-          <li>100% 本地离线运行，源码完全公开可审计</li>
+          <li>100% 本地离线运行，绝无广告、弹窗与云端追踪</li>
         </ul>
       </div>
-      <a class="cta-main cta-amber" href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable" target="_blank" rel="noopener">前往 GitHub 仓库查看源码 ↗</a>
+      <a class="cta-main cta-amber" href="#top">回到上方 3D 舞台试玩 ↑</a>
     </div>
   </div>
 </section>
@@ -920,7 +952,7 @@
     <div>
       <div class="eyebrow-num">03 · 隐私承诺</div>
       <h2>它听得见键盘，<br>所以先说清楚</h2>
-      <p class="intro">桌面宠物常驻屏幕角落，安全与透明是最基本的底线。毛桃的所有代码在 GitHub 公开，主进程主动拦截一切外网请求。</p>
+      <p class="intro">桌面宠物常驻屏幕角落，安全与透明是最基本的底线。毛桃纯本地离线运行，主进程主动拦截一切外网请求。</p>
     </div>
     <div class="rule-list">
       <div class="rule-item">
@@ -953,8 +985,7 @@
     <div>
       <div class="eyebrow-num">04 · 常见问题</div>
       <h2>安装、权限与快捷键，<br>一页看清</h2>
-      <p class="intro">开源个人项目暂未购买昂贵的商业代码签名证书，首次运行遇到系统安全提示属于正常现象。</p>
-      <a class="accent-link" href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases" target="_blank" rel="noopener">查看全部版本与更新日志 ↗</a>
+      <p class="intro">个人独立开发项目暂未购买商业代码签名证书，首次运行遇到系统安全提示属于正常现象。</p>
     </div>
     <div class="faq-list">
       <details class="faq-item" open>
@@ -1016,13 +1047,13 @@
 </section>
 
 <footer>
-  <div><strong>毛桃桌面宠物 MaoTao</strong> · 极简 3D 桌面陪伴 · MIT 开源免费</div>
+  <div><strong>毛桃桌面宠物 · MaoTao Desk</strong> · 极简 3D 桌面陪伴 · 永久免费</div>
   <div class="foot-links">
     <a href="#top">回到舞台</a>
+    <a href="#features">特色与花色</a>
     <a href="#download">三端下载</a>
     <a href="#privacy">隐私承诺</a>
-    <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases" target="_blank" rel="noopener">更新日志</a>
-    <a href="https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable" target="_blank" rel="noopener">GitHub</a>
+    <a href="#faq">常见问题</a>
   </div>
 </footer>
 
@@ -1067,14 +1098,40 @@ function showToast(msg) {
   toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2000);
 }
 
-function spawnKeycap(label) {
+function spawnKeyEffect(label, code = '') {
+  const leftKeys = /^(Key[QWERASDFZXCVTGB]|Digit[1-5]|Tab|CapsLock|ShiftLeft)$/;
+  const xPct = code === 'Space'
+    ? 50
+    : leftKeys.test(code)
+      ? (34 + Math.random() * 14)
+      : (52 + Math.random() * 14);
+  // Keyboard press ripple
+  const rip = document.createElement('div');
+  rip.className = 'key-ripple';
+  rip.style.left = xPct + '%';
+  stageShell.appendChild(rip);
+  setTimeout(() => rip.remove(), 480);
+
   if (!label || privacyOn) return;
   const el = document.createElement('div');
   el.className = 'keycap-float';
   el.textContent = label;
-  el.style.left = (40 + Math.random() * 20) + '%';
+  el.style.left = xPct + '%';
   stageShell.appendChild(el);
   setTimeout(() => el.remove(), 650);
+}
+
+function spawnPetHearts() {
+  [-16, 0, 16].forEach((dx, idx) => {
+    setTimeout(() => {
+      const h = document.createElement('div');
+      h.className = 'heart-float';
+      h.textContent = '♡';
+      h.style.left = `calc(50% + ${dx}px)`;
+      stageShell.appendChild(h);
+      setTimeout(() => h.remove(), 960);
+    }, idx * 140);
+  });
 }
 
 let catApi = null;
@@ -1200,6 +1257,7 @@ stageShell.addEventListener('click', e => {
     return;
   }
   catApi.petHappy?.(1900);
+  spawnPetHearts();
   if (soundOn) sound.playPurr?.();
   showToast('呼噜呼噜 ~ ♡');
 });
@@ -1212,18 +1270,17 @@ window.addEventListener('keydown', e => {
     btnSleep.classList.remove('active');
     catApi.wakeUp?.();
   }
+  const code = e.code;
+  const label = code === 'Space' ? 'SPACE' : code.replace(/^Key|^Digit/, '');
   if (privacyOn) {
     catApi.tap?.(Math.random() < 0.5 ? 'Left' : 'Right');
-  } else {
-    const code = e.code;
-    if (/^[A-Za-z0-9]+$/.test(code)) {
-      downKeys.add(code);
-      catApi.setInput?.(new Set(downKeys), new Set());
-      const label = code === 'Space' ? 'SPACE' : code.replace(/^Key|^Digit/, '');
-      spawnKeycap(label);
-    }
+    spawnKeyEffect('', code);
+  } else if (/^[A-Za-z0-9]+$/.test(code)) {
+    downKeys.add(code);
+    catApi.setInput?.(new Set(downKeys), new Set());
+    spawnKeyEffect(label, code);
   }
-  if (soundOn) sound.playKeyClick?.((Math.random() - 0.5) * 1.4, 2, e.code === 'Space');
+  if (soundOn) sound.playKeyClick?.((Math.random() - 0.5) * 1.4, 2, code === 'Space');
 });
 
 window.addEventListener('keyup', e => {
@@ -1232,7 +1289,7 @@ window.addEventListener('keyup', e => {
   catApi.setInput?.(new Set(downKeys), new Set());
 });
 
-// Subtle idle auto-typing demo when visitor hasn't typed yet
+// Subtle idle auto-typing demo with visible typing ripple & floating keycap effect
 let userInteracted = false;
 window.addEventListener('keydown', () => { userInteracted = true; }, { once: true });
 const demoKeys = ['KeyM', 'KeyA', 'KeyO', 'KeyT', 'KeyA', 'KeyO', 'Space'];
@@ -1240,8 +1297,10 @@ let demoStep = 0;
 setInterval(() => {
   if (!catApi || userInteracted || document.hidden || catApi.isHandoverActive?.() || sleepingOn || focusOn) return;
   const code = demoKeys[demoStep++ % demoKeys.length];
+  const label = code === 'Space' ? 'SPACE' : code.replace(/^Key/, '');
   catApi.setInput?.(new Set([code]), new Set());
-  setTimeout(() => { if (!userInteracted) catApi.setInput?.(new Set(), new Set()); }, 110);
+  spawnKeyEffect(label, code);
+  setTimeout(() => { if (!userInteracted) catApi.setInput?.(new Set(), new Set()); }, 115);
 }, 680);
 
 // Interact popover actions
@@ -1276,6 +1335,7 @@ document.querySelectorAll('[data-act]').forEach(btn => {
       updateFocusUI();
     } else if (act === 'pet') {
       catApi?.petHappy?.(1900);
+      spawnPetHearts();
       if (soundOn) sound.playPurr?.();
       showToast('呼噜呼噜 ~ ♡');
     } else if (act === 'yarn') {
