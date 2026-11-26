@@ -645,6 +645,51 @@
     flex-shrink: 0;
   }
 
+  /* Coming Soon Banner (Custom Service & Upcoming Characters) */
+  .soon-grid {
+    margin-top: 22px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .soon-card {
+    background: var(--surface);
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius-lg);
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .soon-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .soon-card h3 {
+    margin: 0;
+    font-size: 16.5px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .soon-pill {
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .soon-card p {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.65;
+  }
+
   /* 03 Privacy Asymmetric 2-Column */
   .split-sec {
     display: grid;
@@ -775,7 +820,7 @@
 
   @media (max-width: 820px) {
     .nav-links a:not(.nav-cta) { display: none; }
-    .feature-box, .dl-grid, .split-sec { grid-template-columns: 1fr; }
+    .feature-box, .dl-grid, .split-sec, .soon-grid { grid-template-columns: 1fr; }
     .feature-box { padding: 24px 20px; }
     .dl-card { padding: 24px 20px; }
     .alt-grid { grid-template-columns: 1fr; }
@@ -967,6 +1012,23 @@
         </ul>
       </div>
       <a class="cta-main cta-amber" href="#top">回到上方 3D 舞台试玩 ↑</a>
+    </div>
+  </div>
+
+  <div class="soon-grid">
+    <div class="soon-card">
+      <div class="soon-top">
+        <h3>专属宠物形象定制服务</h3>
+        <span class="soon-pill">敬请期待</span>
+      </div>
+      <p>即将支持根据你家毛孩子的真实照片，一对一还原专属花色、异瞳特征与个性小配饰，让自家宝贝住进屏幕一角。</p>
+    </div>
+    <div class="soon-card">
+      <div class="soon-top">
+        <h3>后续全新角色陆续上架</h3>
+        <span class="soon-pill">敬请期待</span>
+      </div>
+      <p>除了八款萌猫外，更多不同物种的 3D 桌面新伙伴、专属待机小动画与治愈互动彩蛋正在精心打磨中，敬请期待。</p>
     </div>
   </div>
 </section>
