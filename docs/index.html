@@ -154,12 +154,20 @@
     flex-shrink: 0;
     margin: 4px auto 12px;
     user-select: none;
-    cursor: pointer;
-    overflow: hidden;
+    cursor: grab;
+    overflow: visible;
+    touch-action: none;
+  }
+  .stage-shell.dragging {
+    cursor: grabbing;
   }
   #pet-stage {
     position: absolute;
     inset: 0;
+    transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .stage-shell.dragging #pet-stage {
+    transition: none;
   }
   #pet-stage canvas {
     position: absolute;
@@ -786,9 +794,9 @@
 <section class="hero">
   <div class="hero-badge"><i></i><span id="ver">毛桃桌面宠物 · 开源免费 · 离线零联网</span></div>
   <h1>屏幕一角，安静陪你。</h1>
-  <p class="hero-sub">直接敲键盘打字、摸摸小猫脑袋，或切换花色观看双猫「老吴」接班动画。</p>
+  <p class="hero-sub">直接敲键盘打字、摸摸脑袋、按住拎起左右甩动，或切换花色看双猫「老吴」接班。</p>
 
-  <div class="stage-shell" id="stage-shell" title="点击摸摸小猫，或直接敲击键盘打字">
+  <div class="stage-shell" id="stage-shell" title="轻点摸摸头，按住可拎起小猫左右甩动，或直接敲键盘打字">
     <div id="pet-stage"></div>
     <div class="stage-toast" id="stage-toast"></div>
   </div>
@@ -1228,10 +1236,34 @@ dockBtns.forEach(btn => {
 pops.forEach(p => p.addEventListener('click', e => e.stopPropagation()));
 document.addEventListener('click', closePops);
 
-// Interactive stage: mouse gaze, pet on click, real keyboard typing!
+// Interactive stage: mouse gaze, press-and-drag scruff lift with pendulum physics, click to pet, and real keyboard typing!
 const downKeys = new Set();
+let dragState = null;
+
 window.addEventListener('pointermove', e => {
   if (!catApi) return;
+  if (dragState && dragState.pointerId === e.pointerId) {
+    const dx = e.clientX - dragState.lastX;
+    const dy = e.clientY - dragState.lastY;
+    dragState.lastX = e.clientX;
+    dragState.lastY = e.clientY;
+    const totalDist = Math.hypot(e.clientX - dragState.startX, e.clientY - dragState.startY);
+    if (!dragState.active && totalDist > 6) {
+      dragState.active = true;
+      stageShell.classList.add('dragging');
+      sleepingOn = false;
+      btnSleep.classList.remove('active');
+      catApi.setDragging?.(true);
+      showToast('拎起来啦！左右甩一甩试试 ~');
+    }
+    if (dragState.active) {
+      const ox = Math.max(-110, Math.min(110, e.clientX - dragState.startX));
+      const oy = Math.max(-55, Math.min(35, e.clientY - dragState.startY));
+      stageEl.style.transform = `translate3d(${ox}px, ${oy}px, 0)`;
+      catApi.dragImpulse?.(dx, dy);
+      return;
+    }
+  }
   const r = stageEl.getBoundingClientRect();
   if (!r.width || !r.height) return;
   const nx = Math.max(-1.4, Math.min(1.4, ((e.clientX - r.left) / r.width) * 2 - 1));
@@ -1239,8 +1271,54 @@ window.addEventListener('pointermove', e => {
   catApi.setPointerNdc?.(nx, ny);
 });
 
+stageShell.addEventListener('pointerdown', e => {
+  if (!catApi || e.button !== 0) return;
+  if (catApi.isHandoverActive?.()) return;
+  const r = stageEl.getBoundingClientRect();
+  const x = ((e.clientX - r.left) / r.width) * 420;
+  const y = ((e.clientY - r.top) / r.height) * 340;
+  // Don't start lift if user clicked the yarn toy
+  if (catApi.toyVisible?.() && catApi.pickToy?.(x, y)) return;
+
+  dragState = {
+    pointerId: e.pointerId,
+    startX: e.clientX,
+    startY: e.clientY,
+    lastX: e.clientX,
+    lastY: e.clientY,
+    active: false,
+    holdTimer: setTimeout(() => {
+      if (!dragState || dragState.pointerId !== e.pointerId || dragState.active) return;
+      dragState.active = true;
+      stageShell.classList.add('dragging');
+      sleepingOn = false;
+      btnSleep.classList.remove('active');
+      catApi.setDragging?.(true);
+      showToast('拎起来啦！左右甩一甩试试 ~');
+    }, 170)
+  };
+  try { stageShell.setPointerCapture(e.pointerId); } catch {}
+});
+
+function endDrag(e) {
+  if (!dragState || (e && dragState.pointerId !== e.pointerId)) return;
+  clearTimeout(dragState.holdTimer);
+  const wasDragging = dragState.active;
+  dragState = null;
+  if (wasDragging) {
+    stageShell.classList.remove('dragging');
+    stageEl.style.transform = '';
+    catApi?.setDragging?.(false);
+    // Suppress the trailing click event after releasing a drag
+    stageShell.dataset.justDragged = String(performance.now());
+  }
+}
+window.addEventListener('pointerup', endDrag);
+window.addEventListener('pointercancel', endDrag);
+
 stageShell.addEventListener('click', e => {
   if (!catApi) return;
+  if (performance.now() - Number(stageShell.dataset.justDragged || 0) < 180) return;
   const r = stageEl.getBoundingClientRect();
   const x = ((e.clientX - r.left) / r.width) * 420;
   const y = ((e.clientY - r.top) / r.height) * 340;
