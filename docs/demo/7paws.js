@@ -730,34 +730,34 @@ let wizardHaloRing = null;
   }
   accessoriesGroup.add(retro); accessoryMap.retro = retro;
 
-  // 3. 招财铃铛项圈 (bell — 3D metallic bell with hanging loop, equator rim & specular depth)
+  // 3. 招财铃铛项圈 (bell — 3D-to-2D hand-drawn cel-shaded bright golden-yellow bell)
   const bell = new THREE.Group(); bell.position.set(0, 1.72, 0.04);
-  const strapMat = new THREE.MeshStandardMaterial({ color: '#d9463e', roughness: 0.62, metalness: 0.05 });
-  const bellGold = new THREE.MeshStandardMaterial({ color: '#f8cb46', roughness: 0.22, metalness: 0.45, emissive: '#593b04', emissiveIntensity: 0.16 });
-  const bellBandMat = new THREE.MeshStandardMaterial({ color: '#d89a1c', roughness: 0.28, metalness: 0.5 });
-  const bellDark = flat('#1e1a18'), bellShine = flat('#ffffff');
-  registerTint('bell', strapMat, '#d9463e', 0);
+  const strapMat = flat('#e04a42');
+  const bellGold = flat('#ffdc4a');
+  const bellBandMat = flat('#f0b41c');
+  const bellDark = flat('#3a2508'), bellShine = flat('#fff9d6');
+  registerTint('bell', strapMat, '#e04a42', 0);
   const collarTorus = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.078, 16, 36), strapMat);
   collarTorus.rotation.x = Math.PI * 0.52; collarTorus.scale.set(1.06, 0.88, 1);
-  const collarRim = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.092, 12, 36), back('#421614'));
+  const collarRim = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.096, 12, 36), back('#4a1c1a'));
   collarRim.rotation.x = Math.PI * 0.52; collarRim.scale.set(1.06, 0.88, 1);
   bell.add(collarTorus, collarRim);
-  // 3D hanging ring loop connecting the collar to the bell crown
+  // Hanging ring loop + 3D-to-2D golden bell with crisp ink outline
   const bellLoop = new THREE.Mesh(new THREE.TorusGeometry(0.052, 0.016, 10, 18), bellBandMat);
   bellLoop.position.set(0, 0.045, 0.63);
-  const bellBall = new THREE.Mesh(new THREE.SphereGeometry(0.18, 28, 20), bellGold);
+  const bellBall = new THREE.Mesh(new THREE.SphereGeometry(0.18, 24, 18), bellGold);
   bellBall.position.set(0, -0.11, 0.64);
-  const bellRim = new THREE.Mesh(new THREE.SphereGeometry(0.198, 22, 16), back('#3a2709'));
+  const bellRim = new THREE.Mesh(new THREE.SphereGeometry(0.202, 22, 16), back('#6e4910'));
   bellRim.position.copy(bellBall.position);
   const bellBand = new THREE.Mesh(new THREE.TorusGeometry(0.182, 0.022, 10, 26), bellBandMat);
   bellBand.position.copy(bellBall.position); bellBand.rotation.x = Math.PI * 0.5;
   const bellSlit = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.022, 0.05), bellDark);
   bellSlit.position.set(0, -0.185, 0.79);
-  const bellDot = new THREE.Mesh(new THREE.SphereGeometry(0.038, 12, 10), bellDark);
+  const bellDot = new THREE.Mesh(new THREE.SphereGeometry(0.036, 12, 10), bellDark);
   bellDot.position.set(0, -0.185, 0.80);
-  const bellSpec = new THREE.Mesh(new THREE.SphereGeometry(0.038, 12, 10), bellShine);
-  bellSpec.scale.set(1.2, 0.85, 0.6);
-  bellSpec.position.set(-0.062, -0.04, 0.80);
+  const bellSpec = new THREE.Mesh(new THREE.SphereGeometry(0.040, 12, 10), bellShine);
+  bellSpec.scale.set(1.25, 0.85, 0.55);
+  bellSpec.position.set(-0.064, -0.042, 0.80);
   bell.add(bellLoop, bellBall, bellRim, bellBand, bellSlit, bellDot, bellSpec);
   neckAccessoriesGroup.add(bell); accessoryMap.bell = bell;
 
@@ -900,35 +900,36 @@ let wizardHaloRing = null;
   sprout.add(l1, l2);
   accessoriesGroup.add(sprout); accessoryMap.sprout = sprout;
 
-  // 11. 天使光环 + 背部3D小翅膀 (halo + angelWings)
+  // 11. 天使光环 + 背部手绘风(3D转2D)小翅膀 (halo + angelWings)
   const halo = new THREE.Group(); halo.position.set(0, 0.96, 0.02);
-  const haloMat = new THREE.MeshStandardMaterial({ color: '#fce174', roughness: 0.25, metalness: 0.3, emissive: '#d8a62a', emissiveIntensity: 0.38 });
-  registerTint('halo', haloMat, '#fce174', 0);
-  const haloMesh = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.042, 14, 34), haloMat);
+  const haloMat = flat('#ffe270');
+  registerTint('halo', haloMat, '#ffe270', 0);
+  const haloMesh = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.042, 12, 34), haloMat);
   haloMesh.rotation.x = Math.PI * 0.5;
-  const haloRim = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.056, 12, 32), back('#8f6814'));
+  const haloRim = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.062, 12, 34), back('#7a5316'));
   haloRim.rotation.x = Math.PI * 0.5;
   halo.add(haloMesh, haloRim);
   accessoriesGroup.add(halo); accessoryMap.halo = halo;
 
   const angelWings = new THREE.Group(); angelWings.position.set(0, 1.48, -0.46);
-  const wingMat = new THREE.MeshStandardMaterial({ color: '#fffdf7', roughness: 0.42, metalness: 0.02, emissive: '#ede6d8', emissiveIntensity: 0.28 });
-  const wingRim = back('#9e9588');
-  const featherGeo = new THREE.SphereGeometry(0.32, 18, 14);
+  const wingMat = flat('#fffdf7');
+  const wingShadeMat = flat('#efe9dd');
+  const wingRim = back('#4e463f');
+  const featherGeo = new THREE.SphereGeometry(0.32, 16, 12);
   angelWings.userData.sides = [-1, 1].map(s => {
     const pivot = new THREE.Group();
-    pivot.position.set(s * 0.62, 0.08, 0.04);
-    pivot.rotation.y = -s * 0.16;
+    pivot.position.set(s * 0.60, 0.08, 0.04);
+    pivot.rotation.y = -s * 0.14;
     const lobes = [
-      [s * 0.54, 0.34, -0.02, 1.82, 0.58, 0.22, s * 0.50],
-      [s * 0.48, 0.08, -0.04, 1.50, 0.50, 0.20, s * 0.22],
-      [s * 0.36, -0.14, -0.06, 1.14, 0.44, 0.18, -s * 0.04]
+      [s * 0.54, 0.34, -0.02, 1.80, 0.56, 0.18, s * 0.50, wingMat],
+      [s * 0.48, 0.08, -0.04, 1.48, 0.48, 0.16, s * 0.22, wingMat],
+      [s * 0.36, -0.14, -0.06, 1.12, 0.42, 0.15, -s * 0.04, wingShadeMat]
     ];
-    for (const [x, y, z, sx, sy, sz, rz] of lobes) {
-      const f = new THREE.Mesh(featherGeo, wingMat);
+    for (const [x, y, z, sx, sy, sz, rz, mat] of lobes) {
+      const f = new THREE.Mesh(featherGeo, mat);
       f.position.set(x, y, z); f.scale.set(sx, sy, sz); f.rotation.z = rz;
       const fr = new THREE.Mesh(featherGeo, wingRim);
-      fr.position.set(x, y, z); fr.scale.set(sx * 1.09, sy * 1.16, sz * 1.22); fr.rotation.z = rz;
+      fr.position.set(x, y, z); fr.scale.set(sx * 1.07, sy * 1.15, sz * 1.28); fr.rotation.z = rz;
       pivot.add(f, fr);
     }
     angelWings.add(pivot);
@@ -1831,13 +1832,17 @@ function createWalkerCat(coatPreset, eyeColorPref = 'auto') {
   headWrap.add(muzzleGroup);
 
   const tuftMat = trackM(new THREE.MeshBasicMaterial({ color: c.fur }));
-  const tuftGeo = trackG(new THREE.ConeGeometry(0.11, 0.32, 8));
+  const tuftRim = trackM(new THREE.MeshBasicMaterial({ color: c.line || '#3a3532', side: THREE.BackSide }));
+  const tuftGeo = trackG(new THREE.ConeGeometry(0.046, 0.14, 6));
   const puffTufts = new THREE.Group();
   puffTufts.visible = false;
-  for (const [ty, tz, rx, sc] of [[1.44, 0.16, 0.25, 1.0], [1.50, -0.12, -0.08, 1.15], [1.40, -0.40, -0.35, 0.92]]) {
+  // Subtle backward-swept dorsal fur tufts right along the arched spine crest (matching reference illustration)
+  for (const [ty, tz, rx, sc] of [[1.33, 0.04, -0.78, 0.92], [1.36, -0.08, -0.88, 1.05], [1.33, -0.20, -0.96, 0.85]]) {
     const tuft = new THREE.Mesh(tuftGeo, tuftMat);
-    tuft.position.set(0, ty, tz); tuft.rotation.x = rx; tuft.scale.setScalar(sc);
-    puffTufts.add(tuft);
+    tuft.position.set(0, ty, tz); tuft.rotation.x = rx; tuft.scale.set(0.55 * sc, sc, 0.95 * sc);
+    const tRim = new THREE.Mesh(tuftGeo, tuftRim);
+    tRim.position.set(0, ty, tz); tRim.rotation.x = rx; tRim.scale.set(0.68 * sc, 1.12 * sc, 1.08 * sc);
+    puffTufts.add(tuft, tRim);
   }
   bodyPivot.add(puffTufts);
 
@@ -1931,11 +1936,11 @@ function createWalkerCat(coatPreset, eyeColorPref = 'auto') {
       const puff = 0.85 + pout * 0.35 + (talk > 0.1 ? Math.sin(walkPhase * 4.5) * 0.10 : 0);
       muzzleGroup.scale.set(puff, puff * 0.92, puff * 1.15);
     }
-    puffTufts.visible = bristle > 0.22 && tk < 0.4;
+    puffTufts.visible = bristle > 0.24 && tk < 0.4;
     if (puffTufts.visible) {
-      const ps = 0.55 + bristle * 0.65;
+      const ps = 0.72 + bristle * 0.32;
       puffTufts.scale.set(ps, ps, ps);
-      bodyPivot.scale.y = (1 - crouch * 0.04) * (1 + bristle * 0.12 * (1 - tk));
+      bodyPivot.scale.y = (1 - crouch * 0.04) * (1 + bristle * 0.06 * (1 - tk));
     }
     wMouth.visible = talk > 0.12;
     if (wMouth.visible) {
