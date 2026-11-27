@@ -746,14 +746,14 @@ let wizardHaloRing = null;
   const bellGold = new THREE.MeshBasicMaterial({ map: bellTex });
   const bellDark = flat('#2e1e10'), bellShine = flat('#fffdf0');
   registerTint('bell', strapMat, '#e04a42', 0);
-  const collarTorus = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.072, 16, 36), strapMat);
+  const collarTorus = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.052, 16, 36), strapMat);
   collarTorus.rotation.x = Math.PI * 0.52; collarTorus.scale.set(1.06, 0.88, 1);
-  const collarRim = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.092, 12, 36), back('#362312'));
+  const collarRim = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.068, 12, 36), back('#362312'));
   collarRim.rotation.x = Math.PI * 0.52; collarRim.scale.set(1.06, 0.88, 1);
   bell.add(collarTorus, collarRim);
   // Rigid pendant sub-group (counter-scaled in frame() so it NEVER squashes/warps with body/neck!)
   const bellPendant = new THREE.Group();
-  bellPendant.position.set(0, -0.10, 0.65);
+  bellPendant.position.set(0, -0.09, 0.68);
   const bellLoop = new THREE.Mesh(new THREE.TorusGeometry(0.052, 0.017, 10, 20), bellDark);
   bellLoop.position.set(0, 0.165, -0.01);
   const bellBall = new THREE.Mesh(new THREE.SphereGeometry(0.175, 24, 18), bellGold);
