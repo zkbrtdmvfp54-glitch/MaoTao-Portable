@@ -302,6 +302,7 @@ impl SettingsStore {
                             | "beret"
                             | "sprout"
                             | "halo"
+                            | "dizzy"
                     )
                 })
                 .map(|v| self.prefs.accessory = v.into())

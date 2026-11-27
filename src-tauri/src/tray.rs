@@ -152,6 +152,7 @@ pub fn build_tray_menu<R: Runtime>(
         ("画家贝雷帽", "beret"),
         ("小嫩芽", "sprout"),
         ("天使光环+翅膀", "halo"),
+        ("眩晕星星", "dizzy"),
     ] {
         acc_sub.append(&CheckMenuItem::with_id(
             app,
