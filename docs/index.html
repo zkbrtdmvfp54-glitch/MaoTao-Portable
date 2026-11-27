@@ -1446,10 +1446,19 @@ stageShell.addEventListener('click', e => {
     triggerAnger();
     return;
   }
-  catApi.petHappy?.(1900);
-  spawnPetHearts();
-  if (soundOn) sound.playPurr?.();
-  showToast('呼噜呼噜 ~ ♡');
+  const regs = catApi.regions?.() || [];
+  const inBox = b => b && x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
+  const [headBox, , tailBox] = regs;
+  if (inBox(tailBox)) {
+    triggerAnger();
+    return;
+  }
+  if (inBox(headBox)) {
+    catApi.petHappy?.(1900);
+    spawnPetHearts();
+    if (soundOn) sound.playPurr?.();
+    showToast('呼噜呼噜 ~ ♡');
+  }
 });
 
 window.addEventListener('keydown', e => {
