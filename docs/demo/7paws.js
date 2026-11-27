@@ -2523,15 +2523,14 @@ function frame() {
   const isLiquidBlack = currentCoat?.id === 'solidblack' && currentEyeColor === 'auto';
   const ex = 0.37 * P.eyeSpread, ey = P.eyeY, er = 0.205 * P.eyeSize, irx = er * 0.94, iry = er * 1.15, c = S.lid, dir = S.lidDir || 1;
   const angerClip = smooth(0.06, 0.72, S.anger);
-  // Dynamic feline pupil: clearly vertical oval at rest; dramatically dilates into a big nearly pure round circle when angry or intensely focusing (typing/playing/lifted/close gaze).
-  const closeGaze = Boolean(gazeTarget) && Math.hypot(pdx, pdy) < 0.55;
-  const focusing = typing || playing || chasingButterfly || (drag > 0.25 && !dragResigned) || closeGaze;
+  // Dynamic feline pupil: subtle vertical oval at rest; dilates from oval -> nearly pure round circle when angry or focusing (tracking/typing/playing).
+  const focusing = Boolean(gazeTarget) || typing || playing || chasingButterfly || (drag > 0.25 && !dragResigned);
   const roundTarget = Math.max(angerClip, focusing ? 1 : 0);
-  S.pupilRound = (S.pupilRound || 0) + (roundTarget - (S.pupilRound || 0)) * ease(10);
-  const pupilTarget = (angry || focusing) ? (1.16 + (playing || chasingButterfly ? 0.08 : 0)) : (0.94 + breath * 0.02);
-  S.pupilScale = (S.pupilScale || 1) + (pupilTarget - (S.pupilScale || 1)) * ease(9);
+  S.pupilRound = (S.pupilRound || 0) + (roundTarget - (S.pupilRound || 0)) * ease(9);
+  const pupilTarget = (angry || focusing) ? (1.06 + (playing || chasingButterfly ? 0.08 : 0)) : (0.98 + breath * 0.02);
+  S.pupilScale = (S.pupilScale || 1) + (pupilTarget - (S.pupilScale || 1)) * ease(8);
   const pDyn = S.pupilScale;
-  const pOvalToRoundX = mix(0.56, 1.32, S.pupilRound);
+  const pOvalToRoundX = mix(0.76, 1.16, S.pupilRound);
   for (const e of eyes) {
     // Smooth vertical squash-blink, true crescent arc ^ ^ smile (zero opaque face mask), and direct angry upper-clip.
     const pet = dir < 0, shut = c > 0.68;
