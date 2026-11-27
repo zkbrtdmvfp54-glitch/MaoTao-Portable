@@ -26,6 +26,21 @@
         "skipTaskbar": true,
         "shadow": false,
         "visible": false
+      },
+      {
+        "label": "menu",
+        "title": "毛桃桌面宠物 · 控制面板",
+        "url": "/src/renderer/menu.html",
+        "width": 372,
+        "height": 612,
+        "resizable": false,
+        "fullscreen": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "shadow": false,
+        "visible": false
       }
     ],
     "security": {
