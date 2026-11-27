@@ -895,19 +895,21 @@
         <span class="pop-hint">实时生效</span>
       </div>
       <div class="ctrl-row">
-        <span>头部配饰 (10 款)</span>
+        <span>精修配饰 (12 款)</span>
         <select id="sel-accessory">
           <option value="none">无配饰</option>
           <option value="crown" selected>迷你小皇冠</option>
-          <option value="bow">蝴蝶结</option>
-          <option value="clip">星星发卡</option>
-          <option value="tophat">绅士礼帽</option>
+          <option value="bell">立体招财铃铛</option>
+          <option value="halo">天使光环 + 翅膀</option>
+          <option value="headphones">经典头戴耳机</option>
+          <option value="retro">复古细梁耳机</option>
+          <option value="fish">嘴叼小鱼干</option>
+          <option value="scarf">暖冬小红围巾</option>
+          <option value="wizard">迷你巫师尖帽</option>
+          <option value="star">伴星发卡</option>
           <option value="shades">酷盖墨镜</option>
           <option value="beret">画家贝雷帽</option>
           <option value="sprout">小嫩芽</option>
-          <option value="flower">小雏菊</option>
-          <option value="halo">天使光环</option>
-          <option value="scarf">暖暖围巾</option>
         </select>
       </div>
       <div class="ctrl-row">
@@ -982,6 +984,17 @@
         <div class="card-top">
           <h3 class="card-title">桌面端安装包</h3>
           <span class="pill-badge" id="dl-ver-badge">自动匹配最新版</span>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:18px;margin:10px 0 14px;padding:10px 14px;border-radius:12px;background:var(--surface);font-variant-numeric:tabular-nums;">
+          <div>
+            <div id="dl-count" style="font-size:22px;font-weight:900;line-height:1.1;color:var(--ink);">—</div>
+            <div style="font-size:11.5px;color:var(--ink-muted);margin-top:2px;">累计下载</div>
+          </div>
+          <div style="width:1px;height:26px;background:var(--line-strong);"></div>
+          <div>
+            <div id="dl-release-date" style="font-size:13.5px;font-weight:700;color:var(--ink-soft);">同步中…</div>
+            <div style="font-size:11.5px;color:var(--ink-muted);margin-top:2px;">最近更新</div>
+          </div>
         </div>
         <div class="route-switch" role="group" aria-label="下载线路">
           <button id="btn-cn" class="route-btn" type="button">国内高速线路</button>
@@ -1662,12 +1675,53 @@ btnCn.onclick = () => { route = 'cn'; renderDownloads(); };
 btnGlobal.onclick = () => { route = 'global'; renderDownloads(); };
 renderDownloads();
 
+function animateCount(el, target) {
+  if (!el || !Number.isFinite(target)) return;
+  const start = performance.now(), dur = 850;
+  const tick = now => {
+    const u = Math.min(1, (now - start) / dur);
+    const eased = 1 - Math.pow(1 - u, 3);
+    el.textContent = Math.round(target * eased).toLocaleString('zh-CN');
+    if (u < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
 (async function loadRelease() {
+  const countEl = document.getElementById('dl-count');
+  const dateEl = document.getElementById('dl-release-date');
+  const CACHE_KEY = 'maotao.release.stats.v1';
+  const applyStats = s => {
+    if (!s) return;
+    if (typeof s.downloads === 'number') animateCount(countEl, s.downloads);
+    if (s.published && dateEl) {
+      dateEl.textContent = new Date(s.published).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+  };
   try {
-    const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`);
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+    if (cached && Date.now() - cached.at < 10 * 60 * 1000) applyStats(cached);
+  } catch {}
+
+  try {
+    const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=100`, {
+      headers: { Accept: 'application/vnd.github+json' }
+    });
     if (!res.ok) throw 0;
-    const rel = await res.json();
+    const all = (await res.json()).filter(r => !r.draft && !r.prerelease);
+    const rel = all[0];
+    if (!rel) throw 0;
     tag = rel.tag_name || '';
+    let totalDownloads = 0;
+    for (const r of all) {
+      for (const a of (r.assets || [])) {
+        if (/\.(exe|dmg|zip|deb|AppImage)$/i.test(a.name)) totalDownloads += (a.download_count || 0);
+      }
+    }
+    const stats = { at: Date.now(), downloads: totalDownloads, version: tag, published: rel.published_at };
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(stats)); } catch {}
+    applyStats(stats);
+
     const assets = rel.assets || [];
     const pick = re => assets.find(a => re.test(a.name))?.browser_download_url || FALLBACK;
     rawLinks = {
