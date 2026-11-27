@@ -21,8 +21,9 @@ export class InteractionController {
     canvas.addEventListener('pointerleave', () => { this.rub = null; this.rubDistance = 0; });
     canvas.addEventListener('contextmenu', event => {
       event.preventDefault();
-      if (renderer.zone(this.point(event)) !== 'none') api.openMenu();
+      api.openMenu();
     });
+    window.addEventListener('contextmenu', event => event.preventDefault());
     window.addEventListener('keydown', event => this.keydown(event));
     api.onCursor(point => {
       // The main process sends cursor position only. This is independent of the
