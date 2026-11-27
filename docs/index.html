@@ -1604,13 +1604,14 @@ const REPO = 'zkbrtdmvfp54-glitch/MaoTao-Portable';
 const FALLBACK = `https://github.com/${REPO}/releases/latest`;
 const CN_MIRROR_PREFIX = 'https://ghfast.top/';
 const CN_DIRECT_LINKS = {
-  winPortable: '', winSetup: '', macArm: '', macX64: '', kylinX64: '', kylinArm: ''
+  winPortable: '', winSetup: '', win7: '', macArm: '', macX64: '', kylinX64: '', kylinArm: ''
 };
 
 function detectOS() {
   const ua = navigator.userAgent || '';
   const plat = (navigator.userAgentData?.platform || navigator.platform || '').toLowerCase();
-  if (/win/i.test(plat) || /windows/i.test(ua)) return { id: 'winPortable', name: 'Windows 便携版' };
+  if (/windows nt 6\.1/i.test(ua)) return { id: 'win7', name: 'Windows 7 专版' };
+  if (/win/i.test(plat) || /windows/i.test(ua)) return { id: 'winPortable', name: 'Windows 10/11 便携版' };
   if (/mac/i.test(plat) || /mac os x/i.test(ua)) return { id: 'macArm', name: 'macOS 版 (M 芯片)' };
   if (/linux|kylin|uos/i.test(plat) || /linux|kylin|uos/i.test(ua)) {
     return /aarch64|arm64/i.test(ua)
@@ -1628,7 +1629,7 @@ function isLikelyChina() {
 let route = isLikelyChina() ? 'cn' : 'global';
 let tag = '';
 let rawLinks = {
-  winPortable: FALLBACK, winSetup: FALLBACK,
+  winPortable: FALLBACK, winSetup: FALLBACK, win7: FALLBACK,
   macArm: FALLBACK, macX64: FALLBACK,
   kylinX64: FALLBACK, kylinArm: FALLBACK
 };
@@ -1662,8 +1663,9 @@ function renderDownloads() {
   dlVerBadge.textContent = tag ? `最新 ${tag}` : '自动匹配最新版';
   meta.textContent = `已自动识别为 ${det.name} · 当前：${routeLabel}`;
   document.getElementById('alt-links').innerHTML = [
-    `<a class="alt-btn" href="${resolveUrl('winPortable')}">Windows 便携版<span>.exe</span></a>`,
-    `<a class="alt-btn" href="${resolveUrl('winSetup')}">Windows 安装版<span>Setup</span></a>`,
+    `<a class="alt-btn" href="${resolveUrl('winPortable')}">Win 10/11 便携版<span>4.2MB</span></a>`,
+    `<a class="alt-btn" href="${resolveUrl('winSetup')}">Win 10/11 安装版<span>2.2MB</span></a>`,
+    `<a class="alt-btn" href="${resolveUrl('win7')}">Windows 7 专版<span>免运行库</span></a>`,
     `<a class="alt-btn" href="${resolveUrl('macArm')}">macOS M 芯片<span>arm64</span></a>`,
     `<a class="alt-btn" href="${resolveUrl('macX64')}">macOS Intel<span>x64</span></a>`,
     `<a class="alt-btn" href="${resolveUrl('kylinX64')}">麒麟 Linux x64<span>.deb</span></a>`,
@@ -1727,6 +1729,7 @@ function animateCount(el, target) {
     rawLinks = {
       winPortable: pick(/Portable.*x64\.exe$/i),
       winSetup: pick(/Setup.*x64\.exe$/i),
+      win7: pick(/Win7.*x64\.exe$/i),
       macArm: pick(/macOS.*arm64\.dmg$/i),
       macX64: pick(/macOS.*x64\.dmg$/i),
       kylinX64: pick(/Kylin.*x64\.deb$/i),
