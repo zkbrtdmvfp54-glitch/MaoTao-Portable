@@ -309,6 +309,8 @@ fn apply_set(app: &AppHandle, key: &str, value: Value) {
 fn show_pet(app: &AppHandle) {
     if let Some(win) = app.get_webview_window("pet") {
         let top = app.state::<AppState>().0.lock().unwrap().store.prefs.top;
+        let _ = win.unminimize();
+        let _ = win.set_visible_on_all_workspaces(true);
         let _ = win.show();
         let _ = win.set_always_on_top(top);
     }
@@ -391,16 +393,7 @@ fn position_menu_near_cursor(app: &AppHandle, win: &WebviewWindow) {
 
 fn show_menu_near(app: &AppHandle) {
     if let Some(win) = ensure_menu_window(app) {
-        let positioned = {
-            let st = app.state::<AppState>();
-            let mut g = st.0.lock().unwrap();
-            let p = g.menu_positioned;
-            g.menu_positioned = true;
-            p
-        };
-        if !positioned {
-            position_menu_near_cursor(app, &win);
-        }
+        position_menu_near_cursor(app, &win);
         let _ = win.set_always_on_top(true);
         let _ = win.show();
         let _ = win.set_focus();
@@ -676,7 +669,7 @@ fn pet_drag_end(app: AppHandle) {
 }
 
 #[tauri::command]
-fn pet_open_menu(app: AppHandle) {
+async fn pet_open_menu(app: AppHandle) {
     toggle_menu_near(&app);
 }
 
@@ -738,7 +731,7 @@ fn menu_get_state(app: AppHandle) -> MenuStateSnapshot {
 }
 
 #[tauri::command]
-fn menu_command(app: AppHandle, cmd: MenuCommand) {
+async fn menu_command(app: AppHandle, cmd: MenuCommand) {
     run_command(&app, &cmd.cmd_type, cmd.key.as_deref(), cmd.value);
     push_menu_state(&app);
 }
@@ -1089,6 +1082,7 @@ fn main() {
             place_pet(&handle, "restore");
             if let Some(pet_win) = app.get_webview_window("pet") {
                 let _ = pet_win.set_ignore_cursor_events(true);
+                let _ = pet_win.set_visible_on_all_workspaces(true);
                 let _ = pet_win.show();
                 let _ = pet_win.set_always_on_top(initial_prefs.top);
                 let close_app = handle.clone();
@@ -1108,6 +1102,23 @@ fn main() {
                     WindowEvent::Focused(false) => {
                         if let Ok(mut g) = close_app.state::<AppState>().0.lock() {
                             g.drag = None;
+                        }
+                    }
+                    _ => {}
+                });
+            }
+            if let Some(menu_win) = app.get_webview_window("menu") {
+                let m_app = handle.clone();
+                menu_win.on_window_event(move |event| match event {
+                    WindowEvent::CloseRequested { api, .. } => {
+                        api.prevent_close();
+                        if let Some(w) = m_app.get_webview_window("menu") {
+                            let _ = w.hide();
+                        }
+                    }
+                    WindowEvent::Focused(false) => {
+                        if let Ok(mut g) = m_app.state::<AppState>().0.lock() {
+                            g.menu_drag = None;
                         }
                     }
                     _ => {}
