@@ -1038,7 +1038,7 @@ const blushMat = new THREE.MeshBasicMaterial({
 const blushes = [-1, 1].map(s => ({ s, mesh: makePatch(blushMat, 5) }));
 blushes.forEach(b => { b.mesh.visible = false; });
 const eyeGlintMat = new THREE.MeshBasicMaterial({
-  color: '#ffffff', depthWrite: false,
+  color: '#ffffff', transparent: true, opacity: 0.78, depthWrite: false,
   side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -14, polygonOffsetUnits: -14
 });
 // True curved ribbon arc wrapped onto the head ellipsoid (for natural ^ ^ happy smile eyes with ZERO opaque face mask).
@@ -1913,14 +1913,13 @@ function createWalkerCat(coatPreset, eyeColorPref = 'auto') {
       const py = ey + (pOffU * siE + pOffV * coE);
       const pClipTop = clipTop < Infinity ? clipTop - pOffV : Infinity;
       fillPatch(e.pupil, px, py, pupilRx, pupilRy, eyeTurn, 0.013, pClipTop, clipCurve * 0.85);
-      // Fixed eye-white/iris highlights (anchored to eye center, not moving with pupil)
-      e.glintMain.visible = angerClip < 0.35;
-      e.glintSub.visible = true;
+      e.glintMain.visible = angerClip < 0.35 && !isLiquidBlack;
+      e.glintSub.visible = !isLiquidBlack;
       if (e.glintMain.visible) {
-        fillPatch(e.glintMain, e.s * ex + e.s * irx * 0.30, ey + h * 0.36, irx * 0.18, h * 0.17, 0, 0.016);
+        fillPatch(e.glintMain, px - pupilRx * 0.31, py + pupilRy * 0.33, pupilRx * 0.24, pupilRy * 0.22, 0.2, 0.016);
       }
       if (e.glintSub.visible) {
-        fillPatch(e.glintSub, e.s * ex - e.s * irx * 0.24, ey - h * 0.32, irx * 0.085, h * 0.08, 0, 0.016);
+        fillPatch(e.glintSub, px + pupilRx * 0.30, py - pupilRy * 0.30, pupilRx * 0.12, pupilRy * 0.12, 0, 0.016);
       }
     }
 
@@ -2548,17 +2547,14 @@ function frame() {
     const clipCurve = !shut && angerClip > 0.02 ? h * 0.08 * angerClip : 0;
     e.iris.material = shut ? M.shut : (e.s < 0 ? M.eye : M.eyeAlt);
     fillPatch(e.iris, e.s * ex, eyc, irx * (shut ? 0.96 : 0.98), h * 0.98, eyeTurn, 0.008, clipTop, clipCurve);
-    // Natural feline pupil: vertical oval at rest so eye-white & its highlight stand out; widens horizontally when excited/typing, narrows to a slit when angry.
-    const baseRx = isLiquidBlack ? 0.56 : 0.44;
-    const baseRy = isLiquidBlack ? 0.72 : 0.68;
-    const widenX = 1 + (pDyn - 1) * 2.1; // strong horizontal dilation (oval -> big round excited pupil)
-    const pupilRx = Math.min(irx * 0.80, irx * baseRx * widenX * pSlitX);
-    const pupilRy = Math.min(h * 0.84, iry * baseRy * mix(1, pDyn, 0.45));
-    const pupilTravel = Math.max(0, irx - pupilRx - er * 0.04), gazeLength = Math.hypot(S.gazeX, S.gazeY);
+    // Cute round pupil (matching the classic violet/blue iris look) with smooth dynamic dilation & angry slit.
+    const baseRatio = isLiquidBlack ? 0.72 : 0.56;
+    const pupilRx = Math.min(irx * 0.84, irx * baseRatio * pDyn * pSlitX);
+    const pupilRy = Math.min(h * 0.84, iry * baseRatio * pDyn);
+    const pupilTravel = Math.max(0, h - pupilRy - er * 0.03), gazeLength = Math.hypot(S.gazeX, S.gazeY);
     const gazeScale = gazeLength > 1 ? 1 / gazeLength : 1;
-    const convergeX = -e.s * irx * 0.07 * (1 - angerClip);
-    const dx = clamp(S.gazeX * pupilTravel * gazeScale * (1 - 0.55 * angerClip) + convergeX, -pupilTravel, pupilTravel);
-    const dy = S.gazeY * Math.max(0, h - pupilRy - er * 0.03) * gazeScale * (1 - 0.55 * angerClip);
+    const dx = S.gazeX * pupilTravel * gazeScale * (1 - 0.55 * angerClip);
+    const dy = S.gazeY * pupilTravel * gazeScale * (1 - 0.55 * angerClip);
     const coE = Math.cos(eyeTurn), siE = Math.sin(eyeTurn);
     const pOffU = -e.s * irx * 0.04 * angerClip;
     const pOffV = h * 0.08 * angerClip;
@@ -2568,17 +2564,15 @@ function frame() {
     fillPatch(e.pupil, px, py, pupilRx, pupilRy, eyeTurn, 0.013, pClipTop, clipCurve * 0.85);
     const pupilVisible = c < 0.62;
     e.pupil.visible = pupilVisible;
-    // KeyCat-style pure-white corneal highlights anchored to the EYE-WHITE/IRIS frame (NOT moving with pupil).
-    const glintVisible = pupilVisible && angerClip < 0.42 && h > iry * 0.38;
+    // Delicate glossy catchlights matching the classic look (subtle on colored eyes, clean on liquid black)
+    const glintVisible = pupilVisible && angerClip < 0.42 && h > iry * 0.38 && !isLiquidBlack;
     e.glintMain.visible = glintVisible;
-    e.glintSub.visible = pupilVisible && h > iry * 0.44;
+    e.glintSub.visible = pupilVisible && h > iry * 0.44 && !isLiquidBlack;
     if (e.glintMain.visible) {
-      // Primary crisp white highlight on the outer-upper eye-white/iris quadrant
-      fillPatch(e.glintMain, e.s * ex + e.s * irx * 0.30, eyc + h * 0.36, irx * 0.185, h * 0.175, 0, 0.016);
+      fillPatch(e.glintMain, px - pupilRx * 0.31, py + pupilRy * 0.33, pupilRx * 0.24, pupilRy * 0.22, 0.2, 0.016);
     }
     if (e.glintSub.visible) {
-      // Secondary tiny white highlight on the inner-lower eye-white/iris quadrant
-      fillPatch(e.glintSub, e.s * ex - e.s * irx * 0.24, eyc - h * 0.32, irx * 0.088, h * 0.085, 0, 0.016);
+      fillPatch(e.glintSub, px + pupilRx * 0.30, py - pupilRy * 0.30, pupilRx * 0.12, pupilRy * 0.12, 0, 0.016);
     }
   }
 
