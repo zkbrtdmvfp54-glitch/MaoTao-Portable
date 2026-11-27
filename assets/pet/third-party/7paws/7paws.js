@@ -768,8 +768,8 @@ let wizardHaloRing = null;
   bell.userData.pendant = bellPendant;
   neckAccessoriesGroup.add(bell); accessoryMap.bell = bell;
 
-  // 4. 嘴叼小鱼干 (fish — gripped at right mouth corner)
-  const fish = new THREE.Group(); fish.position.set(0.18, -0.16, 0.72); fish.rotation.set(0.06, 0.24, -0.12);
+  // 4. 嘴叼小鱼干 (fish — held cleanly in mouth directly below the nose, zero eye overlap)
+  const fish = new THREE.Group(); fish.position.set(0.02, -0.34, 0.74); fish.rotation.set(0.04, 0.14, -0.08);
   const fishBodyMat = flat('#e39a4c'), fishFinMat = flat('#b56c2a'), fishEyeMat = flat('#231d19');
   registerTint('fish', fishBodyMat, '#e39a4c', 0);
   registerTint('fish', fishFinMat, '#b56c2a', 0.25);
