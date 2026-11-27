@@ -944,36 +944,50 @@ let wizardHaloRing = null;
   });
   neckAccessoriesGroup.add(angelWings); accessoryMap.angelWings = angelWings;
 
-  // 12. 眩晕星星 (dizzy — 3 hand-drawn cel-shaded stars continuously orbiting above the head)
-  const dizzy = new THREE.Group(); dizzy.position.set(0, 0.96, 0.02); dizzy.rotation.z = 0.06;
-  const dizzyStarMat = flat('#ffe055');
-  const dizzyStarAlt = flat('#fff3a6');
-  const dizzyRim = back('#6e4910');
+  // 12. 眩晕星星 (dizzy — 3 chubby Q-style puffy 3D-to-2D cel-shaded cartoon stars orbiting above the head)
+  const dizzy = new THREE.Group(); dizzy.position.set(0, 0.98, 0.02); dizzy.rotation.z = 0.06;
+  const dizzyStarMat = new THREE.MeshBasicMaterial({ map: bellTex });
+  const dizzyRim = back('#5c3c0e');
+  const dizzyShine = flat('#fffef2');
   const dizzyOrbitMat = new THREE.MeshBasicMaterial({ color: '#f0c84b', transparent: true, opacity: 0.55, side: THREE.DoubleSide });
   registerTint('dizzy', dizzyStarMat, '#ffe055', 0);
-  const dizzyOrbit = new THREE.Mesh(new THREE.TorusGeometry(0.46, 0.011, 8, 36), dizzyOrbitMat);
+  const dizzyOrbit = new THREE.Mesh(new THREE.TorusGeometry(0.50, 0.012, 8, 36), dizzyOrbitMat);
   dizzyOrbit.rotation.x = Math.PI * 0.5;
   dizzy.add(dizzyOrbit);
+  // Plump Q-style rounded 5-point star with smooth curved tips & pillowy 3D bevel
   const dStarShape = new THREE.Shape();
+  const pts = [];
   for (let i = 0; i < 10; i++) {
     const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
-    const r = i % 2 === 0 ? 0.115 : 0.050;
-    if (i === 0) dStarShape.moveTo(Math.cos(a) * r, Math.sin(a) * r);
-    else dStarShape.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+    const r = i % 2 === 0 ? 0.155 : 0.088;
+    pts.push([Math.cos(a) * r, Math.sin(a) * r]);
+  }
+  const mid = (p1, p2) => [(p1[0] + p2[0]) * 0.5, (p1[1] + p2[1]) * 0.5];
+  const m0 = mid(pts[9], pts[0]);
+  dStarShape.moveTo(m0[0], m0[1]);
+  for (let i = 0; i < 10; i++) {
+    const cur = pts[i], nxt = pts[(i + 1) % 10], m = mid(cur, nxt);
+    dStarShape.quadraticCurveTo(cur[0], cur[1], m[0], m[1]);
   }
   dStarShape.closePath();
-  const dStarGeo = new THREE.ExtrudeGeometry(dStarShape, { depth: 0.028, bevelEnabled: false });
+  const dStarGeo = new THREE.ExtrudeGeometry(dStarShape, {
+    depth: 0.036, bevelEnabled: true, bevelThickness: 0.038, bevelSize: 0.024, bevelSegments: 5
+  });
   dStarGeo.center();
+  const dShineGeo = new THREE.SphereGeometry(0.024, 10, 8);
   dizzy.userData.stars = [0, 1, 2].map(i => {
     const holder = new THREE.Group();
     const ang = (i / 3) * Math.PI * 2;
-    holder.position.set(Math.cos(ang) * 0.46, (i === 1 ? 0.04 : -0.02), Math.sin(ang) * 0.46);
-    const sc = i === 0 ? 1.05 : i === 1 ? 0.85 : 0.92;
-    const star = new THREE.Mesh(dStarGeo, i === 1 ? dizzyStarAlt : dizzyStarMat);
+    holder.position.set(Math.cos(ang) * 0.50, (i === 1 ? 0.045 : -0.02), Math.sin(ang) * 0.50);
+    const sc = i === 0 ? 1.12 : i === 1 ? 0.90 : 0.98;
+    const star = new THREE.Mesh(dStarGeo, dizzyStarMat);
     star.scale.setScalar(sc);
     const rim = new THREE.Mesh(dStarGeo, dizzyRim);
-    rim.scale.set(sc * 1.18, sc * 1.18, sc * 1.45);
-    holder.add(star, rim);
+    rim.scale.set(sc * 1.14, sc * 1.14, sc * 1.24);
+    const shine = new THREE.Mesh(dShineGeo, dizzyShine);
+    shine.scale.set(1.15 * sc, 0.85 * sc, 0.5 * sc);
+    shine.position.set(-0.045 * sc, 0.045 * sc, 0.056 * sc);
+    holder.add(star, rim, shine);
     dizzy.add(holder);
     return holder;
   });
