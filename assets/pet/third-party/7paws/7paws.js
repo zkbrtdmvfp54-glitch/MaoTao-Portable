@@ -2505,9 +2505,10 @@ function frame() {
     wizardHaloRing.rotation.y = t / 1100;
   }
   if (accessoryMap.bell?.visible && accessoryMap.bell.userData.pendant) {
-    // Keep bell pendant a rigid, undeformed sphere independent of torso breathing/stretch scale
+    // Keep bell pendant a compact, rigid, undeformed sphere independent of torso breathing/stretch scale
     const bx = Math.max(0.2, torso.scale.x), by = Math.max(0.2, torso.scale.y), bz = Math.max(0.2, torso.scale.z);
-    accessoryMap.bell.userData.pendant.scale.set(1 / bx, 1 / by, 1 / bz);
+    const s = 0.72;
+    accessoryMap.bell.userData.pendant.scale.set(s / bx, s / by, s / bz);
   }
   if (accessoryMap.halo?.visible) {
     accessoryMap.halo.position.y = 0.96 + Math.sin(t / 460) * 0.038;
