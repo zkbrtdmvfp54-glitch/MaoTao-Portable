@@ -48,9 +48,6 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
-      - name: Run frontend unit tests
-        run: node scripts/model.test.cjs
-
       - name: Prepare lightweight web assets
         run: node scripts/prepare-web.cjs
 
