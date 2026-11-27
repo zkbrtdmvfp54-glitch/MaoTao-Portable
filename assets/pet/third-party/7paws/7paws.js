@@ -730,24 +730,35 @@ let wizardHaloRing = null;
   }
   accessoriesGroup.add(retro); accessoryMap.retro = retro;
 
-  // 3. 招财铃铛项圈 (bell — attached to torso neck)
+  // 3. 招财铃铛项圈 (bell — 3D metallic bell with hanging loop, equator rim & specular depth)
   const bell = new THREE.Group(); bell.position.set(0, 1.72, 0.04);
-  const strapMat = flat('#d9463e'), bellGold = flat('#f2bf38'), bellDark = flat('#232022'), bellShine = flat('#ffffff');
+  const strapMat = new THREE.MeshStandardMaterial({ color: '#d9463e', roughness: 0.62, metalness: 0.05 });
+  const bellGold = new THREE.MeshStandardMaterial({ color: '#f8cb46', roughness: 0.22, metalness: 0.45, emissive: '#593b04', emissiveIntensity: 0.16 });
+  const bellBandMat = new THREE.MeshStandardMaterial({ color: '#d89a1c', roughness: 0.28, metalness: 0.5 });
+  const bellDark = flat('#1e1a18'), bellShine = flat('#ffffff');
   registerTint('bell', strapMat, '#d9463e', 0);
-  const collarTorus = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.075, 14, 36), strapMat);
+  const collarTorus = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.078, 16, 36), strapMat);
   collarTorus.rotation.x = Math.PI * 0.52; collarTorus.scale.set(1.06, 0.88, 1);
-  bell.add(collarTorus);
-  const bellBall = new THREE.Mesh(new THREE.SphereGeometry(0.165, 22, 16), bellGold);
-  bellBall.position.set(0, -0.10, 0.62);
-  const bellRim = new THREE.Mesh(new THREE.SphereGeometry(0.185, 20, 14), back('#242326'));
+  const collarRim = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.092, 12, 36), back('#421614'));
+  collarRim.rotation.x = Math.PI * 0.52; collarRim.scale.set(1.06, 0.88, 1);
+  bell.add(collarTorus, collarRim);
+  // 3D hanging ring loop connecting the collar to the bell crown
+  const bellLoop = new THREE.Mesh(new THREE.TorusGeometry(0.052, 0.016, 10, 18), bellBandMat);
+  bellLoop.position.set(0, 0.045, 0.63);
+  const bellBall = new THREE.Mesh(new THREE.SphereGeometry(0.18, 28, 20), bellGold);
+  bellBall.position.set(0, -0.11, 0.64);
+  const bellRim = new THREE.Mesh(new THREE.SphereGeometry(0.198, 22, 16), back('#3a2709'));
   bellRim.position.copy(bellBall.position);
-  const bellBand = new THREE.Mesh(new THREE.TorusGeometry(0.165, 0.018, 8, 22), flat('#c99520'));
+  const bellBand = new THREE.Mesh(new THREE.TorusGeometry(0.182, 0.022, 10, 26), bellBandMat);
   bellBand.position.copy(bellBall.position); bellBand.rotation.x = Math.PI * 0.5;
-  const bellDot = new THREE.Mesh(new THREE.SphereGeometry(0.036, 10, 8), bellDark);
-  bellDot.position.set(0, -0.17, 0.76);
-  const bellSpec = new THREE.Mesh(new THREE.SphereGeometry(0.032, 10, 8), bellShine);
-  bellSpec.position.set(-0.055, -0.04, 0.76);
-  bell.add(bellBall, bellRim, bellBand, bellDot, bellSpec);
+  const bellSlit = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.022, 0.05), bellDark);
+  bellSlit.position.set(0, -0.185, 0.79);
+  const bellDot = new THREE.Mesh(new THREE.SphereGeometry(0.038, 12, 10), bellDark);
+  bellDot.position.set(0, -0.185, 0.80);
+  const bellSpec = new THREE.Mesh(new THREE.SphereGeometry(0.038, 12, 10), bellShine);
+  bellSpec.scale.set(1.2, 0.85, 0.6);
+  bellSpec.position.set(-0.062, -0.04, 0.80);
+  bell.add(bellLoop, bellBall, bellRim, bellBand, bellSlit, bellDot, bellSpec);
   neckAccessoriesGroup.add(bell); accessoryMap.bell = bell;
 
   // 4. 嘴叼小鱼干 (fish — gripped at right mouth corner)
@@ -888,6 +899,42 @@ let wizardHaloRing = null;
   const l2 = new THREE.Mesh(leafGeo, leafMat); l2.scale.set(1.25, 0.48, 0.34); l2.position.set(0.12, 0.33, 0.01); l2.rotation.z = -0.38;
   sprout.add(l1, l2);
   accessoriesGroup.add(sprout); accessoryMap.sprout = sprout;
+
+  // 11. 天使光环 + 背部3D小翅膀 (halo + angelWings)
+  const halo = new THREE.Group(); halo.position.set(0, 0.96, 0.02);
+  const haloMat = new THREE.MeshStandardMaterial({ color: '#fce174', roughness: 0.25, metalness: 0.3, emissive: '#d8a62a', emissiveIntensity: 0.38 });
+  registerTint('halo', haloMat, '#fce174', 0);
+  const haloMesh = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.042, 14, 34), haloMat);
+  haloMesh.rotation.x = Math.PI * 0.5;
+  const haloRim = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.056, 12, 32), back('#8f6814'));
+  haloRim.rotation.x = Math.PI * 0.5;
+  halo.add(haloMesh, haloRim);
+  accessoriesGroup.add(halo); accessoryMap.halo = halo;
+
+  const angelWings = new THREE.Group(); angelWings.position.set(0, 1.24, -0.74);
+  const wingMat = new THREE.MeshStandardMaterial({ color: '#fffdf7', roughness: 0.45, metalness: 0.02, emissive: '#ede6d8', emissiveIntensity: 0.25 });
+  const wingRim = back('#9e9588');
+  const featherGeo = new THREE.SphereGeometry(0.24, 18, 14);
+  angelWings.userData.sides = [-1, 1].map(s => {
+    const pivot = new THREE.Group();
+    pivot.position.set(s * 0.38, 0.04, 0.06);
+    pivot.rotation.y = -s * 0.26;
+    const lobes = [
+      [s * 0.34, 0.22, -0.02, 1.55, 0.52, 0.24, s * 0.48],
+      [s * 0.30, 0.03, -0.04, 1.28, 0.46, 0.22, s * 0.22],
+      [s * 0.22, -0.14, -0.05, 0.96, 0.40, 0.20, -s * 0.04]
+    ];
+    for (const [x, y, z, sx, sy, sz, rz] of lobes) {
+      const f = new THREE.Mesh(featherGeo, wingMat);
+      f.position.set(x, y, z); f.scale.set(sx, sy, sz); f.rotation.z = rz;
+      const fr = new THREE.Mesh(featherGeo, wingRim);
+      fr.position.set(x, y, z); fr.scale.set(sx * 1.09, sy * 1.16, sz * 1.22); fr.rotation.z = rz;
+      pivot.add(f, fr);
+    }
+    angelWings.add(pivot);
+    return { s, pivot };
+  });
+  neckAccessoriesGroup.add(angelWings); accessoryMap.angelWings = angelWings;
 }
 let currentAccessory = 'crown';
 let currentAccessoryColor = 'auto';
@@ -911,10 +958,12 @@ function syncHeadwear() {
   if (showPhones) applyAccessoryColor();
   for (const [k, obj] of Object.entries(accessoryMap)) obj.visible = !showPhones && k === currentAccessory;
   accessoriesGroup.visible = !showPhones && currentAccessory !== 'none' && Boolean(accessoryMap[currentAccessory]);
-  neckAccessoriesGroup.visible = currentAccessory === 'bell' || currentAccessory === 'scarf';
+  const showHaloWings = !showPhones && currentAccessory === 'halo';
+  neckAccessoriesGroup.visible = currentAccessory === 'bell' || currentAccessory === 'scarf' || showHaloWings;
   if (neckAccessoriesGroup.visible) {
     accessoryMap.bell.visible = currentAccessory === 'bell';
     accessoryMap.scarf.visible = currentAccessory === 'scarf';
+    accessoryMap.angelWings.visible = showHaloWings;
   }
 }
 function setAccessory(id) {
@@ -989,8 +1038,16 @@ const blushMat = new THREE.MeshBasicMaterial({
 const blushes = [-1, 1].map(s => ({ s, mesh: makePatch(blushMat, 5) }));
 blushes.forEach(b => { b.mesh.visible = false; });
 const eyeGlintMat = new THREE.MeshBasicMaterial({
-  color: '#d8d5cf', transparent: true, opacity: 0.38, depthWrite: false,
-  side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -12, polygonOffsetUnits: -12
+  color: '#ffffff', transparent: true, opacity: 0.94, depthWrite: false,
+  side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -14, polygonOffsetUnits: -14
+});
+const eyeGlintSubMat = new THREE.MeshBasicMaterial({
+  color: '#ffffff', transparent: true, opacity: 0.72, depthWrite: false,
+  side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -14, polygonOffsetUnits: -14
+});
+const eyeScleraGlintMat = new THREE.MeshBasicMaterial({
+  color: '#ffffff', transparent: true, opacity: 0.62, depthWrite: false,
+  side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -13, polygonOffsetUnits: -13
 });
 // True curved ribbon arc wrapped onto the head ellipsoid (for natural ^ ^ happy smile eyes with ZERO opaque face mask).
 const ARC_SEG = 20;
@@ -1034,8 +1091,9 @@ const eyes = [-1, 1].map(s => ({
   s,
   iris: makePatch(M.eye, 3),
   pupil: makePatch(M.pupil, 4),
+  glintSclera: makePatch(eyeScleraGlintMat, 5),
   glintMain: makePatch(eyeGlintMat, 5),
-  glintSub: makePatch(eyeGlintMat, 5),
+  glintSub: makePatch(eyeGlintSubMat, 5),
   smileArc: makeArcPatch(M.shut, 6),
   lid: makePatch(M.lid, 6)
 }));
@@ -1765,6 +1823,33 @@ function createWalkerCat(coatPreset, eyeColorPref = 'auto') {
   const wMouth = makePatchOn(headWrap, mouthMat, 6);
   wMouth.visible = false;
 
+  // Handover confrontation details: pouty puffed muzzle pads (努嘴) + spiky dorsal fur tufts (炸毛).
+  const muzzleMat = trackMat(new THREE.MeshBasicMaterial({ color: c.chin || c.patch || (c.id === 'solidblack' ? '#d9d3ca' : c.fur) }));
+  const muzzleRim = trackMat(new THREE.MeshBasicMaterial({ color: c.line || '#3a3532', side: THREE.BackSide }));
+  const muzzleGeo = trackGeo(new THREE.SphereGeometry(0.135, 16, 12));
+  const muzzleGroup = new THREE.Group();
+  muzzleGroup.position.set(0, -0.15, 0.67);
+  muzzleGroup.visible = false;
+  for (const s of [-1, 1]) {
+    const pad = new THREE.Mesh(muzzleGeo, muzzleMat);
+    pad.position.set(s * 0.095, 0, 0); pad.scale.set(1.08, 0.84, 0.95);
+    const padR = new THREE.Mesh(muzzleGeo, muzzleRim);
+    padR.position.set(s * 0.095, 0, 0); padR.scale.set(1.18, 0.94, 1.05);
+    muzzleGroup.add(pad, padR);
+  }
+  headWrap.add(muzzleGroup);
+
+  const tuftMat = trackMat(new THREE.MeshBasicMaterial({ color: c.fur }));
+  const tuftGeo = trackGeo(new THREE.ConeGeometry(0.11, 0.32, 8));
+  const puffTufts = new THREE.Group();
+  puffTufts.visible = false;
+  for (const [ty, tz, rx, sc] of [[1.44, 0.16, 0.25, 1.0], [1.50, -0.12, -0.08, 1.15], [1.40, -0.40, -0.35, 0.92]]) {
+    const tuft = new THREE.Mesh(tuftGeo, tuftMat);
+    tuft.position.set(0, ty, tz); tuft.rotation.x = rx; tuft.scale.setScalar(sc);
+    puffTufts.add(tuft);
+  }
+  bodyPivot.add(puffTufts);
+
   const lowSeatedHeadY = (2.3 * P.bodyH + P.neck) * (1 - 0.275);
 
   function setPose({ walkPhase = 0, walkAmp = 0, crouch = 0, angry = 0, talk = 0, headYaw = 0, lookX = 0, surprise = 0, tailWag = 0, tailFuzz = 0, tuck = 0 } = {}) {
@@ -1847,10 +1932,23 @@ function createWalkerCat(coatPreset, eyeColorPref = 'auto') {
       }
     }
 
-    // Talking mouth patch on the face
+    // Talking mouth patch + confrontation pouty muzzle (努嘴) & dorsal bristle tufts (炸毛)
+    const bristle = clamp(Math.max(angry, tailFuzz), 0, 1);
+    const pout = clamp(Math.max(angry * 0.9, talk), 0, 1);
+    muzzleGroup.visible = pout > 0.18 && tk < 0.4;
+    if (muzzleGroup.visible) {
+      const puff = 0.85 + pout * 0.35 + (talk > 0.1 ? Math.sin(walkPhase * 4.5) * 0.10 : 0);
+      muzzleGroup.scale.set(puff, puff * 0.92, puff * 1.15);
+    }
+    puffTufts.visible = bristle > 0.22 && tk < 0.4;
+    if (puffTufts.visible) {
+      const ps = 0.55 + bristle * 0.65;
+      puffTufts.scale.set(ps, ps, ps);
+      bodyPivot.scale.y = (1 - crouch * 0.04) * (1 + bristle * 0.12 * (1 - tk));
+    }
     wMouth.visible = talk > 0.12;
     if (wMouth.visible) {
-      fillPatch(wMouth, 0, -0.18, 0.068, 0.032 + talk * 0.055, 0, 0.018);
+      fillPatch(wMouth, 0, -0.20, 0.068, 0.032 + talk * 0.055, 0, 0.022);
     }
 
     // Tail upright sway / confrontation bristle quiver
@@ -2403,6 +2501,16 @@ function frame() {
   if (wizardHaloRing && accessoryMap.wizard?.visible) {
     wizardHaloRing.rotation.y = t / 1100;
   }
+  if (accessoryMap.halo?.visible) {
+    accessoryMap.halo.position.y = 0.96 + Math.sin(t / 460) * 0.038;
+  }
+  if (accessoryMap.angelWings?.visible) {
+    const flap = Math.sin(t / 340) * 0.16 + (typing ? Math.sin(t / 140) * 0.08 : 0);
+    for (const w of accessoryMap.angelWings.userData.sides || []) {
+      w.pivot.rotation.y = -w.s * (0.24 + flap);
+      w.pivot.rotation.z = w.s * flap * 0.35;
+    }
+  }
 
   // eyes
   if (t > S.blinkAt) {
@@ -2419,6 +2527,12 @@ function frame() {
   const isLiquidBlack = currentCoat?.id === 'solidblack' && currentEyeColor === 'auto';
   const ex = 0.37 * P.eyeSpread, ey = P.eyeY, er = 0.205 * P.eyeSize, irx = er * 0.94, iry = er * 1.15, c = S.lid, dir = S.lidDir || 1;
   const angerClip = smooth(0.06, 0.72, S.anger);
+  // Dynamic feline pupil dilation/constriction: dilates wide on play/butterfly/lift, focuses on typing, narrows into fierce slits when angry.
+  const excited = playing || chasingButterfly || (drag > 0.25 && !dragResigned);
+  const pupilTarget = excited ? 1.18 : angry ? 0.80 : typing ? (1.04 + fast * 0.08) : (0.98 + breath * 0.025);
+  S.pupilScale = (S.pupilScale || 1) + (pupilTarget - (S.pupilScale || 1)) * ease(8);
+  const pDyn = S.pupilScale;
+  const pSlitX = mix(1, 0.74, angerClip);
   for (const e of eyes) {
     // Smooth vertical squash-blink, true crescent arc ^ ^ smile (zero opaque face mask), and direct angry upper-clip.
     const pet = dir < 0, shut = c > 0.68;
@@ -2434,6 +2548,7 @@ function frame() {
     if (showSmileArc) {
       fillArcPatch(e.smileArc, e.s * ex, eyc + 0.01, irx * 0.96, iry * 0.66, irx * 0.24, eyeTurn, 0.015);
       e.pupil.visible = false;
+      e.glintSclera.visible = false;
       e.glintMain.visible = false;
       e.glintSub.visible = false;
       continue;
@@ -2442,8 +2557,9 @@ function frame() {
     const clipCurve = !shut && angerClip > 0.02 ? h * 0.08 * angerClip : 0;
     e.iris.material = shut ? M.shut : (e.s < 0 ? M.eye : M.eyeAlt);
     fillPatch(e.iris, e.s * ex, eyc, irx * (shut ? 0.96 : 0.98), h * 0.98, eyeTurn, 0.008, clipTop, clipCurve);
-    const pupilRx = irx * (isLiquidBlack ? 0.72 : 0.56) * (1 - 0.06 * angerClip);
-    const pupilRy = Math.min(h * 0.82, iry * (isLiquidBlack ? 0.72 : 0.56) * (1 - 0.06 * angerClip));
+    const baseRatio = isLiquidBlack ? 0.72 : 0.57;
+    const pupilRx = Math.min(irx * 0.84, irx * baseRatio * pDyn * pSlitX);
+    const pupilRy = Math.min(h * 0.86, iry * baseRatio * pDyn);
     const pupilTravel = Math.max(0, h - pupilRy - er * 0.03), gazeLength = Math.hypot(S.gazeX, S.gazeY);
     const gazeScale = gazeLength > 1 ? 1 / gazeLength : 1;
     const dx = S.gazeX * pupilTravel * gazeScale * (1 - 0.55 * angerClip);
@@ -2457,14 +2573,22 @@ function frame() {
     fillPatch(e.pupil, px, py, pupilRx, pupilRy, eyeTurn, 0.013, pClipTop, clipCurve * 0.85);
     const pupilVisible = c < 0.62;
     e.pupil.visible = pupilVisible;
-    // Liquid black cat keeps razor-clean hollow white ring eyes (no cloudy gray glints inside the black pupil).
-    e.glintMain.visible = pupilVisible && angerClip < 0.35 && !isLiquidBlack;
-    e.glintSub.visible = pupilVisible && !isLiquidBlack;
+    // Glossy layered catchlights: crisp highlight on iris/eye-white rim + bright primary & secondary specular dots on pupil.
+    const glintVisible = pupilVisible && angerClip < 0.42 && h > iry * 0.38;
+    e.glintSclera.visible = glintVisible && !isLiquidBlack;
+    e.glintMain.visible = glintVisible;
+    e.glintSub.visible = pupilVisible && h > iry * 0.44;
+    if (e.glintSclera.visible) {
+      // Soft glossy highlight resting directly on the upper-left eye-white / iris rim.
+      fillPatch(e.glintSclera, e.s * ex - irx * 0.34, eyc + h * 0.46, irx * 0.24, h * 0.13, 0.38, 0.012);
+    }
     if (e.glintMain.visible) {
-      fillPatch(e.glintMain, px - pupilRx * 0.31, py + pupilRy * 0.33, pupilRx * 0.25, pupilRy * 0.23, 0.2, 0.016);
+      const mScale = isLiquidBlack ? 0.78 : 1.0;
+      fillPatch(e.glintMain, px - pupilRx * 0.34, py + pupilRy * 0.34, pupilRx * 0.25 * mScale, pupilRy * 0.23 * mScale, 0.25, 0.016);
     }
     if (e.glintSub.visible) {
-      fillPatch(e.glintSub, px + pupilRx * 0.3, py - pupilRy * 0.3, pupilRx * 0.12, pupilRy * 0.12, 0, 0.016);
+      const sScale = isLiquidBlack ? 0.72 : 1.0;
+      fillPatch(e.glintSub, px + pupilRx * 0.32, py - pupilRy * 0.30, pupilRx * 0.12 * sScale, pupilRy * 0.11 * sScale, 0, 0.016);
     }
   }
 
