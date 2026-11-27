@@ -28,6 +28,8 @@ jobs:
             platform: kylin-x64
           - os: ubuntu-24.04-arm
             platform: kylin-arm64
+          - os: windows-latest
+            platform: win7-x64
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout source
@@ -39,16 +41,19 @@ jobs:
           node-version: 22
 
       - name: Setup Rust stable
+        if: matrix.platform != 'win7-x64'
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform == 'mac-universal' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Cache Rust build artifacts
+        if: matrix.platform != 'win7-x64'
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
 
       - name: Prepare lightweight web assets
+        if: matrix.platform != 'win7-x64'
         run: node scripts/prepare-web.cjs
 
       - name: Install Linux Tauri & X11 hook dependencies
@@ -108,6 +113,19 @@ jobs:
           mkdir -p dist-release
           cp src-tauri/target/release/bundle/deb/*.deb "dist-release/MAOTAO-Kylin-${VER}-arm64.deb"
           ls -lh dist-release
+
+      - name: Build Windows 7 SP1 x64 Compatible Portable (Electron 22)
+        if: matrix.platform == 'win7-x64'
+        shell: pwsh
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: |
+          $ver = (Get-Content package.json | ConvertFrom-Json).version
+          npm install --no-save electron@22.3.27 electron-builder@24.13.3 uiohook-napi@1.5.5
+          npx electron-builder --win portable --x64 --config scripts/build-win7.json --publish never
+          New-Item -ItemType Directory -Force -Path dist-release | Out-Null
+          Copy-Item "dist/MAOTAO-Win7-$ver-x64.exe" "dist-release/MAOTAO-Win7-$ver-x64.exe" -Force
+          Get-ChildItem dist-release | Select-Object Name, Length
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
