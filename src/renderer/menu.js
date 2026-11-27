@@ -33,7 +33,8 @@ const ACCESSORIES = [
   { id: 'star', label: '伴星发卡' },
   { id: 'shades', label: '酷盖墨镜' },
   { id: 'beret', label: '贝雷帽' },
-  { id: 'sprout', label: '小嫩芽' }
+  { id: 'sprout', label: '小嫩芽' },
+  { id: 'halo', label: '天使光环' }
 ];
 
 const ACC_COLORS = [

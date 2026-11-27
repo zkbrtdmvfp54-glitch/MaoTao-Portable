@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost; base-uri 'none'; form-action 'none'">
 <title>毛桃桌面宠物</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -22,6 +22,7 @@
   </div>
 </div>
 <div id="status" role="status"></div>
+<script src="tauri-bridge.js"></script>
 <script src="/assets/pet/third-party/7paws/three.min.js"></script>
 <script src="/assets/pet/third-party/7paws/7paws.js"></script>
 <script type="module" src="app.js"></script>

@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>中英文试打</title>
 <link rel="stylesheet" href="typing.css">
@@ -11,6 +11,7 @@
 <label for="typing">中英文试打</label>
 <input id="typing" type="text" maxlength="80" autocomplete="off" autofocus placeholder="在这里打几个字">
 <p>输入仅用于此刻的宠物动画。</p>
+<script src="tauri-bridge.js"></script>
 <script src="typing.js" defer></script>
 </body>
 </html>
