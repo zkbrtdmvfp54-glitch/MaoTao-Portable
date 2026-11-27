@@ -911,18 +911,18 @@ let wizardHaloRing = null;
   halo.add(haloMesh, haloRim);
   accessoriesGroup.add(halo); accessoryMap.halo = halo;
 
-  const angelWings = new THREE.Group(); angelWings.position.set(0, 1.24, -0.74);
-  const wingMat = new THREE.MeshStandardMaterial({ color: '#fffdf7', roughness: 0.45, metalness: 0.02, emissive: '#ede6d8', emissiveIntensity: 0.25 });
+  const angelWings = new THREE.Group(); angelWings.position.set(0, 1.48, -0.46);
+  const wingMat = new THREE.MeshStandardMaterial({ color: '#fffdf7', roughness: 0.42, metalness: 0.02, emissive: '#ede6d8', emissiveIntensity: 0.28 });
   const wingRim = back('#9e9588');
-  const featherGeo = new THREE.SphereGeometry(0.24, 18, 14);
+  const featherGeo = new THREE.SphereGeometry(0.32, 18, 14);
   angelWings.userData.sides = [-1, 1].map(s => {
     const pivot = new THREE.Group();
-    pivot.position.set(s * 0.38, 0.04, 0.06);
-    pivot.rotation.y = -s * 0.26;
+    pivot.position.set(s * 0.62, 0.08, 0.04);
+    pivot.rotation.y = -s * 0.16;
     const lobes = [
-      [s * 0.34, 0.22, -0.02, 1.55, 0.52, 0.24, s * 0.48],
-      [s * 0.30, 0.03, -0.04, 1.28, 0.46, 0.22, s * 0.22],
-      [s * 0.22, -0.14, -0.05, 0.96, 0.40, 0.20, -s * 0.04]
+      [s * 0.54, 0.34, -0.02, 1.82, 0.58, 0.22, s * 0.50],
+      [s * 0.48, 0.08, -0.04, 1.50, 0.50, 0.20, s * 0.22],
+      [s * 0.36, -0.14, -0.06, 1.14, 0.44, 0.18, -s * 0.04]
     ];
     for (const [x, y, z, sx, sy, sz, rz] of lobes) {
       const f = new THREE.Mesh(featherGeo, wingMat);
@@ -1038,16 +1038,8 @@ const blushMat = new THREE.MeshBasicMaterial({
 const blushes = [-1, 1].map(s => ({ s, mesh: makePatch(blushMat, 5) }));
 blushes.forEach(b => { b.mesh.visible = false; });
 const eyeGlintMat = new THREE.MeshBasicMaterial({
-  color: '#ffffff', transparent: true, opacity: 0.94, depthWrite: false,
+  color: '#ffffff', depthWrite: false,
   side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -14, polygonOffsetUnits: -14
-});
-const eyeGlintSubMat = new THREE.MeshBasicMaterial({
-  color: '#ffffff', transparent: true, opacity: 0.72, depthWrite: false,
-  side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -14, polygonOffsetUnits: -14
-});
-const eyeScleraGlintMat = new THREE.MeshBasicMaterial({
-  color: '#ffffff', transparent: true, opacity: 0.62, depthWrite: false,
-  side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -13, polygonOffsetUnits: -13
 });
 // True curved ribbon arc wrapped onto the head ellipsoid (for natural ^ ^ happy smile eyes with ZERO opaque face mask).
 const ARC_SEG = 20;
@@ -1086,14 +1078,13 @@ function fillArcPatch(mesh, cx, cy, rx, ry, thick, turn, lift) {
   }
   pos.needsUpdate = true;
 }
-// One coat-colored eye-white surface with one black pupil, subtle glassy catchlights, and a genuine arc smile mesh (zero mask cutout).
+// One coat-colored eye-white surface with one solid black pupil, fixed eye-white specular highlights (anchored to iris, NOT pupil), and a genuine arc smile mesh.
 const eyes = [-1, 1].map(s => ({
   s,
   iris: makePatch(M.eye, 3),
   pupil: makePatch(M.pupil, 4),
-  glintSclera: makePatch(eyeScleraGlintMat, 5),
   glintMain: makePatch(eyeGlintMat, 5),
-  glintSub: makePatch(eyeGlintSubMat, 5),
+  glintSub: makePatch(eyeGlintMat, 5),
   smileArc: makeArcPatch(M.shut, 6),
   lid: makePatch(M.lid, 6)
 }));
@@ -1824,9 +1815,9 @@ function createWalkerCat(coatPreset, eyeColorPref = 'auto') {
   wMouth.visible = false;
 
   // Handover confrontation details: pouty puffed muzzle pads (努嘴) + spiky dorsal fur tufts (炸毛).
-  const muzzleMat = trackMat(new THREE.MeshBasicMaterial({ color: c.chin || c.patch || (c.id === 'solidblack' ? '#d9d3ca' : c.fur) }));
-  const muzzleRim = trackMat(new THREE.MeshBasicMaterial({ color: c.line || '#3a3532', side: THREE.BackSide }));
-  const muzzleGeo = trackGeo(new THREE.SphereGeometry(0.135, 16, 12));
+  const muzzleMat = trackM(new THREE.MeshBasicMaterial({ color: c.chin || c.patch || (c.id === 'solidblack' ? '#d9d3ca' : c.fur) }));
+  const muzzleRim = trackM(new THREE.MeshBasicMaterial({ color: c.line || '#3a3532', side: THREE.BackSide }));
+  const muzzleGeo = trackG(new THREE.SphereGeometry(0.135, 16, 12));
   const muzzleGroup = new THREE.Group();
   muzzleGroup.position.set(0, -0.15, 0.67);
   muzzleGroup.visible = false;
@@ -1839,8 +1830,8 @@ function createWalkerCat(coatPreset, eyeColorPref = 'auto') {
   }
   headWrap.add(muzzleGroup);
 
-  const tuftMat = trackMat(new THREE.MeshBasicMaterial({ color: c.fur }));
-  const tuftGeo = trackGeo(new THREE.ConeGeometry(0.11, 0.32, 8));
+  const tuftMat = trackM(new THREE.MeshBasicMaterial({ color: c.fur }));
+  const tuftGeo = trackG(new THREE.ConeGeometry(0.11, 0.32, 8));
   const puffTufts = new THREE.Group();
   puffTufts.visible = false;
   for (const [ty, tz, rx, sc] of [[1.44, 0.16, 0.25, 1.0], [1.50, -0.12, -0.08, 1.15], [1.40, -0.40, -0.35, 0.92]]) {
@@ -1922,13 +1913,14 @@ function createWalkerCat(coatPreset, eyeColorPref = 'auto') {
       const py = ey + (pOffU * siE + pOffV * coE);
       const pClipTop = clipTop < Infinity ? clipTop - pOffV : Infinity;
       fillPatch(e.pupil, px, py, pupilRx, pupilRy, eyeTurn, 0.013, pClipTop, clipCurve * 0.85);
-      e.glintMain.visible = angerClip < 0.35 && !isLiquidBlack;
-      e.glintSub.visible = !isLiquidBlack;
+      // Fixed eye-white/iris highlights (anchored to eye center, not moving with pupil)
+      e.glintMain.visible = angerClip < 0.35;
+      e.glintSub.visible = true;
       if (e.glintMain.visible) {
-        fillPatch(e.glintMain, px - pupilRx * 0.31, py + pupilRy * 0.33, pupilRx * 0.25, pupilRy * 0.23, 0.2, 0.016);
+        fillPatch(e.glintMain, e.s * ex + e.s * irx * 0.30, ey + h * 0.36, irx * 0.18, h * 0.17, 0, 0.016);
       }
       if (e.glintSub.visible) {
-        fillPatch(e.glintSub, px + pupilRx * 0.3, py - pupilRy * 0.3, pupilRx * 0.12, pupilRy * 0.12, 0, 0.016);
+        fillPatch(e.glintSub, e.s * ex - e.s * irx * 0.24, ey - h * 0.32, irx * 0.085, h * 0.08, 0, 0.016);
       }
     }
 
@@ -2548,7 +2540,6 @@ function frame() {
     if (showSmileArc) {
       fillArcPatch(e.smileArc, e.s * ex, eyc + 0.01, irx * 0.96, iry * 0.66, irx * 0.24, eyeTurn, 0.015);
       e.pupil.visible = false;
-      e.glintSclera.visible = false;
       e.glintMain.visible = false;
       e.glintSub.visible = false;
       continue;
@@ -2557,13 +2548,17 @@ function frame() {
     const clipCurve = !shut && angerClip > 0.02 ? h * 0.08 * angerClip : 0;
     e.iris.material = shut ? M.shut : (e.s < 0 ? M.eye : M.eyeAlt);
     fillPatch(e.iris, e.s * ex, eyc, irx * (shut ? 0.96 : 0.98), h * 0.98, eyeTurn, 0.008, clipTop, clipCurve);
-    const baseRatio = isLiquidBlack ? 0.72 : 0.57;
-    const pupilRx = Math.min(irx * 0.84, irx * baseRatio * pDyn * pSlitX);
-    const pupilRy = Math.min(h * 0.86, iry * baseRatio * pDyn);
-    const pupilTravel = Math.max(0, h - pupilRy - er * 0.03), gazeLength = Math.hypot(S.gazeX, S.gazeY);
+    // Natural feline pupil: vertical oval at rest so eye-white & its highlight stand out; widens horizontally when excited/typing, narrows to a slit when angry.
+    const baseRx = isLiquidBlack ? 0.56 : 0.44;
+    const baseRy = isLiquidBlack ? 0.72 : 0.68;
+    const widenX = 1 + (pDyn - 1) * 2.1; // strong horizontal dilation (oval -> big round excited pupil)
+    const pupilRx = Math.min(irx * 0.80, irx * baseRx * widenX * pSlitX);
+    const pupilRy = Math.min(h * 0.84, iry * baseRy * mix(1, pDyn, 0.45));
+    const pupilTravel = Math.max(0, irx - pupilRx - er * 0.04), gazeLength = Math.hypot(S.gazeX, S.gazeY);
     const gazeScale = gazeLength > 1 ? 1 / gazeLength : 1;
-    const dx = S.gazeX * pupilTravel * gazeScale * (1 - 0.55 * angerClip);
-    const dy = S.gazeY * pupilTravel * gazeScale * (1 - 0.55 * angerClip);
+    const convergeX = -e.s * irx * 0.07 * (1 - angerClip);
+    const dx = clamp(S.gazeX * pupilTravel * gazeScale * (1 - 0.55 * angerClip) + convergeX, -pupilTravel, pupilTravel);
+    const dy = S.gazeY * Math.max(0, h - pupilRy - er * 0.03) * gazeScale * (1 - 0.55 * angerClip);
     const coE = Math.cos(eyeTurn), siE = Math.sin(eyeTurn);
     const pOffU = -e.s * irx * 0.04 * angerClip;
     const pOffV = h * 0.08 * angerClip;
@@ -2573,22 +2568,17 @@ function frame() {
     fillPatch(e.pupil, px, py, pupilRx, pupilRy, eyeTurn, 0.013, pClipTop, clipCurve * 0.85);
     const pupilVisible = c < 0.62;
     e.pupil.visible = pupilVisible;
-    // Glossy layered catchlights: crisp highlight on iris/eye-white rim + bright primary & secondary specular dots on pupil.
+    // KeyCat-style pure-white corneal highlights anchored to the EYE-WHITE/IRIS frame (NOT moving with pupil).
     const glintVisible = pupilVisible && angerClip < 0.42 && h > iry * 0.38;
-    e.glintSclera.visible = glintVisible && !isLiquidBlack;
     e.glintMain.visible = glintVisible;
     e.glintSub.visible = pupilVisible && h > iry * 0.44;
-    if (e.glintSclera.visible) {
-      // Soft glossy highlight resting directly on the upper-left eye-white / iris rim.
-      fillPatch(e.glintSclera, e.s * ex - irx * 0.34, eyc + h * 0.46, irx * 0.24, h * 0.13, 0.38, 0.012);
-    }
     if (e.glintMain.visible) {
-      const mScale = isLiquidBlack ? 0.78 : 1.0;
-      fillPatch(e.glintMain, px - pupilRx * 0.34, py + pupilRy * 0.34, pupilRx * 0.25 * mScale, pupilRy * 0.23 * mScale, 0.25, 0.016);
+      // Primary crisp white highlight on the outer-upper eye-white/iris quadrant
+      fillPatch(e.glintMain, e.s * ex + e.s * irx * 0.30, eyc + h * 0.36, irx * 0.185, h * 0.175, 0, 0.016);
     }
     if (e.glintSub.visible) {
-      const sScale = isLiquidBlack ? 0.72 : 1.0;
-      fillPatch(e.glintSub, px + pupilRx * 0.32, py - pupilRy * 0.30, pupilRx * 0.12 * sScale, pupilRy * 0.11 * sScale, 0, 0.016);
+      // Secondary tiny white highlight on the inner-lower eye-white/iris quadrant
+      fillPatch(e.glintSub, e.s * ex - e.s * irx * 0.24, eyc - h * 0.32, irx * 0.088, h * 0.085, 0, 0.016);
     }
   }
 
