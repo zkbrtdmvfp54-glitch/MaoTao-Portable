@@ -730,35 +730,42 @@ let wizardHaloRing = null;
   }
   accessoriesGroup.add(retro); accessoryMap.retro = retro;
 
-  // 3. 招财铃铛项圈 (bell — 3D spherical bright golden-yellow bell with hand-drawn toon outline)
+  // 3. 招财铃铛项圈 (bell — rigid undeformed 3D cel-shaded golden sphere matching reference)
   const bell = new THREE.Group(); bell.position.set(0, 1.72, 0.04);
   const strapMat = flat('#e04a42');
-  const bellGold = new THREE.MeshLambertMaterial({ color: '#ffdf4d', emissive: '#b8820a', emissiveIntensity: 0.34 });
-  const bellBandMat = new THREE.MeshLambertMaterial({ color: '#f2b820', emissive: '#946204', emissiveIntensity: 0.30 });
-  const bellDark = flat('#3a2508'), bellShine = flat('#fff9d6');
+  const bellTexCanvas = document.createElement('canvas');
+  bellTexCanvas.width = 128; bellTexCanvas.height = 128;
+  const bctx = bellTexCanvas.getContext('2d');
+  const bgrad = bctx.createRadialGradient(48, 44, 8, 64, 64, 64);
+  bgrad.addColorStop(0, '#ffe35c');
+  bgrad.addColorStop(0.58, '#f5c22e');
+  bgrad.addColorStop(1, '#d99a14');
+  bctx.fillStyle = bgrad;
+  bctx.fillRect(0, 0, 128, 128);
+  const bellTex = new THREE.CanvasTexture(bellTexCanvas);
+  const bellGold = new THREE.MeshBasicMaterial({ map: bellTex });
+  const bellDark = flat('#2e1e10'), bellShine = flat('#fffdf0');
   registerTint('bell', strapMat, '#e04a42', 0);
-  const collarTorus = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.078, 16, 36), strapMat);
+  const collarTorus = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.072, 16, 36), strapMat);
   collarTorus.rotation.x = Math.PI * 0.52; collarTorus.scale.set(1.06, 0.88, 1);
-  const collarRim = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.096, 12, 36), back('#4a1c1a'));
+  const collarRim = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.092, 12, 36), back('#362312'));
   collarRim.rotation.x = Math.PI * 0.52; collarRim.scale.set(1.06, 0.88, 1);
   bell.add(collarTorus, collarRim);
-  // Hanging ring loop + 3D-to-2D golden bell with crisp ink outline
-  const bellLoop = new THREE.Mesh(new THREE.TorusGeometry(0.052, 0.016, 10, 18), bellBandMat);
-  bellLoop.position.set(0, 0.045, 0.63);
-  const bellBall = new THREE.Mesh(new THREE.SphereGeometry(0.18, 24, 18), bellGold);
-  bellBall.position.set(0, -0.11, 0.64);
-  const bellRim = new THREE.Mesh(new THREE.SphereGeometry(0.202, 22, 16), back('#6e4910'));
-  bellRim.position.copy(bellBall.position);
-  const bellBand = new THREE.Mesh(new THREE.TorusGeometry(0.182, 0.022, 10, 26), bellBandMat);
-  bellBand.position.copy(bellBall.position); bellBand.rotation.x = Math.PI * 0.5;
-  const bellSlit = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.022, 0.05), bellDark);
-  bellSlit.position.set(0, -0.185, 0.79);
-  const bellDot = new THREE.Mesh(new THREE.SphereGeometry(0.036, 12, 10), bellDark);
-  bellDot.position.set(0, -0.185, 0.80);
-  const bellSpec = new THREE.Mesh(new THREE.SphereGeometry(0.040, 12, 10), bellShine);
-  bellSpec.scale.set(1.25, 0.85, 0.55);
-  bellSpec.position.set(-0.064, -0.042, 0.80);
-  bell.add(bellLoop, bellBall, bellRim, bellBand, bellSlit, bellDot, bellSpec);
+  // Rigid pendant sub-group (counter-scaled in frame() so it NEVER squashes/warps with body/neck!)
+  const bellPendant = new THREE.Group();
+  bellPendant.position.set(0, -0.10, 0.65);
+  const bellLoop = new THREE.Mesh(new THREE.TorusGeometry(0.052, 0.017, 10, 20), bellDark);
+  bellLoop.position.set(0, 0.165, -0.01);
+  const bellBall = new THREE.Mesh(new THREE.SphereGeometry(0.175, 24, 18), bellGold);
+  const bellRim = new THREE.Mesh(new THREE.SphereGeometry(0.202, 22, 16), back('#362312'));
+  const bellSlit = new THREE.Mesh(new THREE.BoxGeometry(0.125, 0.024, 0.04), bellDark);
+  bellSlit.position.set(0, -0.088, 0.152);
+  const bellSpec = new THREE.Mesh(new THREE.SphereGeometry(0.034, 12, 10), bellShine);
+  bellSpec.scale.set(1.1, 1.1, 0.45);
+  bellSpec.position.set(-0.068, -0.018, 0.162);
+  bellPendant.add(bellLoop, bellBall, bellRim, bellSlit, bellSpec);
+  bell.add(bellPendant);
+  bell.userData.pendant = bellPendant;
   neckAccessoriesGroup.add(bell); accessoryMap.bell = bell;
 
   // 4. 嘴叼小鱼干 (fish — gripped at right mouth corner)
@@ -2496,6 +2503,11 @@ function frame() {
   }
   if (wizardHaloRing && accessoryMap.wizard?.visible) {
     wizardHaloRing.rotation.y = t / 1100;
+  }
+  if (accessoryMap.bell?.visible && accessoryMap.bell.userData.pendant) {
+    // Keep bell pendant a rigid, undeformed sphere independent of body breathing/stretch scale
+    const bx = Math.max(0.2, body.scale.x), by = Math.max(0.2, body.scale.y), bz = Math.max(0.2, body.scale.z);
+    accessoryMap.bell.userData.pendant.scale.set(1 / bx, 1 / by, 1 / bz);
   }
   if (accessoryMap.halo?.visible) {
     accessoryMap.halo.position.y = 0.96 + Math.sin(t / 460) * 0.038;
