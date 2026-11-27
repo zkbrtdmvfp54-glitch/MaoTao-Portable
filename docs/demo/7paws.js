@@ -730,11 +730,11 @@ let wizardHaloRing = null;
   }
   accessoriesGroup.add(retro); accessoryMap.retro = retro;
 
-  // 3. 招财铃铛项圈 (bell — 3D-to-2D hand-drawn cel-shaded bright golden-yellow bell)
+  // 3. 招财铃铛项圈 (bell — 3D spherical bright golden-yellow bell with hand-drawn toon outline)
   const bell = new THREE.Group(); bell.position.set(0, 1.72, 0.04);
   const strapMat = flat('#e04a42');
-  const bellGold = flat('#ffdc4a');
-  const bellBandMat = flat('#f0b41c');
+  const bellGold = new THREE.MeshLambertMaterial({ color: '#ffdf4d', emissive: '#b8820a', emissiveIntensity: 0.34 });
+  const bellBandMat = new THREE.MeshLambertMaterial({ color: '#f2b820', emissive: '#946204', emissiveIntensity: 0.30 });
   const bellDark = flat('#3a2508'), bellShine = flat('#fff9d6');
   registerTint('bell', strapMat, '#e04a42', 0);
   const collarTorus = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.078, 16, 36), strapMat);
@@ -1039,7 +1039,7 @@ const blushMat = new THREE.MeshBasicMaterial({
 const blushes = [-1, 1].map(s => ({ s, mesh: makePatch(blushMat, 5) }));
 blushes.forEach(b => { b.mesh.visible = false; });
 const eyeGlintMat = new THREE.MeshBasicMaterial({
-  color: '#ffffff', transparent: true, opacity: 0.78, depthWrite: false,
+  color: '#ffffff', transparent: true, opacity: 0.42, depthWrite: false,
   side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -14, polygonOffsetUnits: -14
 });
 // True curved ribbon arc wrapped onto the head ellipsoid (for natural ^ ^ happy smile eyes with ZERO opaque face mask).
