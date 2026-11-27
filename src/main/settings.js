@@ -16,7 +16,7 @@ const choices = {
   keyboardStyle: ['cream', 'matcha', 'sakura', 'obsidian'],
   coat: ['solidblack', 'maotao', 'calico', 'ragdoll', 'orange', 'black', 'siamese', 'white'],
   eyeColor: ['auto', 'blue', 'amber', 'emerald', 'violet', 'rose', 'odd'],
-  accessory: ['none', 'crown', 'headphones', 'retro', 'bell', 'fish', 'scarf', 'wizard', 'star', 'shades', 'beret', 'sprout', 'halo'],
+  accessory: ['none', 'crown', 'headphones', 'retro', 'bell', 'fish', 'scarf', 'wizard', 'star', 'shades', 'beret', 'sprout', 'halo', 'dizzy'],
   accessoryColor: ['auto', 'sage', 'obsidian', 'cream', 'caramel', 'mist', 'sakura'],
   theme: ['cream', 'mint', 'night', 'green'],
   sleepMinutes: [2, 5, 10]

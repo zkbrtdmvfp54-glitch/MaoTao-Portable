@@ -39,7 +39,8 @@ function buildMenu(store, actions, listening, visible, unavailableReason = '') {
     choice('嘴叼小鱼干', 'accessory', 'fish'), choice('暖冬小红围巾', 'accessory', 'scarf'),
     choice('迷你巫师尖帽', 'accessory', 'wizard'), choice('伴星发卡', 'accessory', 'star'),
     choice('酷盖墨镜', 'accessory', 'shades'), choice('画家贝雷帽', 'accessory', 'beret'),
-    choice('小嫩芽', 'accessory', 'sprout'), choice('天使光环+翅膀', 'accessory', 'halo')
+    choice('小嫩芽', 'accessory', 'sprout'), choice('天使光环+翅膀', 'accessory', 'halo'),
+    choice('眩晕星星', 'accessory', 'dizzy')
   ];
   const sizeMenu = [choice('小', 'size', 'small'), choice('中', 'size', 'medium'), choice('大', 'size', 'large')];
   const interactMenu = [
