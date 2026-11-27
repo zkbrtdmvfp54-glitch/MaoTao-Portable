@@ -1,13 +1,16 @@
 {
   "name": "maotao-desktop-pet",
-  "version": "1.5.5",
+  "version": "2.0.0",
   "private": true,
   "description": "毛桃桌面宠物",
-  "author": "MAOTAO Desktop Pet",
+  "author": "MAOTAO Desktop Pet <maotao@example.com>",
   "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
     "test": "node --test scripts/*.test.cjs",
+    "prepare:web": "node scripts/prepare-web.cjs",
+    "tauri:dev": "npx --yes @tauri-apps/cli@2 dev",
+    "tauri:build": "npx --yes @tauri-apps/cli@2 build",
     "dist": "npm run dist:win:x64",
     "dist:win:x64": "electron-builder --win --x64",
     "dist:mac": "electron-builder --mac --x64 --arm64",
