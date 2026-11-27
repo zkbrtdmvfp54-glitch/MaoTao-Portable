@@ -943,6 +943,41 @@ let wizardHaloRing = null;
     return { s, pivot };
   });
   neckAccessoriesGroup.add(angelWings); accessoryMap.angelWings = angelWings;
+
+  // 12. 眩晕星星 (dizzy — 3 hand-drawn cel-shaded stars continuously orbiting above the head)
+  const dizzy = new THREE.Group(); dizzy.position.set(0, 0.96, 0.02); dizzy.rotation.z = 0.06;
+  const dizzyStarMat = flat('#ffe055');
+  const dizzyStarAlt = flat('#fff3a6');
+  const dizzyRim = back('#6e4910');
+  const dizzyOrbitMat = new THREE.MeshBasicMaterial({ color: '#f0c84b', transparent: true, opacity: 0.55, side: THREE.DoubleSide });
+  registerTint('dizzy', dizzyStarMat, '#ffe055', 0);
+  const dizzyOrbit = new THREE.Mesh(new THREE.TorusGeometry(0.46, 0.011, 8, 36), dizzyOrbitMat);
+  dizzyOrbit.rotation.x = Math.PI * 0.5;
+  dizzy.add(dizzyOrbit);
+  const dStarShape = new THREE.Shape();
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+    const r = i % 2 === 0 ? 0.115 : 0.050;
+    if (i === 0) dStarShape.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+    else dStarShape.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  dStarShape.closePath();
+  const dStarGeo = new THREE.ExtrudeGeometry(dStarShape, { depth: 0.028, bevelEnabled: false });
+  dStarGeo.center();
+  dizzy.userData.stars = [0, 1, 2].map(i => {
+    const holder = new THREE.Group();
+    const ang = (i / 3) * Math.PI * 2;
+    holder.position.set(Math.cos(ang) * 0.46, (i === 1 ? 0.04 : -0.02), Math.sin(ang) * 0.46);
+    const sc = i === 0 ? 1.05 : i === 1 ? 0.85 : 0.92;
+    const star = new THREE.Mesh(dStarGeo, i === 1 ? dizzyStarAlt : dizzyStarMat);
+    star.scale.setScalar(sc);
+    const rim = new THREE.Mesh(dStarGeo, dizzyRim);
+    rim.scale.set(sc * 1.18, sc * 1.18, sc * 1.45);
+    holder.add(star, rim);
+    dizzy.add(holder);
+    return holder;
+  });
+  accessoriesGroup.add(dizzy); accessoryMap.dizzy = dizzy;
 }
 let currentAccessory = 'crown';
 let currentAccessoryColor = 'auto';
@@ -2512,6 +2547,15 @@ function frame() {
   }
   if (accessoryMap.halo?.visible) {
     accessoryMap.halo.position.y = 0.96 + Math.sin(t / 460) * 0.038;
+  }
+  if (accessoryMap.dizzy?.visible) {
+    accessoryMap.dizzy.rotation.y = t / 420;
+    accessoryMap.dizzy.position.y = 0.95 + Math.sin(t / 320) * 0.03;
+    accessoryMap.dizzy.rotation.z = Math.sin(t / 520) * 0.11;
+    (accessoryMap.dizzy.userData.stars || []).forEach((st, idx) => {
+      st.rotation.y = -t / 420; // keep stars facing camera cleanly while orbiting
+      st.rotation.z = Math.sin(t / 240 + idx * 2.1) * 0.35;
+    });
   }
   if (accessoryMap.angelWings?.visible) {
     const flap = Math.sin(t / 340) * 0.16 + (typing ? Math.sin(t / 140) * 0.08 : 0);
