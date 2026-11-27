@@ -25,17 +25,24 @@ if (!app.isPackaged && process.env.MAOTAO_DEV_PROFILE) {
 // This local application synthesizes short sounds for explicitly enabled input.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
-function serveLocal(request) {
-  const url = new URL(request.url);
+function resolveLocalPath(rawUrl) {
+  const url = new URL(rawUrl);
   const resource = url.pathname;
   const segments = resource.split('/').filter(Boolean);
   const rendererResource = /^\/src\/renderer\/[A-Za-z0-9_/.-]+\.(?:html|js|css)$/.test(resource);
-  const petResource = /^\/assets\/pet\/(?:manifest\.json|(?:processed|animations)\/(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+\.(?:png|svg)|third-party\/7paws\/[A-Za-z0-9_.-]+\.js)$/.test(resource);
-  if (request.method !== 'GET' || url.host !== 'app' || (!rendererResource && !petResource) ||
+  const petResource = /^\/assets\/pet\/(?:manifest\.json|(?:processed|animations|audio)\/(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+\.(?:png|svg|mp3)|third-party\/7paws\/[A-Za-z0-9_.-]+\.js)$/.test(resource);
+  if (url.host !== 'app' || (!rendererResource && !petResource) ||
       segments.some(segment => segment === '.' || segment === '..')) {
-    return new Response(null, { status: 404 });
+    return null;
   }
-  return net.fetch(pathToFileURL(path.join(APP_DIR, ...segments)).href);
+  return path.join(APP_DIR, ...segments);
+}
+
+function serveLocal(request) {
+  if (request.method !== 'GET') return new Response(null, { status: 404 });
+  const filePath = resolveLocalPath(request.url);
+  if (!filePath) return new Response(null, { status: 404 });
+  return net.fetch(pathToFileURL(filePath).href);
 }
 
 if (!app.requestSingleInstanceLock()) {
@@ -263,7 +270,15 @@ if (!app.requestSingleInstanceLock()) {
     tray?.destroy();
   });
   app.whenReady().then(async () => {
-    protocol.handle('maotao', serveLocal);
+    if (typeof protocol.handle === 'function') {
+      protocol.handle('maotao', serveLocal);
+    } else {
+      protocol.registerFileProtocol('maotao', (request, callback) => {
+        const filePath = resolveLocalPath(request.url);
+        if (!filePath) return callback({ error: -6 });
+        callback({ path: filePath });
+      });
+    }
     session.defaultSession.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] },
       (_request, callback) => callback({ cancel: true }));
     session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
