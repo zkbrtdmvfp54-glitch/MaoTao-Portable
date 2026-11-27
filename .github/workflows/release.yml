@@ -72,7 +72,7 @@ jobs:
             libssl-dev \
             build-essential
 
-      - name: Build Windows x64 (NSIS Setup + Single-File Portable EXE)
+      - name: Build Windows 10/11 x64 (Lightweight NSIS Setup)
         if: matrix.platform == 'win-x64'
         shell: pwsh
         run: |
@@ -81,7 +81,6 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist-release | Out-Null
           $nsis = Get-ChildItem src-tauri/target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
           Copy-Item $nsis.FullName "dist-release/MAOTAO-Setup-$ver-x64.exe" -Force
-          Copy-Item src-tauri/target/release/MAOTAO.exe "dist-release/MAOTAO-Portable-$ver-x64.exe" -Force
           Get-ChildItem dist-release | Select-Object Name, Length
 
       - name: Build macOS (Apple Silicon arm64 + Intel x64 DMG)
