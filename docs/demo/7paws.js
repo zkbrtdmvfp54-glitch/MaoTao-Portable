@@ -2523,12 +2523,14 @@ function frame() {
   const isLiquidBlack = currentCoat?.id === 'solidblack' && currentEyeColor === 'auto';
   const ex = 0.37 * P.eyeSpread, ey = P.eyeY, er = 0.205 * P.eyeSize, irx = er * 0.94, iry = er * 1.15, c = S.lid, dir = S.lidDir || 1;
   const angerClip = smooth(0.06, 0.72, S.anger);
-  // Dynamic feline pupil dilation/constriction: dilates wide on play/butterfly/lift, focuses on typing, narrows into fierce slits when angry.
-  const excited = playing || chasingButterfly || (drag > 0.25 && !dragResigned);
-  const pupilTarget = excited ? 1.18 : angry ? 0.80 : typing ? (1.04 + fast * 0.08) : (0.98 + breath * 0.025);
+  // Dynamic feline pupil: subtle vertical oval at rest; dilates from oval -> nearly pure round circle when angry or focusing (tracking/typing/playing).
+  const focusing = Boolean(gazeTarget) || typing || playing || chasingButterfly || (drag > 0.25 && !dragResigned);
+  const roundTarget = Math.max(angerClip, focusing ? 1 : 0);
+  S.pupilRound = (S.pupilRound || 0) + (roundTarget - (S.pupilRound || 0)) * ease(9);
+  const pupilTarget = (angry || focusing) ? (1.06 + (playing || chasingButterfly ? 0.08 : 0)) : (0.98 + breath * 0.02);
   S.pupilScale = (S.pupilScale || 1) + (pupilTarget - (S.pupilScale || 1)) * ease(8);
   const pDyn = S.pupilScale;
-  const pSlitX = mix(1, 0.74, angerClip);
+  const pOvalToRoundX = mix(0.76, 1.16, S.pupilRound);
   for (const e of eyes) {
     // Smooth vertical squash-blink, true crescent arc ^ ^ smile (zero opaque face mask), and direct angry upper-clip.
     const pet = dir < 0, shut = c > 0.68;
@@ -2552,10 +2554,10 @@ function frame() {
     const clipCurve = !shut && angerClip > 0.02 ? h * 0.08 * angerClip : 0;
     e.iris.material = shut ? M.shut : (e.s < 0 ? M.eye : M.eyeAlt);
     fillPatch(e.iris, e.s * ex, eyc, irx * (shut ? 0.96 : 0.98), h * 0.98, eyeTurn, 0.008, clipTop, clipCurve);
-    // Cute round pupil (matching the classic violet/blue iris look) with smooth dynamic dilation & angry slit.
+    // Resting vertical oval -> nearly pure round circle when angry or focusing.
     const baseRatio = isLiquidBlack ? 0.72 : 0.56;
-    const pupilRx = Math.min(irx * 0.84, irx * baseRatio * pDyn * pSlitX);
     const pupilRy = Math.min(h * 0.84, iry * baseRatio * pDyn);
+    const pupilRx = Math.min(irx * 0.84, Math.min(pupilRy * 0.98, irx * baseRatio * pDyn * pOvalToRoundX));
     const pupilTravel = Math.max(0, h - pupilRy - er * 0.03), gazeLength = Math.hypot(S.gazeX, S.gazeY);
     const gazeScale = gazeLength > 1 ? 1 / gazeLength : 1;
     const dx = S.gazeX * pupilTravel * gazeScale * (1 - 0.55 * angerClip);
