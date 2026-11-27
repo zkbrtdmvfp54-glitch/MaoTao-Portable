@@ -944,13 +944,13 @@ let wizardHaloRing = null;
   });
   neckAccessoriesGroup.add(angelWings); accessoryMap.angelWings = angelWings;
 
-  // 12. 眩晕星星 (dizzy — 3 chubby Q-style puffy 3D-to-2D cel-shaded cartoon stars orbiting above the head)
+  // 12. 眩晕星星 (dizzy — 3 chubby Q-style puffy 3D-to-2D bright yellow cartoon stars orbiting above the head)
   const dizzy = new THREE.Group(); dizzy.position.set(0, 0.98, 0.02); dizzy.rotation.z = 0.06;
-  const dizzyStarMat = new THREE.MeshBasicMaterial({ map: bellTex });
-  const dizzyRim = back('#5c3c0e');
-  const dizzyShine = flat('#fffef2');
-  const dizzyOrbitMat = new THREE.MeshBasicMaterial({ color: '#f0c84b', transparent: true, opacity: 0.55, side: THREE.DoubleSide });
-  registerTint('dizzy', dizzyStarMat, '#ffe055', 0);
+  const dizzyStarMat = flat('#ffea45');
+  const dizzyRim = back('#7a590c');
+  const dizzyShine = flat('#ffffff');
+  const dizzyOrbitMat = new THREE.MeshBasicMaterial({ color: '#ffdf40', transparent: true, opacity: 0.62, side: THREE.DoubleSide });
+  registerTint('dizzy', dizzyStarMat, '#ffea45', 0);
   const dizzyOrbit = new THREE.Mesh(new THREE.TorusGeometry(0.50, 0.012, 8, 36), dizzyOrbitMat);
   dizzyOrbit.rotation.x = Math.PI * 0.5;
   dizzy.add(dizzyOrbit);
