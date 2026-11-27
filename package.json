@@ -1,6 +1,6 @@
 {
   "name": "maotao-desktop-pet",
-  "version": "1.5.5",
+  "version": "1.5.6",
   "private": true,
   "description": "毛桃桌面宠物",
   "author": "MAOTAO Desktop Pet",
@@ -48,7 +48,7 @@
       "artifactName": "MAOTAO-Kylin-${version}-${arch}.${ext}"
     },
     "portable": {"artifactName": "MAOTAO-Portable-${version}-x64.exe"},
-    "nsis": {"artifactName": "MAOTAO-Setup-${version}-x64.exe", "oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": false}
+    "nsis": {"artifactName": "MAOTAO-Setup-${version}-x64.exe", "oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true}
   }
 }
 

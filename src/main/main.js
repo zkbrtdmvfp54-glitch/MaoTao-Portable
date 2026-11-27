@@ -30,7 +30,7 @@ function serveLocal(request) {
   const resource = url.pathname;
   const segments = resource.split('/').filter(Boolean);
   const rendererResource = /^\/src\/renderer\/[A-Za-z0-9_/.-]+\.(?:html|js|css)$/.test(resource);
-  const petResource = /^\/assets\/pet\/(?:manifest\.json|(?:processed|animations)\/(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+\.(?:png|svg)|third-party\/7paws\/[A-Za-z0-9_.-]+\.js)$/.test(resource);
+  const petResource = /^\/assets\/pet\/(?:manifest\.json|(?:processed|animations)\/(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+\.(?:png|svg)|audio\/[A-Za-z0-9_.-]+\.mp3|third-party\/7paws\/[A-Za-z0-9_.-]+\.js)$/.test(resource);
   if (request.method !== 'GET' || url.host !== 'app' || (!rendererResource && !petResource) ||
       segments.some(segment => segment === '.' || segment === '..')) {
     return new Response(null, { status: 404 });
@@ -250,7 +250,10 @@ if (!app.requestSingleInstanceLock()) {
     return win && !win.isDestroyed() && event.sender === win.webContents
       && event.senderFrame === win.webContents.mainFrame && event.senderFrame?.url === expected;
   }
-  app.on('second-instance', () => pet?.show());
+  app.on('second-instance', () => {
+    pet?.place('primary');
+    pet?.show();
+  });
   app.on('window-all-closed', () => app.quit());
   app.on('before-quit', () => {
     quitting = true;
