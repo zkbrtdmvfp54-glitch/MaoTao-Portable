@@ -1033,7 +1033,7 @@ fn pet_drag_end(app: AppHandle) {
                 });
                 g.last_cursor = None;
             }
-        }
+        };
     }
     if let Some(side) = side {
         let visible = scaled_peek_visible_width(size.width, side, viewport);
@@ -1320,7 +1320,7 @@ fn start_poll_thread(app: AppHandle) {
         let inside = local_x >= 0.0 && local_x < size.width as f64
             && local_y >= 0.0 && local_y < size.height as f64;
 
-        let (need_ignore_change, next_ignore, emit_cursor) = {
+        let (need_ignore_change, next_ignore, emit_cursor, inside_pet) = {
             let st = app.state::<AppState>();
             let Ok(mut g) = st.0.lock() else { continue };
             let hit = if inside {
@@ -1332,7 +1332,7 @@ fn start_poll_thread(app: AppHandle) {
                 false
             };
             let on_occupied_display = g.edge_peek.as_ref().map_or(true, |peek| {
-                let (wx, _, ww, _, _) = peek.work_area;
+                let (wx, _, ww, _) = peek.work_area;
                 let boundary = if peek.side == "right" { wx + ww - pos.x } else { wx - pos.x };
                 let logical_boundary = viewport.0 + boundary as f64 * viewport.2 / size.width as f64;
                 if peek.side == "right" { x < logical_boundary } else { x >= logical_boundary }
@@ -1351,7 +1351,7 @@ fn start_poll_thread(app: AppHandle) {
             } else {
                 false
             };
-            (changed, next_ignore, emit)
+            (changed, next_ignore, emit, inside_pet)
         };
 
         if need_ignore_change {
