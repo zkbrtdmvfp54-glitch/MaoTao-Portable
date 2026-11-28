@@ -797,6 +797,7 @@ fn handle_tray_menu_click(app: &AppHandle, id: &str) {
                 "keyboard" => !g.store.prefs.keyboard,
                 "leftMouse" => !g.store.prefs.left_mouse,
                 "numpad" => !g.store.prefs.numpad,
+                "christmasDecor" => !g.store.prefs.christmas_decor,
                 "top" => !g.store.prefs.top,
                 "hideOnClose" => !g.store.prefs.hide_on_close,
                 "sound" => !g.store.prefs.sound,
