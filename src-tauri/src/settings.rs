@@ -30,7 +30,6 @@ pub struct Preferences {
     pub eye_color: String,
     pub accessory: String,
     pub accessory_color: String,
-    pub christmas_decor: bool,
     pub sleep_minutes: u32,
     pub left_mouse: bool,
     pub numpad: bool,
@@ -63,7 +62,6 @@ impl Default for Preferences {
             eye_color: "auto".into(),
             accessory: "crown".into(),
             accessory_color: "auto".into(),
-            christmas_decor: true,
             sleep_minutes: 5,
             left_mouse: false,
             numpad: false,
@@ -202,7 +200,6 @@ impl SettingsStore {
             "privacyMode" => value.as_bool().map(|v| self.prefs.privacy_mode = v).is_some(),
             "clickThrough" => value.as_bool().map(|v| self.prefs.click_through = v).is_some(),
             "hideOnClose" => value.as_bool().map(|v| self.prefs.hide_on_close = v).is_some(),
-            "christmasDecor" => value.as_bool().map(|v| self.prefs.christmas_decor = v).is_some(),
             "volume" => value
                 .as_f64()
                 .filter(|v| v.is_finite() && *v >= 0.0 && *v <= 1.0)

@@ -4,7 +4,7 @@ const path = require('node:path');
 const defaults = Object.freeze({
   top: true, keyboard: true, sound: true, keySound: true, focusMode: false, standbyMode: false, volume: 0.7,
   size: 'medium', scale: 1, dock: 'right', view: 'cat', keyboardStyle: 'cream', theme: 'cream',
-  coat: 'solidblack', eyeColor: 'auto', accessory: 'crown', accessoryColor: 'auto', christmasDecor: true, sleepMinutes: 5,
+  coat: 'solidblack', eyeColor: 'auto', accessory: 'crown', accessoryColor: 'auto', sleepMinutes: 5,
   leftMouse: false, numpad: false, showKeyChips: true, privacyMode: false, clickThrough: false,
   focusMinutes: 25, breakMinutes: 5,
   hideOnClose: true, position: null

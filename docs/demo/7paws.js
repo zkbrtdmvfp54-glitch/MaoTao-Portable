@@ -18,27 +18,15 @@ stageEl.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(29, 1, 0.1, 100);
 const CAM = V(0, 5.0, 10.2), LOOK = V(0, 1.35, 0.45);
-const VIEW = new URLSearchParams(location.search);
-const flat = color => new THREE.MeshBasicMaterial({ color });
-const back = color => new THREE.MeshBasicMaterial({ color, side: THREE.BackSide });
 // Lit only materials on the focus headset; the cat keeps its flat, reference-matched coat.
 scene.add(new THREE.HemisphereLight(0xffffff, 0x6a7e73, 0.55));
 const headphoneKeyLight = new THREE.DirectionalLight(0xfff9ed, 0.62);
 headphoneKeyLight.position.set(-3.5, 5.5, 7);
 scene.add(headphoneKeyLight);
-const sceneScriptUrl = [...document.scripts].reverse()
-  .find(script => /\/7paws\.js(?:[?#]|$)/i.test(script.src))?.src || document.baseURI;
-const christmasSceneImage = document.createElement('img');
-christmasSceneImage.className = 'christmas-scene-backdrop';
-christmasSceneImage.alt = '';
-christmasSceneImage.draggable = false;
-christmasSceneImage.decoding = 'async';
-christmasSceneImage.setAttribute('aria-hidden', 'true');
-christmasSceneImage.src = new URL('./christmas-scene.png', sceneScriptUrl).href;
-let christmasDecorVisible = options.christmasDecor !== false;
-christmasSceneImage.hidden = !christmasDecorVisible;
-stageEl.dataset.christmasDecor = String(christmasDecorVisible);
-stageEl.insertBefore(christmasSceneImage, stageEl.firstChild);
+const VIEW = new URLSearchParams(location.search);
+const flat = color => new THREE.MeshBasicMaterial({ color });
+const back = color => new THREE.MeshBasicMaterial({ color, side: THREE.BackSide });
+
 /* ---------- materials that a coat preset recolours ---------- */
 const onFace = (color, k) => new THREE.MeshBasicMaterial({ color, polygonOffset: true, polygonOffsetFactor: -4 * k, polygonOffsetUnits: -4 * k });
 const M = { lid: onFace('#101010', 3), shut: onFace('#8b8f86', 1), fur: flat('#101010'), limb: new THREE.MeshBasicMaterial({ color: '#ffffff', vertexColors: true }), patch: flat('#101010'), line: back('#8b8f86'), eye: onFace('#b9d36b', 1), eyeAlt: onFace('#b9d36b', 1), pupil: onFace('#0b0b0b', 2), nose: onFace('#fffaf0', 3), stripe: new THREE.MeshBasicMaterial({ color: '#101010', side: THREE.DoubleSide, transparent: true, vertexColors: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }), angry: new THREE.MeshBasicMaterial({ color: '#303030', side: THREE.DoubleSide, transparent: true, vertexColors: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5 }), inner: flat('#101010') };
@@ -2878,11 +2866,6 @@ return {
     if ('eyeColor' in o) { currentEyeColor = o.eyeColor || 'auto'; applyEyeColor(); }
     if ('accessory' in o) setAccessory(o.accessory || 'none');
     if ('accessoryColor' in o) setAccessoryColor(o.accessoryColor || 'auto');
-    if ('christmasDecor' in o) {
-      christmasDecorVisible = !!o.christmasDecor;
-      christmasSceneImage.hidden = !christmasDecorVisible;
-      stageEl.dataset.christmasDecor = String(christmasDecorVisible);
-    }
     if ('keyboardStyle' in o) applyKeyboardStyle(o.keyboardStyle || 'cream');
     if ('sleepMinutes' in o && !VIEW.get('sleep')) SLEEP_AFTER = (+o.sleepMinutes > 0 ? clamp(+o.sleepMinutes, 1, 120) : 1e12) * 60000;
     if ('showKeyLabels' in o) {
@@ -3000,7 +2983,6 @@ return {
     S.pet = false; S.happyUntil = 0; S.act = null; S.rate = 0;
   },
   toyVisible() { return yarn.visible; },
-  christmasDecorVisible() { return christmasDecorVisible; },
   pickToy(x, y) {
     if (!yarn.visible || !stageEl.clientWidth || !stageEl.clientHeight) return false;
     scene.updateMatrixWorld(true);

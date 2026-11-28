@@ -150,8 +150,6 @@ test('global inputs export only coarse side and category', () => {
 test('preferences survive reloading while stats reset on the local date', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'maotao-settings-'));
   const store = new SettingsStore(directory);
-  assert.equal(store.prefs.christmasDecor, true);
-  store.set('christmasDecor', false);
   store.set('volume', 0.25);
   store.set('coat', 'siamese');
   store.set('coat', 'not-a-coat');
@@ -160,7 +158,6 @@ test('preferences survive reloading while stats reset on the local date', () => 
   store.count('keys');
   store.flush();
   const readback = new SettingsStore(directory);
-  assert.equal(readback.prefs.christmasDecor, false);
   assert.equal(readback.prefs.volume, 0.25);
   assert.equal(readback.prefs.coat, 'siamese');
   assert.deepEqual(readback.prefs.position, { x: -105, y: 20 });
@@ -172,9 +169,7 @@ test('preferences survive reloading while stats reset on the local date', () => 
   readback.flush();
   const legacyDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'maotao-legacy-settings-'));
   fs.writeFileSync(path.join(legacyDirectory, 'preferences.json'), JSON.stringify({ prefs: { coat: 'maotao' } }));
-  const legacy = new SettingsStore(legacyDirectory);
-  assert.equal(legacy.prefs.coat, 'maotao');
-  assert.equal(legacy.prefs.christmasDecor, true);
+  assert.equal(new SettingsStore(legacyDirectory).prefs.coat, 'maotao');
   fs.writeFileSync(readback.file, '{broken');
   assert.equal(new SettingsStore(directory).prefs.size, 'medium');
 });

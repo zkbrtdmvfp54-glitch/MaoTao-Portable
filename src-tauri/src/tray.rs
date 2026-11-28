@@ -164,14 +164,6 @@ pub fn build_tray_menu<R: Runtime>(
         )?)?;
     }
     win_sub.append(&acc_sub)?;
-    win_sub.append(&CheckMenuItem::with_id(
-        app,
-        "toggle:christmasDecor",
-        "圣诞场景",
-        true,
-        prefs.christmas_decor,
-        None::<&str>,
-    )?)?;
     win_sub.append(&PredefinedMenuItem::separator(app)?)?;
 
     let size_sub = Submenu::new(app, "大小", true)?;

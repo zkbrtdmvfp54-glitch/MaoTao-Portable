@@ -12,7 +12,6 @@ export class SevenPawsRenderer {
       eyeColor: preferences.eyeColor || 'auto',
       accessory: preferences.accessory || 'crown',
       accessoryColor: preferences.accessoryColor || 'auto',
-      christmasDecor: preferences.christmasDecor !== false,
       keyboardStyle: preferences.keyboardStyle || 'cream',
       sleepMinutes: preferences.sleepMinutes,
       focusMode: !!preferences.focusMode
@@ -53,7 +52,6 @@ export class SevenPawsRenderer {
       eyeColor: preferences.eyeColor || 'auto',
       accessory: preferences.accessory || 'none',
       accessoryColor: preferences.accessoryColor || 'auto',
-      christmasDecor: preferences.christmasDecor !== false,
       keyboardStyle: preferences.keyboardStyle || 'cream',
       sleepMinutes: preferences.sleepMinutes
     });
