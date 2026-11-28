@@ -20,6 +20,10 @@ export class PetStateMachine {
     this.lastMouse = -Infinity;
     this.wakeUntil = 0;
     this.sleeping = this.manualSleep = this.dragging = false;
+    this.edgePeek = null;
+    this.edgePeekSide = null;
+    this.edgePeekBlend = 0;
+    this.edgePeekTransition = null;
     this.lastVisual = this.lastActivity;
     this.model = null;
     this.lastPointer = null;
@@ -58,6 +62,29 @@ export class PetStateMachine {
       this.effects.keyRipples.length = 0;
     }
     this.model?.setDragging?.(next);
+  }
+  setEdgePeek(side) {
+    const next = side === 'left' || side === 'right' ? side : null;
+    if (this.edgePeek === next) return;
+    const now = performance.now();
+    if (next) this.edgePeekSide = next;
+    this.edgePeek = next;
+    this.edgePeekTransition = {
+      from: this.edgePeekBlend,
+      to: next ? 1 : 0,
+      start: now,
+      duration: next ? 240 : 260
+    };
+    if (this.edgePeek) {
+      this.sleeping = false;
+      this.manualSleep = false;
+      this.clearPaws();
+      this.effects.floatingLetters.length = 0;
+      this.effects.keyRipples.length = 0;
+    } else {
+      this.lastActivity = now;
+    }
+    this.model?.setEdgePeek?.(this.edgePeek);
   }
   dragMove(dx, dy) {
     if (!this.dragging) return;
@@ -199,6 +226,7 @@ export class PetStateMachine {
     this.status(`${this.petName()}舔爪子洗脸中`);
   }
   cursor(x, y, followMouse) {
+    if (this.edgePeek) return;
     const now = performance.now();
     if (this.dragging) return;
     const moved = !this.lastPointer || Math.hypot(x - this.lastPointer.x, y - this.lastPointer.y) >= 1;
@@ -238,7 +266,7 @@ export class PetStateMachine {
       keyboard: !!this.prefs.keyboard, standby: this.standbyMode, dragging: this.dragging,
       linked, petting: this.petEnergy > 0.12, poked: this.poke > 0
     });
-    if (!keyObj || this.standbyMode || this.dragging) return;
+    if (!keyObj || this.standbyMode || this.dragging || this.edgePeek) return;
     this.wake();
     if (!this.prefs.keyboard) return;
     if (!linked && (this.petEnergy > 0.12 || this.poke > 0)) return;
@@ -274,6 +302,17 @@ export class PetStateMachine {
     }
   }
   update(dt, now) {
+    if (this.edgePeekTransition) {
+      const transition = this.edgePeekTransition;
+      const progress = clamp((now - transition.start) / transition.duration, 0, 1);
+      const eased = progress * progress * (3 - 2 * progress);
+      this.edgePeekBlend = transition.from + (transition.to - transition.from) * eased;
+      if (progress >= 1) {
+        this.edgePeekBlend = transition.to;
+        this.edgePeekTransition = null;
+        if (!this.edgePeek) this.edgePeekSide = null;
+      }
+    }
     if (this.focusMode) {
       this.focusRemaining = Math.max(0, this.focusRemaining - dt);
       if (this.focusRemaining === 0) {
@@ -316,6 +355,7 @@ export class PetStateMachine {
   }
   frameInterval(now) {
     const active = this.dragging || this.poke || this.petEnergy || this.typeEnergy
+      || this.edgePeekTransition
       || this.focusMode || this.model?.isHandoverActive?.()
       || this.leftPaw.timer || this.rightPaw.timer || this.lean > 0.08 || now < this.wakeUntil
       || (now >= this.nextBlink && now < this.nextBlink + 190 && !this.sleeping)

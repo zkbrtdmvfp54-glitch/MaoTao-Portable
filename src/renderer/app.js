@@ -9,6 +9,28 @@ import { SevenPawsRenderer } from './pet/SevenPawsRenderer.js';
 
 const api = window.maotao;
 const status = document.querySelector('#status');
+const scene = document.querySelector('#pet-scene');
+const SCENE_WIDTH = 420;
+const SCENE_HEIGHT = 340;
+const CAT_VIEWPORT = { x: 120, y: 40, width: 180, height: 260 };
+let activePreferences = null;
+let renderer = null;
+function applyViewport(prefs) {
+  const viewport = prefs.keyboard ? { x: 0, y: 0, width: SCENE_WIDTH, height: SCENE_HEIGHT } : CAT_VIEWPORT;
+  const measuredScale = window.innerWidth / viewport.width;
+  const scale = measuredScale >= 0.7 && measuredScale <= 1.75
+    ? measuredScale
+    : Number.isFinite(prefs.scale) ? prefs.scale : 1;
+  scene.style.width = `${SCENE_WIDTH * scale}px`;
+  scene.style.height = `${SCENE_HEIGHT * scale}px`;
+  scene.style.left = `${-viewport.x * scale}px`;
+  scene.style.top = `${-viewport.y * scale}px`;
+}
+window.addEventListener('resize', () => {
+  if (!activePreferences) return;
+  applyViewport(activePreferences);
+  renderer?.scale();
+});
 let statusTimeout;
 function notify(message) {
   status.textContent = message;
@@ -19,6 +41,8 @@ function notify(message) {
 
 async function start() {
   const [assets, prefs] = await Promise.all([loadAssets(), api.getPreferences()]);
+  activePreferences = prefs;
+  applyViewport(prefs);
   const canvas = document.querySelector('#pet');
   let model = null;
   try {
@@ -33,7 +57,7 @@ async function start() {
   const state = new PetStateMachine(assets, keyboard, new SoundManager(), new Effects(), notify);
   state.setModel(model);
   state.onFocusComplete = () => api.finishFocus();
-  const renderer = new PetRenderer(canvas, assets, state, model);
+  renderer = new PetRenderer(canvas, assets, state, model);
   let maskRevision = 0;
   const refreshMask = () => {
     const revision = ++maskRevision;
@@ -46,9 +70,12 @@ async function start() {
   };
   const configure = next => {
     const updateMask = !renderer.mask || next.keyboard !== state.prefs.keyboard || next.view !== state.prefs.view || next.leftMouse !== state.prefs.leftMouse || next.numpad !== state.prefs.numpad;
+    activePreferences = next;
     status.dataset.theme = next.theme;
+    applyViewport(next);
     model?.setPreferences(next);
     state.configure(next);
+    renderer.scale();
     if (updateMask) {
       if (model) refreshMask();
       else api.setHitMask(renderer.silhouette());
@@ -56,6 +83,10 @@ async function start() {
   };
   configure(prefs);
   api.onPreferences(configure);
+  api.onEdgePeek?.(() => {
+    refreshMask();
+    setTimeout(refreshMask, 320);
+  });
   new InteractionController(canvas, renderer, state, api);
   window.addEventListener('beforeunload', () => model?.destroy(), { once: true });
   let previous = performance.now();

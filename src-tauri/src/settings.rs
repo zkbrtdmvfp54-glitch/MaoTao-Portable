@@ -39,6 +39,8 @@ pub struct Preferences {
     pub focus_minutes: u32,
     pub break_minutes: u32,
     pub hide_on_close: bool,
+    pub launch_at_startup: bool,
+    pub key_switch: String,
     pub position: Option<Position>,
 }
 
@@ -71,6 +73,8 @@ impl Default for Preferences {
             focus_minutes: 25,
             break_minutes: 5,
             hide_on_close: true,
+            launch_at_startup: false,
+            key_switch: "brown".into(),
             position: None,
         }
     }
@@ -200,6 +204,12 @@ impl SettingsStore {
             "privacyMode" => value.as_bool().map(|v| self.prefs.privacy_mode = v).is_some(),
             "clickThrough" => value.as_bool().map(|v| self.prefs.click_through = v).is_some(),
             "hideOnClose" => value.as_bool().map(|v| self.prefs.hide_on_close = v).is_some(),
+            "launchAtStartup" => value.as_bool().map(|v| self.prefs.launch_at_startup = v).is_some(),
+            "keySwitch" => value
+                .as_str()
+                .filter(|v| matches!(*v, "blue" | "brown" | "red" | "silentRed" | "silver" | "starPink"))
+                .map(|v| self.prefs.key_switch = v.into())
+                .is_some(),
             "volume" => value
                 .as_f64()
                 .filter(|v| v.is_finite() && *v >= 0.0 && *v <= 1.0)
@@ -373,6 +383,9 @@ fn sanitize_prefs(mut p: Preferences) -> Preferences {
     }
     if p.focus_minutes < 1 || p.focus_minutes > 120 {
         p.focus_minutes = d.focus_minutes;
+    }
+    if !matches!(p.key_switch.as_str(), "blue" | "brown" | "red" | "silentRed" | "silver" | "starPink") {
+        p.key_switch = d.key_switch;
     }
     if p.break_minutes < 1 || p.break_minutes > 60 {
         p.break_minutes = d.break_minutes;

@@ -98,6 +98,10 @@ export class SevenPawsRenderer {
     this.api.setDragging?.(Boolean(enabled));
   }
 
+  setEdgePeek(side) {
+    this.api.setEdgePeek?.(side === 'left' || side === 'right' ? side : null);
+  }
+
   dragImpulse(dx, dy) {
     this.api.dragImpulse?.(dx, dy);
   }

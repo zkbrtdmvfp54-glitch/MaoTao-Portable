@@ -5,6 +5,7 @@ const { app, BrowserWindow, ipcMain, net, protocol, session, dialog, powerMonito
 const { PetWindow, restrictContents, webOptions } = require('./window');
 const { MenuWindow } = require('./menu-window');
 const { SettingsStore } = require('./settings');
+const { setAutostart: configureAutostart } = require('./autostart');
 const { setupTray, buildMenu } = require('./tray');
 const pkg = require('../../package.json');
 
@@ -180,15 +181,32 @@ if (!app.requestSingleInstanceLock()) {
     updateMenu();
   }
   const actions = {
+    setAutostart(enabled) {
+      if (typeof enabled !== 'boolean') return false;
+      try {
+        configureAutostart(enabled, { app });
+      } catch (error) {
+        console.warn('开机自启动设置失败', error?.code || error?.message || 'unknown');
+        return false;
+      }
+      store.set('launchAtStartup', enabled);
+      sendPrefs();
+      updateMenu();
+      menuWin?.pushState();
+      return true;
+    },
     set(key, value) {
+      if (key === 'launchAtStartup') return actions.setAutostart(value);
       if (key === 'standbyMode' && value) {
         stopInput();
         if (store.prefs.focusMode) store.set('focusMode', false);
       }
+      const keyboardChanged = key === 'keyboard' && store.prefs.keyboard !== value;
+      if (keyboardChanged && !store.prefs.position) store.set('position', pet.sceneOrigin());
       store.set(key, value);
       if (key === 'focusMinutes') syncPomodoroIdleDuration();
       if (key === 'top') pet.setTopmost(value);
-      if (key === 'size' || key === 'scale') pet.place(store.prefs.position ? 'restore' : 'dock');
+      if (key === 'size' || key === 'scale' || key === 'keyboard') pet.place(store.prefs.position ? 'restore' : 'dock');
       if (key === 'clickThrough') pet.pollMouse();
       sendPrefs();
     },
@@ -201,8 +219,7 @@ if (!app.requestSingleInstanceLock()) {
     },
     center() {
       pet.place('center');
-      const { x, y } = pet.win.getBounds();
-      store.set('position', { x, y });
+      store.set('position', pet.sceneOrigin());
       pet.show();
     },
     reset() {
@@ -284,6 +301,14 @@ if (!app.requestSingleInstanceLock()) {
     session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
     session.defaultSession.setPermissionCheckHandler(() => false);
     store = new SettingsStore(app.getPath('userData'));
+    if (store.prefs.launchAtStartup) {
+      try {
+        configureAutostart(true, { app });
+      } catch (error) {
+        console.warn('开机自启动恢复失败', error?.code || error?.message || 'unknown');
+        store.set('launchAtStartup', false);
+      }
+    }
     pet = new PetWindow(store, visible => {
       if (!visible) stopInput();
       else updateMenu();
@@ -309,6 +334,12 @@ if (!app.requestSingleInstanceLock()) {
       fromWindow(event, pet.win, PET_URL) ? store.prefs : null);
     ipcMain.handle('menu:state', event =>
       fromWindow(event, menuWin?.win, MENU_URL) ? getMenuState() : null);
+    ipcMain.handle('menu:autostart', (event, enabled) => {
+      if (!fromWindow(event, menuWin?.win, MENU_URL) || typeof enabled !== 'boolean') return false;
+      const changed = actions.setAutostart(enabled);
+      menuWin?.pushState();
+      return changed;
+    });
     ipcMain.on('menu:close', event => {
       if (fromWindow(event, menuWin?.win, MENU_URL)) menuWin.hide();
     });
@@ -340,7 +371,10 @@ if (!app.requestSingleInstanceLock()) {
     const petEvents = {
       'pet:mask': mask => pet.setMask(mask),
       'pet:drag-start': point => pet.startDrag(point),
+      'pet:edge-peek-drag-start': () => pet.startDragFromEdgePeek(),
+      'pet:edge-peek-press': held => pet.setEdgePeekPress(Boolean(held)),
       'pet:drag-end': () => pet.endDrag(),
+      'pet:edge-peek-exit': () => pet.exitEdgePeek(),
       'pet:menu': () => { updateMenu(); menuWin.toggleNear(); },
       'pet:focus-complete': () => {
         if (store.prefs.focusMode) {

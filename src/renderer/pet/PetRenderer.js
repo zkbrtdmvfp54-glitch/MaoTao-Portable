@@ -3,6 +3,7 @@ import { clamp } from '../geometry.js';
 const CELL = 4;
 const GRID_WIDTH = 105;
 const GRID_HEIGHT = 85;
+const EDGE_PEEK_CLEARANCE = CELL;
 const inside = (x, y, [left, top, width, height]) =>
   x >= left && x < left + width && y >= top && y < top + height;
 
@@ -21,7 +22,80 @@ export class PetRenderer {
     this.canvas.width = Math.round(this.canvas.clientWidth * ratio);
     this.canvas.height = Math.round(this.canvas.clientHeight * ratio);
   }
+  edgePeekAmount() {
+    return clamp(this.state.edgePeekBlend ?? Number(Boolean(this.state.edgePeek)), 0, 1);
+  }
+  edgePeekClip() {
+    const side = this.state.edgePeekSide || this.state.edgePeek;
+    const peek = this.edgePeekAmount();
+    if ((side !== 'left' && side !== 'right') || peek <= 0.01) return null;
+    const boundary = side === 'right'
+      ? 420 - (200 + EDGE_PEEK_CLEARANCE) * peek
+      : (200 + EDGE_PEEK_CLEARANCE) * peek;
+    return side === 'right' ? { left: 0, right: boundary } : { left: boundary, right: 420 };
+  }
+  clipEdgePeek(context) {
+    const bounds = this.edgePeekClip();
+    if (!bounds) return null;
+    context.beginPath();
+    context.rect(bounds.left, 0, bounds.right - bounds.left, 340);
+    context.clip();
+    return bounds;
+  }
   silhouette() {
+    const peek = this.edgePeekAmount();
+    if (this.state.edgePeek || peek > 0.01) {
+      const sample = new OffscreenCanvas(420, 340);
+      const context = sample.getContext('2d', { willReadFrequently: true });
+      const clip = this.clipEdgePeek(context);
+      if (this.model?.canvas) {
+        context.drawImage(this.model.canvas, 0, 0, 420, 340);
+      } else {
+        if (peek < 1) {
+          context.save();
+          context.globalAlpha = 1 - peek;
+          this.drawCat(context, performance.now());
+          context.restore();
+        }
+        if (peek > 0) {
+          context.save();
+          context.globalAlpha = peek;
+          this.drawEdgePeek(context, performance.now());
+          context.restore();
+        }
+      }
+      if (peek > 0.01) this.drawEdgePaw(context, performance.now());
+      const rgba = context.getImageData(0, 0, 420, 340).data;
+      const mask = new Uint8Array(GRID_WIDTH * GRID_HEIGHT);
+      for (let y = 0; y < GRID_HEIGHT; y++) {
+        for (let x = 0; x < GRID_WIDTH; x++) {
+          const source = ((y * CELL + 2) * 420 + x * CELL + 2) * 4 + 3;
+          if (rgba[source] >= 96) mask[y * GRID_WIDTH + x] = 1;
+        }
+      }
+      const edgeMask = mask.slice();
+      for (let y = 0; y < GRID_HEIGHT; y++) {
+        for (let x = 0; x < GRID_WIDTH; x++) {
+          if (!edgeMask[y * GRID_WIDTH + x]) continue;
+          for (let dy = -2; dy <= 2; dy++) {
+            for (let dx = -2; dx <= 2; dx++) {
+              const nx = x + dx, ny = y + dy;
+              if (nx >= 0 && nx < GRID_WIDTH && ny >= 0 && ny < GRID_HEIGHT) mask[ny * GRID_WIDTH + nx] = 1;
+            }
+          }
+        }
+      }
+      if (clip) {
+        for (let y = 0; y < GRID_HEIGHT; y++) {
+          for (let x = 0; x < GRID_WIDTH; x++) {
+            const centerX = x * CELL + CELL / 2;
+            if (centerX < clip.left || centerX >= clip.right) mask[y * GRID_WIDTH + x] = 0;
+          }
+        }
+      }
+      this.mask = mask;
+      return mask;
+    }
     if (this.model?.canvas) {
       const sample = new OffscreenCanvas(GRID_WIDTH, GRID_HEIGHT);
       const context = sample.getContext('2d', { willReadFrequently: true });
@@ -73,6 +147,9 @@ export class PetRenderer {
   }
   zone({ x, y }) {
     if (x < 0 || x >= 420 || y < 0 || y >= 340) return 'none';
+    if (this.state.edgePeek || this.edgePeekAmount() > 0.01) {
+      return this.mask?.[Math.floor(y / CELL) * GRID_WIDTH + Math.floor(x / CELL)] ? 'body' : 'none';
+    }
     if (this.model?.pickToy?.(x, y)) return 'toy';
     const kind = this.mask?.[Math.floor(y / CELL) * GRID_WIDTH + Math.floor(x / CELL)];
     if (kind === 2) return 'desk';
@@ -88,17 +165,192 @@ export class PetRenderer {
     if (Math.hypot(x - nx, y - ny) < radius) return 'nose';
     return y < this.assets.hotspots.headMaxY ? 'head' : 'body';
   }
+  drawEdgePeek(ctx, now) {
+    const palettes = {
+      solidblack: { fur: '#211f23', line: '#100f12', inner: '#b97988', muzzle: '#e8dadd', eye: '#f0c550', spot: null },
+      maotao: { fur: '#c9c7c0', line: '#777873', inner: '#e9b8bb', muzzle: '#f5efe7', eye: '#64a8d8', spot: '#777873' },
+      calico: { fur: '#faf5eb', line: '#3d3838', inner: '#edb8bd', muzzle: '#fff8ef', eye: '#d4a13d', spot: '#df843c' },
+      ragdoll: { fur: '#f9f6ef', line: '#6d5a50', inner: '#e8c0c0', muzzle: '#fffaf2', eye: '#66a8e5', spot: '#725b50' },
+      orange: { fur: '#e9a558', line: '#9d5e2d', inner: '#f1c1b5', muzzle: '#fff1dc', eye: '#9a6c2d', spot: '#b96f2e' },
+      black: { fur: '#f8f4ed', line: '#29272b', inner: '#b87b83', muzzle: '#fffaf2', eye: '#9acb62', spot: '#29272b' },
+      siamese: { fur: '#eadbc3', line: '#4c3832', inner: '#87645b', muzzle: '#f6ebdb', eye: '#55a9e5', spot: '#513b34' },
+      white: { fur: '#fffdf7', line: '#938c85', inner: '#eab8bd', muzzle: '#ffffff', eye: '#55a9e5', spot: null }
+    };
+    const color = palettes[this.state.prefs.coat] || palettes.solidblack;
+    const t = now / 250;
+    const side = this.state.edgePeekSide || this.state.edgePeek;
+    const peekDirection = side === 'left' ? -1 : 1;
+
+    ctx.save();
+    ctx.translate(210 - peekDirection * 22, 122 + Math.sin(t * 0.6) * 2);
+    ctx.rotate(-peekDirection * 0.18);
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.shadowColor = '#17151b50';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 5;
+
+    for (const direction of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(direction * 38, -22);
+      ctx.quadraticCurveTo(direction * 52, -49, direction * 55, -76);
+      ctx.quadraticCurveTo(direction * 57, -86, direction * 44, -80);
+      ctx.lineTo(direction * 12, -53);
+      ctx.closePath();
+      ctx.fillStyle = color.fur;
+      ctx.strokeStyle = color.line;
+      ctx.lineWidth = 5;
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.moveTo(direction * 40, -36);
+      ctx.lineTo(direction * 48, -67);
+      ctx.lineTo(direction * 22, -49);
+      ctx.closePath();
+      ctx.fillStyle = color.inner;
+      ctx.fill();
+      ctx.shadowBlur = 10;
+    }
+
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 62, 54, 0, 0, Math.PI * 2);
+    ctx.fillStyle = color.fur;
+    ctx.strokeStyle = color.line;
+    ctx.lineWidth = 5;
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    if (color.spot) {
+      ctx.beginPath();
+      ctx.ellipse(side === 'left' ? 30 : -30, -21, 20, 29, side === 'left' ? -0.25 : 0.25, 0, Math.PI * 2);
+      ctx.fillStyle = color.spot;
+      ctx.globalAlpha = 0.72;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.fillStyle = color.muzzle;
+    ctx.beginPath();
+    ctx.ellipse(-13, 19, 22, 15, -0.12, 0, Math.PI * 2);
+    ctx.ellipse(13, 19, 22, 15, 0.12, 0, Math.PI * 2);
+    ctx.fill();
+
+    for (const eyeX of [-24, 24]) {
+      ctx.fillStyle = '#fff9ee';
+      ctx.beginPath();
+      ctx.ellipse(eyeX, 1, 8.5, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = color.eye;
+      ctx.beginPath();
+      ctx.ellipse(eyeX + 1, 3, 5, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#27242a';
+      ctx.beginPath();
+      ctx.ellipse(eyeX + 1.5, 4, 2.2, 4.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(eyeX - 0.5, 0.3, 1.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = '#dc8994';
+    ctx.beginPath();
+    ctx.moveTo(-6, 18);
+    ctx.quadraticCurveTo(0, 14, 6, 18);
+    ctx.quadraticCurveTo(3, 25, 0, 25);
+    ctx.quadraticCurveTo(-4, 24, -6, 18);
+    ctx.fill();
+    ctx.strokeStyle = color.line;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(0, 24);
+    ctx.lineTo(0, 30);
+    ctx.quadraticCurveTo(-6, 35, -12, 31);
+    ctx.moveTo(0, 30);
+    ctx.quadraticCurveTo(6, 35, 12, 31);
+    ctx.stroke();
+    ctx.restore();
+
+  }
+  drawEdgePaw(ctx, now) {
+    const palettes = {
+      solidblack: { fur: '#211f23', line: '#100f12', pad: '#b97988' },
+      maotao: { fur: '#c9c7c0', line: '#777873', pad: '#e9b8bb' },
+      calico: { fur: '#faf5eb', line: '#3d3838', pad: '#edb8bd' },
+      ragdoll: { fur: '#f9f6ef', line: '#6d5a50', pad: '#e8c0c0' },
+      orange: { fur: '#e9a558', line: '#9d5e2d', pad: '#f1c1b5' },
+      black: { fur: '#f8f4ed', line: '#29272b', pad: '#b87b83' },
+      siamese: { fur: '#eadbc3', line: '#4c3832', pad: '#87645b' },
+      white: { fur: '#fffdf7', line: '#938c85', pad: '#eab8bd' }
+    };
+    const color = palettes[this.state.prefs.coat] || palettes.solidblack;
+    const side = this.state.edgePeekSide || this.state.edgePeek;
+    const opacity = this.edgePeekAmount();
+    if (!side || opacity <= 0.01) return;
+    const edge = side === 'left' ? 200 : 220;
+    const centerX = edge + (side === 'left' ? -4 : 4);
+    const centerY = 190 + Math.sin(now / 230) * 1.8;
+
+    // Only the small paw crosses the screen edge; the arm stays hidden behind it.
+    ctx.save();
+    ctx.globalAlpha *= opacity;
+    ctx.translate(centerX, centerY);
+    ctx.rotate(side === 'left' ? -0.18 : 0.18);
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.shadowColor = '#17151b44';
+    ctx.shadowBlur = 5;
+    ctx.fillStyle = color.fur;
+    ctx.strokeStyle = color.line;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 17, 13, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = color.pad;
+    for (const [x, y, rx, ry] of [[-8, -8, 4.2, 4.6], [0, -10, 4.2, 4.8], [8, -8, 4.2, 4.6], [0, 3, 6, 4.5]]) {
+      ctx.beginPath();
+      ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
   draw(now) {
     const ctx = this.context;
     const { width, height } = this.canvas;
     const [baseW, baseH] = this.assets.canvas;
     ctx.setTransform(width / baseW, 0, 0, height / baseH, 0, 0);
     ctx.clearRect(0, 0, baseW, baseH);
+    const clip = this.edgePeekClip();
+    if (clip) {
+      ctx.save();
+      this.clipEdgePeek(ctx);
+    }
+    const peek = this.edgePeekAmount();
     if (this.model) {
       this.model.draw(ctx);
+      if (peek > 0.01) this.drawEdgePaw(ctx, now);
       if (this.state.prefs.keyboard && !this.state.dragging) {
         this.state.effects.drawKeyRipples(ctx);
         this.state.effects.drawMouseClicks?.(ctx);
+      }
+    } else if (this.state.edgePeek || peek > 0.01) {
+      if (peek < 1) {
+        ctx.save();
+        ctx.globalAlpha = 1 - peek;
+        this.drawCat(ctx, now);
+        ctx.restore();
+      }
+      if (peek > 0.01) {
+        ctx.save();
+        ctx.globalAlpha = peek;
+        this.drawEdgePeek(ctx, now);
+        ctx.restore();
+        this.drawEdgePaw(ctx, now);
       }
     } else {
       this.drawCat(ctx, now);
@@ -113,12 +365,15 @@ export class PetRenderer {
       this.state.effects.drawKeyRipples(ctx);
       this.state.effects.drawMouseClicks?.(ctx);
     }
-    this.drawFocusTimer(ctx);
-    this.state.effects.drawFloatingLetters(ctx);
-    this.state.effects.drawParticles(ctx);
+    if (!this.state.edgePeek) {
+      this.drawFocusTimer(ctx);
+      this.state.effects.drawFloatingLetters(ctx);
+      this.state.effects.drawParticles(ctx);
+    }
     if (this.model?.host) {
       this.model.host.dataset.floatingLetters = String(this.state.effects.floatingLetters.length);
     }
+    if (clip) ctx.restore();
   }
   drawFocusTimer(ctx) {
     const state = this.state;

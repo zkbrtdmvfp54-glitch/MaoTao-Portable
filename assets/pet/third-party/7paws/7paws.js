@@ -1445,7 +1445,7 @@ $('btnCopy').onclick = () => { const out = $('shapeOut'), note = $('copied'); ou
 /* ---------- state ---------- */
 const RISE = 30, FALL = 46, STRIKE = RISE + FALL;
 const S = { last: performance.now(), lastKey: -1e9, lastMouse: -1e9, lastInput: performance.now(), sleepAt: 0, down: new Map(), thump: 0, thumpSide: 0, jolt: -1e9, rate: 0, anger: 0, angerUntil: 0, tailStrike: false,
-  turn: 0, nod: 0, tilt: 0, lid: 0, blinkAt: performance.now() + 2500, blinkUntil: 0, happyUntil: 0, bounceAt: -1e9, act: null, actUntil: 0, nextAct: performance.now() + 6000,
+  turn: 0, nod: 0, tilt: 0, lid: 0, blinkAt: performance.now() + 2500, blinkUntil: 0, happyUntil: 0, bounceAt: -1e9, act: null, actUntil: 0, nextAct: performance.now() + 6000, edgePeek: null, edgePeekSide: null, edgePeekBlend: 0, edgePeekTransition: null,
   gazeX: 0, gazeY: 0, pointer: null, lastPointerMove: -1e9, autoIdleTriggered: false, keyAim: V(0, KEY_TOP + 0.12, KB.z0), hasKeyAim: false,
   yarn: { x: 0.56, z: 1.96, vx: -0.58, vz: 0.14, hop: 0, spinX: 0, spinZ: 0 },
   phase: 0, lastSide: 'L', alt: 'L', spin: 0, spinning: false, mouseDown: false, wigX: 0, wigZ: 0, lidDir: 1, mouseLean: 0, sx: 0, fwd: 0, fwdGoal: 0, demoMouse: 0, chips: [] };
@@ -2277,6 +2277,19 @@ const shoulderW = V(0, 0, 0), proj = V(0, 0, 0), tmpGoal = V(0, 0, 0), angerAnch
 function frame() {
   const t = performance.now(), realDt = Math.min(1, (t - S.last) / 1000), dt = Math.min(0.05, realDt); S.last = t;
   const ease = k => 1 - Math.exp(-dt * k);
+  if (S.edgePeekTransition) {
+    const transition = S.edgePeekTransition;
+    const progress = clamp((t - transition.start) / transition.duration, 0, 1);
+    const eased = progress * progress * (3 - 2 * progress);
+    S.edgePeekBlend = transition.from + (transition.to - transition.from) * eased;
+    if (progress >= 1) {
+      S.edgePeekBlend = transition.to;
+      S.edgePeekTransition = null;
+      if (!S.edgePeek) S.edgePeekSide = null;
+    }
+  }
+  const edgePeekBlend = S.edgePeekBlend || 0;
+  const peekDirection = S.edgePeekSide === 'left' ? -1 : S.edgePeekSide === 'right' ? 1 : 0;
   runDemo(t);
   if (!S.sleepAt && !demo && !focusMode && t - S.lastInput > SLEEP_AFTER) S.sleepAt = t;
   if (VIEW.get('pose')) { S.act = VIEW.get('pose'); S.actUntil = t + (+VIEW.get('left') || 900); }   // preview switch: hold one idle action at a chosen moment
@@ -2340,11 +2353,14 @@ function frame() {
   updateHandover(t, dt);
   const hl = S.handoverLow || 0;
   const loaf = S.loaf, squat = 1 - 0.52 * loaf - 0.16 * S.low - 0.275 * hl;       // asleep / handover low-settle smooth continuous morph
-  const hideDesk = S.dragging || asleep;
+  const hideDesk = S.dragging || asleep || Boolean(S.edgePeek) || edgePeekBlend > 0.95;
   activeLayout.group.visible = showKeyboard && !hideDesk;
   mouseGroup.visible = showMousePref && !hideDesk;
   deskShadow.visible = false;
-  sleepCushion.visible = !S.dragging && loaf > 0.05;
+  sleepCushion.visible = !S.dragging && edgePeekBlend < 0.01 && loaf > 0.05;
+  torso.visible = edgePeekBlend < 0.995;
+  tail.visible = edgePeekBlend < 0.995;
+  hindFeet.forEach(foot => { foot.visible = edgePeekBlend < 0.995; });
   if (sleepCushion.visible) {
     const cs = smooth(0.05, 0.72, loaf);
     sleepCushion.scale.set(cs, cs, cs);
@@ -2360,7 +2376,7 @@ function frame() {
   if (drag < 0.01) { S.dragAngle *= Math.exp(-dt * 12); S.dragVel *= Math.exp(-dt * 12); }
   const dragSwing = drag > 0.005 ? (S.dragAngle + Math.sin(t / 310) * 0.07) * drag : 0;
   cat.rotation.z = dragSwing;
-  cat.position.x = drag > 0.005 ? Math.sin(dragSwing) * 0.52 : 0;
+  cat.position.x = drag > 0.005 ? Math.sin(dragSwing) * 0.52 : peekDirection * edgePeekBlend * 0.07;
   // Dangle & swing hind feet reactively with pendulum inertia when scruff-lifted.
   hindFeet.forEach((g, i) => {
     const s = i ? 1 : -1;
@@ -2370,8 +2386,8 @@ function frame() {
     g.rotation.z = -dragSwing * 0.85 + s * 0.08 * drag;
   });
   torso.scale.set(
-    P.bodyW * (1 + 0.36 * loaf + breath * (0.012 + 0.02 * loaf) - bounce * 0.03 - 0.11 * drag),
-    P.bodyH * squat * (1 + breath * (0.012 + 0.018 * loaf) + bounce * 0.05 - S.thump * (0.012 + 0.02 * fast) + 0.15 * drag),
+    P.bodyW * (1 + 0.36 * loaf + breath * (0.012 + 0.02 * loaf) - bounce * 0.03 - 0.11 * drag) * (1 - 0.42 * edgePeekBlend),
+    P.bodyH * squat * (1 + breath * (0.012 + 0.018 * loaf) + bounce * 0.05 - S.thump * (0.012 + 0.02 * fast) + 0.15 * drag) * (1 - 0.68 * edgePeekBlend),
     1 + 0.3 * loaf + breath * 0.02 - 0.06 * drag
   );
   torso.rotation.z = -0.32 * loaf;
@@ -2386,7 +2402,7 @@ function frame() {
   S.sx += (clamp(reach * 0.13, -0.2, 0.2) - DESK_DIR * S.mouseLean * 0.22 + playLean - S.sx) * ease(9);
   const sx = S.sx + S.thump * S.thumpSide * 0.012 + (crouch ? Math.sin(t / 55) * 0.02 : 0), fwd = S.fwd;
   upper.matrix.set(1, sx, 0, 0,  0, 1 - fwd * fwd * 0.35, 0, 0,  0, fwd, 1, 0,  0, 0, 0, 1);
-  yarn.visible = playing && !asleep;
+  yarn.visible = playing && !asleep && !S.edgePeek;
   if (yarn.visible) {
     const y = S.yarn;
     y.x += y.vx * dt;
@@ -2410,7 +2426,7 @@ function frame() {
     yarn.position.set(y.x, YARN_BOUNDS.baseY + hopHeight, y.z);
     yarn.rotation.set(y.spinX, t / 340, y.spinZ);
   }
-  butterfly.visible = chasingButterfly && !asleep;
+  butterfly.visible = chasingButterfly && !asleep && !S.edgePeek;
   if (butterfly.visible) {
     const bfY = 1.62 + Math.sin(t / 390) * 0.36 + Math.cos(t / 230) * 0.1;
     const bfZ = 1.32 + Math.cos(t / 720) * 0.24;
@@ -2511,8 +2527,8 @@ function frame() {
   [S.nod, S.nodV] = springStep(S.nod, S.nodV, nodT, 52, 11.8);
   [S.tilt, S.tiltV] = springStep(S.tilt, S.tiltV, tiltT, 44, 10.6);
   { const w = (t - (S.wokeAt || -1e9)) / 750; S.shake = w > 0.15 && w < 1 ? Math.sin(w * 26) * 0.16 * (1 - w) : 0; }
-  head.rotation.set(S.nod + S.thump * (0.05 + 0.05 * fast), S.turn + S.shake + (S.handoverYaw || 0), S.tilt);
-  head.position.x = -0.36 * loaf;
+  head.rotation.set(S.nod + S.thump * (0.05 + 0.05 * fast), S.turn + S.shake + (S.handoverYaw || 0) + peekDirection * 0.12 * edgePeekBlend, S.tilt + peekDirection * 0.18 * edgePeekBlend);
+  head.position.x = -0.36 * loaf + peekDirection * 0.05 * edgePeekBlend;
   head.position.z = 0.1 - fwd * 0.5 + 0.58 * loaf + 0.34 * hl;
   head.position.y = (2.3 * P.bodyH + P.neck) * (1 - 0.6 * loaf - 0.16 * S.low - 0.275 * hl) + breath * (0.018 + 0.016 * loaf) + bounce * 0.09 - 0.18 * loaf - S.thump * 0.02 - 0.04 * S.anger;
   { const py = head.position.y; headFix.matrix.set(1, -sx, 0, sx * py,  0, 1, 0, 0,  0, -fwd, 1, fwd * py,  0, 0, 0, 1); }
@@ -2657,7 +2673,12 @@ function frame() {
   // paws
   for (const side of ['L', 'R']) {
     const p = paws[side], since = t - p.tapAt;
-    if (drag > 0.08) {
+    const visible = edgePeekBlend < 0.995;
+    p.rim.visible = p.core.visible = p.root.visible = p.foot.visible = visible;
+    if (edgePeekBlend > 0.01) {
+      p.mode = 'rest';
+      p.pos.lerp(REST[side], ease(6 + edgePeekBlend * 8));
+    } else if (drag > 0.08) {
       p.mode = 'drag';
       const s = side === 'L' ? -1 : 1;
       const swayX = -dragSwing * 0.42 - (S.dragVel || 0) * 0.03;
@@ -2801,6 +2822,13 @@ return {
   hitRegions() {
     if (!stageEl.clientWidth || !stageEl.clientHeight) return [];
     scene.updateMatrixWorld(true);
+    if (S.edgePeek) {
+      return [
+        hitExpand([head]),
+        [],
+        [], [], []
+      ];
+    }
     return [
       hitExpand([head]),
       hitExpand([torso, ...hindFeet, paws.L.rim, paws.L.core, paws.L.root, paws.L.foot, paws.R.rim, paws.R.core, paws.R.root, paws.R.foot]),
@@ -2825,7 +2853,7 @@ return {
     S.wigZ = clamp(S.wigZ + dy, -0.12, 0.12);
   },
   setInput(keySet, buttonSet) {
-    if (standbyMode || !showKeyboard) { this.clear(); return; }
+    if (standbyMode || !showKeyboard || S.edgePeek) { this.clear(); return; }
     for (const code of shownKeys) if (!keySet.has(code)) { keyUp(code); downAt.delete(code); }
     for (const code of keySet) if (!shownKeys.has(code)) { keyDown(code); downAt.set(code, performance.now()); }
     shownKeys = new Set(keySet);
@@ -2888,6 +2916,32 @@ return {
     }
     syncDeskVisibility();
     stageEl.dataset.dragging = next ? 'true' : 'false';
+  },
+  setEdgePeek(side) {
+    const next = side === 'left' || side === 'right' ? side : null;
+    if (S.edgePeek === next) return;
+    const t = performance.now();
+    if (next) S.edgePeekSide = next;
+    S.edgePeekTransition = {
+      from: S.edgePeekBlend || 0,
+      to: next ? 1 : 0,
+      start: t,
+      duration: next ? 240 : 260
+    };
+    S.edgePeek = next;
+    S.act = null;
+    S.actUntil = 0;
+    S.sleepAt = 0;
+    S.manualSleep = false;
+    S.lastInput = t;
+    S.nextAct = t + 1e12;
+    S.down.clear();
+    shownKeys = new Set();
+    downAt.clear();
+    yarn.visible = false;
+    butterfly.visible = false;
+    if (next) this.clear();
+    stageEl.dataset.edgePeek = next || 'none';
   },
   dragImpulse(dx = 0, dy = 0) {
     if (!S.dragging) return;

@@ -13,7 +13,10 @@ contextBridge.exposeInMainWorld('maotao', Object.freeze({
   dragStart: point => {
     if (Number.isFinite(point?.x) && Number.isFinite(point?.y)) ipcRenderer.send('pet:drag-start', point);
   },
+  dragStartFromEdgePeek: () => ipcRenderer.send('pet:edge-peek-drag-start'),
+  edgePeekPress: held => ipcRenderer.send('pet:edge-peek-press', Boolean(held)),
   dragEnd: () => ipcRenderer.send('pet:drag-end'),
+  exitEdgePeek: () => ipcRenderer.send('pet:edge-peek-exit'),
   openMenu: () => ipcRenderer.send('pet:menu'),
   count: kind => {
     if (kind === 'keys' || kind === 'clicks') ipcRenderer.send('pet:count', kind);
@@ -25,6 +28,7 @@ contextBridge.exposeInMainWorld('maotao', Object.freeze({
     }
   },
   getMenuState: () => ipcRenderer.invoke('menu:state'),
+  setAutostart: enabled => ipcRenderer.invoke('menu:autostart', Boolean(enabled)),
   onMenuState: callback => on('menu:state', callback),
   menuCommand: cmd => {
     if (cmd && typeof cmd.type === 'string') ipcRenderer.send('menu:command', cmd);
@@ -35,6 +39,7 @@ contextBridge.exposeInMainWorld('maotao', Object.freeze({
   onPreferences: callback => on('pet:preferences', callback),
   onCursor: callback => on('pet:cursor', callback),
   onDragMove: callback => on('pet:drag-move', callback),
+  onEdgePeek: callback => on('pet:edge-peek', callback),
   onInput: callback => on('pet:input', callback),
   onAction: callback => on('pet:action', callback)
 }));

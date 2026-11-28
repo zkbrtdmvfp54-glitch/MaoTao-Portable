@@ -7,7 +7,7 @@ const defaults = Object.freeze({
   coat: 'solidblack', eyeColor: 'auto', accessory: 'crown', accessoryColor: 'auto', sleepMinutes: 5,
   leftMouse: false, numpad: false, showKeyChips: true, privacyMode: false, clickThrough: false,
   focusMinutes: 25, breakMinutes: 5,
-  hideOnClose: true, position: null
+  hideOnClose: true, launchAtStartup: false, keySwitch: 'brown', position: null
 });
 const choices = {
   size: ['small', 'medium', 'large'],
@@ -19,6 +19,7 @@ const choices = {
   accessory: ['none', 'crown', 'headphones', 'retro', 'bell', 'fish', 'scarf', 'wizard', 'star', 'shades', 'beret', 'sprout', 'halo', 'dizzy'],
   accessoryColor: ['auto', 'sage', 'obsidian', 'cream', 'caramel', 'mist', 'sakura'],
   theme: ['cream', 'mint', 'night', 'green'],
+  keySwitch: ['blue', 'brown', 'red', 'silentRed', 'silver', 'starPink'],
   sleepMinutes: [2, 5, 10]
 };
 function localDate(date = new Date()) {

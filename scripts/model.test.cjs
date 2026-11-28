@@ -147,6 +147,104 @@ test('global inputs export only coarse side and category', () => {
   assert.deepEqual(classify(UiohookKey.Space), { kind: 'key', category: 'space' });
 });
 
+test('short clicks while tucked pet the cat without restoring it', async () => {
+  const { InteractionController } = await import('../src/renderer/interaction/InteractionController.js');
+  const previousWindow = global.window;
+  global.window = { addEventListener() {} };
+  try {
+    const listeners = new Map();
+    const canvas = {
+      addEventListener(type, callback) { listeners.set(type, callback); },
+      setPointerCapture() {},
+      style: {}
+    };
+    const updates = [];
+    const interactions = [];
+    const pressStates = [];
+    let edgeListener;
+    const controller = new InteractionController(canvas, { zone: () => 'body' }, {
+      setEdgePeek(side) { updates.push(side); },
+      cursor() {}, perform() {}, key() {},
+      setDragging() {}, clearPaws() {}, mouse() {}, pet(withMeow) { interactions.push(['pet', withMeow]); }, playToy() {}
+    }, {
+      count() {}, dragStart() {}, openMenu() {},
+      onCursor() {}, onDragMove() {},
+      onEdgePeek(callback) { edgeListener = callback; },
+      edgePeekPress(held) { pressStates.push(held); },
+      onInput() {}, onAction() {},
+      dragStartFromEdgePeek() { interactions.push(['drag-start-from-edge']); },
+      dragEnd() { interactions.push(['drag-end']); }
+    });
+    edgeListener('left');
+    controller.down({ button: 0, offsetX: 100, offsetY: 120, pointerId: 1 });
+    controller.up({ pointerId: 1 }, true);
+    assert.equal(controller.edgePeek, 'left');
+    assert.deepEqual(updates, ['left']);
+    assert.deepEqual(interactions, [['pet', true]]);
+    assert.deepEqual(pressStates, [true, false]);
+
+    edgeListener(null);
+    assert.equal(controller.edgePeek, null);
+    assert.deepEqual(updates, ['left', null]);
+  } finally {
+    global.window = previousWindow;
+  }
+});
+
+test('long-pressing a tucked cat starts a native pull-out drag', async () => {
+  const { InteractionController, EDGE_PEEK_LONG_PRESS_MS } = await import('../src/renderer/interaction/InteractionController.js');
+  const previousWindow = global.window;
+  global.window = { addEventListener() {} };
+  try {
+    const listeners = new Map();
+    const calls = [];
+    const pressStates = [];
+    let edgeListener;
+    const canvas = {
+      addEventListener(type, callback) { listeners.set(type, callback); },
+      setPointerCapture() {},
+      style: {}
+    };
+    const controller = new InteractionController(canvas, { zone: () => 'body' }, {
+      setEdgePeek() {}, cursor() {}, perform() {}, key() {},
+      setDragging(value) { calls.push(['dragging', value]); },
+      clearPaws() { calls.push(['clear-paws']); }, mouse() {},
+      pet() { calls.push(['pet']); }, playToy() {}
+    }, {
+      count() {}, dragStart() { calls.push(['normal-drag']); }, dragStartFromEdgePeek() { calls.push(['pull-out']); },
+      edgePeekPress(held) { pressStates.push(held); },
+      dragEnd() { calls.push(['drag-end']); }, openMenu() {},
+      onCursor() {}, onDragMove() {}, onEdgePeek(callback) { edgeListener = callback; },
+      onInput() {}, onAction() {}
+    });
+    edgeListener('right');
+    controller.down({ button: 0, offsetX: 100, offsetY: 120, pointerId: 2 });
+    await new Promise(resolve => setTimeout(resolve, EDGE_PEEK_LONG_PRESS_MS + 25));
+    assert.ok(calls.some(([name]) => name === 'pull-out'));
+    controller.up({ pointerId: 2 }, true);
+    assert.deepEqual(calls.filter(([name]) => name === 'drag-end'), [['drag-end']]);
+    assert.equal(calls.some(([name]) => name === 'pet'), false);
+    assert.deepEqual(pressStates, [true, false]);
+  } finally {
+    global.window = previousWindow;
+  }
+});
+
+test('edge tuck clips the pet and hit area to the occupied display edge', async () => {
+  const { PetRenderer } = await import('../src/renderer/pet/PetRenderer.js');
+  const renderer = Object.create(PetRenderer.prototype);
+  renderer.state = { edgePeek: 'right', edgePeekSide: 'right', edgePeekBlend: 1 };
+  assert.deepEqual(renderer.edgePeekClip(), { left: 0, right: 216 });
+  renderer.state.edgePeekBlend = 0.5;
+  assert.deepEqual(renderer.edgePeekClip(), { left: 0, right: 318 });
+  renderer.state.edgePeek = 'left';
+  renderer.state.edgePeekSide = 'left';
+  renderer.state.edgePeekBlend = 1;
+  assert.deepEqual(renderer.edgePeekClip(), { left: 204, right: 420 });
+  renderer.state.edgePeekBlend = 0;
+  assert.equal(renderer.edgePeekClip(), null);
+});
+
 test('preferences survive reloading while stats reset on the local date', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'maotao-settings-'));
   const store = new SettingsStore(directory);

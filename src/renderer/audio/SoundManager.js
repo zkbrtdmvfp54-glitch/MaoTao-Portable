@@ -1,3 +1,12 @@
+export const KEY_SWITCH_PROFILES = Object.freeze({
+  blue: Object.freeze({ pitch: 1.08, bodyGain: 0.12, bodyEnd: 126, bodyDuration: 0.052, clickGain: 0.145, clickFrequency: 2550, clickQ: 2.5, noiseTail: 0.2 }),
+  brown: Object.freeze({ pitch: 1, bodyGain: 0.13, bodyEnd: 112, bodyDuration: 0.048, clickGain: 0.09, clickFrequency: 1950, clickQ: 1.9, noiseTail: 0.25 }),
+  red: Object.freeze({ pitch: 0.92, bodyGain: 0.12, bodyEnd: 92, bodyDuration: 0.043, clickGain: 0.045, clickFrequency: 1380, clickQ: 1.35, noiseTail: 0.34 }),
+  silentRed: Object.freeze({ pitch: 0.84, bodyGain: 0.075, bodyEnd: 78, bodyDuration: 0.038, clickGain: 0.018, clickFrequency: 920, clickQ: 1.1, noiseTail: 0.45 }),
+  silver: Object.freeze({ pitch: 1.22, bodyGain: 0.12, bodyEnd: 142, bodyDuration: 0.038, clickGain: 0.11, clickFrequency: 3150, clickQ: 2.8, noiseTail: 0.16 }),
+  starPink: Object.freeze({ pitch: 1.04, bodyGain: 0.11, bodyEnd: 138, bodyDuration: 0.058, clickGain: 0.085, clickFrequency: 2860, clickQ: 2.2, noiseTail: 0.3, sparkle: true })
+});
+
 export class SoundManager {
   constructor() {
     this.enabled = true;
@@ -7,6 +16,7 @@ export class SoundManager {
     this.lastMeow = -Infinity;
     this.lastClick = -Infinity;
     this.keyEnabled = true;
+    this.keySwitch = 'brown';
     this.volume = 0.7;
     this.handoverAudio = null;
     this.handoverAudioReady = false;
@@ -39,13 +49,12 @@ export class SoundManager {
   configure(prefs) {
     this.enabled = prefs.sound;
     this.keyEnabled = prefs.keySound;
+    this.keySwitch = KEY_SWITCH_PROFILES[prefs.keySwitch] ? prefs.keySwitch : 'brown';
     this.volume = prefs.volume;
     if (this.output) this.output.gain.setTargetAtTime(this.enabled ? this.volume : 0, this.ctx.currentTime, 0.012);
   }
 
-  /**
-   * 柔和奶油木轴机械键盘音：根据按键左右位置(normX)与行号微调温润音高
-   */
+  /** 选定键轴的机械声，按键位置会带来轻微音高变化。 */
   playKeyClick(normX = 0, row = 2, isSpace = false) {
     if (!this.enabled || !this.keyEnabled || performance.now() - this.lastKey < 36) return;
     this.lastKey = performance.now();
@@ -53,45 +62,58 @@ export class SoundManager {
     if (!this.ctx) return;
 
     const now = this.ctx.currentTime;
-    // 左低右高微调，配合轻微自然音高抖动，敲字更有音乐律动感
-    const baseFreq = isSpace ? 205 : (265 + normX * 42 + (2 - row) * 14);
+    const profile = KEY_SWITCH_PROFILES[this.keySwitch] || KEY_SWITCH_PROFILES.brown;
+    const baseFreq = (isSpace ? 205 : (265 + normX * 42 + (2 - row) * 14)) * profile.pitch;
     const jitter = 0.96 + Math.random() * 0.08;
 
-    // 1) 温润木质低频 "Thock" 敲击体
+    // 1) Low body. Profiles change pitch, attack weight and decay for each switch family.
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(baseFreq * jitter, now);
-    osc.frequency.exponentialRampToValueAtTime(isSpace ? 78 : 112, now + 0.042);
+    osc.frequency.exponentialRampToValueAtTime(isSpace ? profile.bodyEnd * 0.72 : profile.bodyEnd, now + profile.bodyDuration);
 
-    gain.gain.setValueAtTime(isSpace ? 0.17 : 0.13, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.048);
+    gain.gain.setValueAtTime(isSpace ? profile.bodyGain * 1.24 : profile.bodyGain, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + profile.bodyDuration + 0.006);
 
     osc.connect(gain).connect(this.output);
     osc.start(now);
-    osc.stop(now + 0.052);
+    osc.stop(now + profile.bodyDuration + 0.01);
 
-    // 2) 奶油轴体轻脆木片高音点缀
-    const bufLen = Math.floor(this.ctx.sampleRate * 0.018);
+    // 2) Filtered contact noise: crisp for blue/silver, restrained for red and silent red.
+    const bufLen = Math.max(1, Math.floor(this.ctx.sampleRate * 0.024));
     const buf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
     const ch = buf.getChannelData(0);
     for (let i = 0; i < bufLen; i++) {
-      ch[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufLen * 0.25));
+      ch[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufLen * profile.noiseTail));
     }
     const noise = this.ctx.createBufferSource();
     noise.buffer = buf;
 
     const filter = this.ctx.createBiquadFilter();
     filter.type = 'bandpass';
-    filter.frequency.setValueAtTime((isSpace ? 1350 : 1950) * jitter, now);
-    filter.Q.setValueAtTime(1.9, now);
+    filter.frequency.setValueAtTime((isSpace ? profile.clickFrequency * 0.72 : profile.clickFrequency) * jitter, now);
+    filter.Q.setValueAtTime(profile.clickQ, now);
 
     const nGain = this.ctx.createGain();
-    nGain.gain.setValueAtTime(0.09, now);
-    nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+    nGain.gain.setValueAtTime(isSpace ? profile.clickGain * 0.7 : profile.clickGain, now);
+    nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.026);
 
     noise.connect(filter).connect(nGain).connect(this.output);
     noise.start(now);
+
+    if (profile.sparkle) {
+      const tone = this.ctx.createOscillator();
+      const toneGain = this.ctx.createGain();
+      tone.type = 'sine';
+      tone.frequency.setValueAtTime((isSpace ? 760 : 980 + normX * 90) * jitter, now);
+      tone.frequency.exponentialRampToValueAtTime(520, now + 0.085);
+      toneGain.gain.setValueAtTime(isSpace ? 0.018 : 0.026, now);
+      toneGain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      tone.connect(toneGain).connect(this.output);
+      tone.start(now);
+      tone.stop(now + 0.095);
+    }
   }
 
   /** 轻柔鼠标微动点击声 */

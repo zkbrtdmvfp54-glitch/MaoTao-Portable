@@ -118,7 +118,7 @@ if ($Action -eq 'probe') {
   $bounds = New-Object TestInput+Rect
   [void][TestInput]::GetWindowRect([TestInput]::GetAncestor($hit, 2), [ref]$bounds)
   [Console]::Error.WriteLine(("{0},{1} {2}x{3}" -f $bounds.Left,$bounds.Top,($bounds.Right-$bounds.Left),($bounds.Bottom-$bounds.Top)))
-  [pscustomobject]@{ hit=$hit.ToInt64(); root=[TestInput]::GetAncestor($hit, 2).ToInt64(); class=[TestInput]::Name([TestInput]::GetAncestor($hit, 2)) } | ConvertTo-Json -Compress
+  [pscustomobject]@{ set=$set; read=$read; x=$position.X; y=$position.Y; hit=$hit.ToInt64(); root=[TestInput]::GetAncestor($hit, 2).ToInt64(); class=[TestInput]::Name([TestInput]::GetAncestor($hit, 2)) } | ConvertTo-Json -Compress
   exit
 }
 $down = if ($Action -eq 'right') { 8 } else { 2 }
@@ -131,14 +131,22 @@ if ($Action -eq 'drag') {
     [void][TestInput]::SetCursorPos([int]($X + ($TargetX - $X) * $i / 24), [int]($Y + ($TargetY - $Y) * $i / 24))
     Start-Sleep -Milliseconds 35
   }
+} elseif ($Action -eq 'hold-drag') {
+  Start-Sleep -Milliseconds 450
+  for ($i = 1; $i -le 24; $i++) {
+    [void][TestInput]::SetCursorPos([int]($X + ($TargetX - $X) * $i / 24), [int]($Y + ($TargetY - $Y) * $i / 24))
+    Start-Sleep -Milliseconds 35
+  }
 }
 Start-Sleep -Milliseconds 65
 $upResult = [TestInput]::Mouse($up)
+$finalPosition = New-Object TestInput+Point
+$finalRead = [TestInput]::GetCursorPos([ref]$finalPosition)
 
 
 
 
-[pscustomobject]@{ set=$set; read=$read; x=$position.X; y=$position.Y; hit=$hit.ToInt64(); root=[TestInput]::GetAncestor($hit, 2).ToInt64(); foreground=$focus.ToInt64(); class=[TestInput]::Name([TestInput]::GetAncestor($hit, 2)); down=$downResult; up=$upResult } | ConvertTo-Json -Compress
+[pscustomobject]@{ set=$set; read=$read; x=$position.X; y=$position.Y; finalX=$finalPosition.X; finalY=$finalPosition.Y; finalRead=$finalRead; hit=$hit.ToInt64(); root=[TestInput]::GetAncestor($hit, 2).ToInt64(); foreground=$focus.ToInt64(); class=[TestInput]::Name([TestInput]::GetAncestor($hit, 2)); down=$downResult; up=$upResult } | ConvertTo-Json -Compress
 
 
 

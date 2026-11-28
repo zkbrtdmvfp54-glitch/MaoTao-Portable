@@ -20,6 +20,8 @@ node scripts/release-check.cjs dist\MAOTAO-Portable-1.0.0-x64.exe
 
 产物为 `dist/MAOTAO-Portable-1.0.0-x64.exe` 和 `dist/MAOTAO-Setup-1.0.0-x64.exe`。Portable 可直接运行；Setup 为每用户 NSIS 安装器。脚本校验本地 Electron 版本，或可用 `-ElectronDist <官方 Windows x64 Electron ZIP>` 指定经 SHA-256 校验的运行时。EXE 未签名。
 
+发布工作流会先安装官网上一版 Tauri NSIS 安装包，再用新版本安装到同一隔离目录，核对卸载注册表中的版本号已更新，并启动新程序确认桌宠窗口出现。只有覆盖升级和启动检查均通过，工作流才会发布 GitHub Release；官网从最新 Release 自动读取 Windows 安装包。
+
 外壳检查会短暂移动鼠标并发送固定测试键，覆盖透明点击穿透、模型/花色、托盘、拖动、多屏、睡眠、输入联动、隐私和进程退出；也确认跨应用按键驱动击键动作、隐藏键盘会阻止同步、待机会屏蔽输入。外部联动检查只有在确认专用 WinForms 测试窗体位于命中位置后才发送输入。`MAOTAO_TEST_OUTPUT` 可设为截图目录。
 
 ## macOS Intel 与 Apple Silicon

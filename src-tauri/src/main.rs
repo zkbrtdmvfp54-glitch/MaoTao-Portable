@@ -17,13 +17,30 @@ use tauri::{
 };
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
+use tauri_plugin_autostart::{MacosLauncher, ManagerExt as AutostartManagerExt};
 
 const PET_W: f64 = 420.0;
 const PET_H: f64 = 340.0;
+const PEEK_VISIBLE_WIDTH: f64 = 220.0;
 const MASK_W: usize = 105;
 const MASK_H: usize = 85;
 const MENU_W: f64 = 372.0;
 const MENU_H: f64 = 612.0;
+
+fn pet_viewport(keyboard_visible: bool) -> (f64, f64, f64, f64) {
+    if keyboard_visible {
+        (0.0, 0.0, PET_W, PET_H)
+    } else {
+        (120.0, 40.0, 180.0, 260.0)
+    }
+}
+
+fn scene_origin_from_viewport(pos: Position, size: PhysicalSize<u32>, viewport: (f64, f64, f64, f64)) -> Position {
+    Position {
+        x: pos.x - (size.width as f64 * viewport.0 / viewport.2).round() as i32,
+        y: pos.y - (size.height as f64 * viewport.1 / viewport.3).round() as i32,
+    }
+}
 
 #[derive(Debug, Clone)]
 struct PetDrag {
@@ -33,6 +50,14 @@ struct PetDrag {
     win_y: i32,
     win_w: u32,
     win_h: u32,
+    from_edge_peek: bool,
+}
+
+#[derive(Debug, Clone)]
+struct EdgePeek {
+    side: String,
+    restore: Position,
+    work_area: (i32, i32, i32, i32),
 }
 
 #[derive(Debug, Clone)]
@@ -47,6 +72,8 @@ struct InnerState {
     mask: Option<Vec<u8>>,
     ignored: bool,
     drag: Option<PetDrag>,
+    edge_peek: Option<EdgePeek>,
+    edge_peek_press_held: bool,
     menu_drag: Option<MenuDrag>,
     menu_positioned: bool,
     last_cursor: Option<(f64, f64)>,
@@ -150,7 +177,198 @@ fn monitor_work_area(win: &WebviewWindow, mode: &str, saved: Option<&Position>) 
     }
 }
 
+fn monitor_work_area_for_pet(
+    win: &WebviewWindow,
+    mode: &str,
+    saved: Option<&Position>,
+    viewport: (f64, f64, f64, f64),
+    scale: f64,
+) -> (i32, i32, i32, i32, f64) {
+    let monitors = win.available_monitors().unwrap_or_default();
+    let chosen = if mode == "restore" {
+        saved.and_then(|origin| {
+            monitors.iter().max_by_key(|monitor| {
+                let dpr = monitor.scale_factor();
+                let x = origin.x + (viewport.0 * scale * dpr).round() as i32;
+                let y = origin.y + (viewport.1 * scale * dpr).round() as i32;
+                let width = (viewport.2 * scale * dpr).round().max(1.0) as u32;
+                let height = (viewport.3 * scale * dpr).round().max(1.0) as u32;
+                let area = monitor.work_area();
+                rect_overlap_area(
+                    x, y, width, height,
+                    area.position.x, area.position.y, area.size.width, area.size.height,
+                )
+            }).filter(|monitor| {
+                let dpr = monitor.scale_factor();
+                let x = origin.x + (viewport.0 * scale * dpr).round() as i32;
+                let y = origin.y + (viewport.1 * scale * dpr).round() as i32;
+                let width = (viewport.2 * scale * dpr).round().max(1.0) as u32;
+                let height = (viewport.3 * scale * dpr).round().max(1.0) as u32;
+                let area = monitor.work_area();
+                rect_overlap_area(
+                    x, y, width, height,
+                    area.position.x, area.position.y, area.size.width, area.size.height,
+                ) > 0
+            }).cloned()
+        })
+    } else {
+        None
+    };
+    let monitor = chosen
+        .or_else(|| {
+            if mode == "primary" || mode == "restore" {
+                win.primary_monitor().ok().flatten()
+            } else {
+                win.current_monitor().ok().flatten()
+            }
+        })
+        .or_else(|| monitors.into_iter().next());
+    if let Some(monitor) = monitor {
+        let area = monitor.work_area();
+        (
+            area.position.x,
+            area.position.y,
+            area.size.width as i32,
+            area.size.height as i32,
+            monitor.scale_factor(),
+        )
+    } else {
+        (0, 0, 1920, 1080, 1.0)
+    }
+}
+
+fn work_area_distance_squared(cursor_x: i64, cursor_y: i64, x: i32, y: i32, width: u32, height: u32) -> u128 {
+    let left = x as i64;
+    let top = y as i64;
+    let right = left + width as i64;
+    let bottom = top + height as i64;
+    let dx = if cursor_x < left {
+        left - cursor_x
+    } else if cursor_x >= right {
+        cursor_x - (right - 1)
+    } else {
+        0
+    };
+    let dy = if cursor_y < top {
+        top - cursor_y
+    } else if cursor_y >= bottom {
+        cursor_y - (bottom - 1)
+    } else {
+        0
+    };
+    (dx as u128) * (dx as u128) + (dy as u128) * (dy as u128)
+}
+
+fn rect_overlap_area(ax: i32, ay: i32, aw: u32, ah: u32, bx: i32, by: i32, bw: u32, bh: u32) -> u128 {
+    let left = (ax as i64).max(bx as i64);
+    let top = (ay as i64).max(by as i64);
+    let right = (ax as i64 + aw as i64).min(bx as i64 + bw as i64);
+    let bottom = (ay as i64 + ah as i64).min(by as i64 + bh as i64);
+    if right <= left || bottom <= top { return 0; }
+    ((right - left) as u128) * ((bottom - top) as u128)
+}
+
+fn scaled_peek_visible_width(window_width: u32, side: &str, viewport: (f64, f64, f64, f64)) -> i32 {
+    let visible_base = if viewport.0 == 0.0 && viewport.2 == PET_W {
+        PEEK_VISIBLE_WIDTH
+    } else if side == "right" {
+        (216.0 - viewport.0).max(1.0)
+    } else {
+        (viewport.0 + viewport.2 - 204.0).max(1.0)
+    };
+    ((visible_base * window_width as f64 / viewport.2).round() as i32).clamp(1, window_width as i32)
+}
+
+fn monitor_work_area_for_rect(win: &WebviewWindow, x: i32, y: i32, width: u32, height: u32) -> (i32, i32, i32, i32, f64) {
+    let monitors = win.available_monitors().unwrap_or_default();
+    let monitor = monitors.iter().max_by_key(|monitor| {
+        let area = monitor.work_area();
+        rect_overlap_area(x, y, width, height, area.position.x, area.position.y, area.size.width, area.size.height)
+    });
+    if let Some(monitor) = monitor {
+        let area = monitor.work_area();
+        if rect_overlap_area(x, y, width, height, area.position.x, area.position.y, area.size.width, area.size.height) > 0 {
+            return (
+                area.position.x,
+                area.position.y,
+                area.size.width as i32,
+                area.size.height as i32,
+                monitor.scale_factor(),
+            );
+        }
+    }
+    monitor_work_area_at(win, (x as f64) + width as f64 * 0.5, (y as f64) + height as f64 * 0.5)
+}
+
+fn monitor_work_area_at(win: &WebviewWindow, cursor_x: f64, cursor_y: f64) -> (i32, i32, i32, i32, f64) {
+    let monitors = win.available_monitors().unwrap_or_default();
+    let cursor_x = cursor_x.round() as i64;
+    let cursor_y = cursor_y.round() as i64;
+    let monitor = monitors.into_iter().min_by_key(|monitor| {
+        let area = monitor.work_area();
+        work_area_distance_squared(
+            cursor_x,
+            cursor_y,
+            area.position.x,
+            area.position.y,
+            area.size.width,
+            area.size.height,
+        )
+    });
+    if let Some(monitor) = monitor {
+        let area = monitor.work_area();
+        (
+            area.position.x,
+            area.position.y,
+            area.size.width as i32,
+            area.size.height as i32,
+            monitor.scale_factor(),
+        )
+    } else {
+        monitor_work_area(win, "current", None)
+    }
+}
+
+#[cfg(test)]
+mod monitor_tests {
+    use super::work_area_distance_squared;
+
+    #[test]
+    fn cursor_prefers_the_portrait_display_and_supports_negative_coordinates() {
+        let landscape = work_area_distance_squared(2100, 300, 0, 0, 1920, 1080);
+        let portrait = work_area_distance_squared(2100, 300, 1920, -320, 1080, 1920);
+        assert_eq!(portrait, 0);
+        assert!(portrait < landscape);
+
+        let negative_portrait = work_area_distance_squared(-700, 400, -1080, 0, 1080, 1920);
+        let primary = work_area_distance_squared(-700, 400, 0, 0, 1920, 1080);
+        assert_eq!(negative_portrait, 0);
+        assert!(negative_portrait < primary);
+    }
+
+    #[test]
+    fn tucked_width_tracks_window_scale_and_stays_clamped() {
+        let full = pet_viewport(true);
+        assert_eq!(scaled_peek_visible_width(315, "right", full), 165);
+        assert_eq!(scaled_peek_visible_width(420, "right", full), 220);
+        assert_eq!(scaled_peek_visible_width(630, "right", full), 330);
+        assert_eq!(scaled_peek_visible_width(42, "right", full), 42);
+        assert_eq!(scaled_peek_visible_width(180, "right", pet_viewport(false)), 96);
+        assert_eq!(scaled_peek_visible_width(180, "left", pet_viewport(false)), 96);
+    }
+
+    #[test]
+    fn occupied_display_uses_the_largest_window_overlap() {
+        let primary_overlap = rect_overlap_area(-220, 0, 420, 340, -100, 0, 100, 100);
+        let secondary_overlap = rect_overlap_area(-220, 0, 420, 340, 0, 0, 1920, 1080);
+        assert_eq!(primary_overlap, 10_000);
+        assert_eq!(secondary_overlap, 68_000);
+        assert!(secondary_overlap > primary_overlap);
+    }
+}
+
 fn place_pet(app: &AppHandle, mode: &str) {
+    restore_edge_peek(app);
     let Some(win) = app.get_webview_window("pet") else {
         return;
     };
@@ -159,7 +377,7 @@ fn place_pet(app: &AppHandle, mode: &str) {
         let guard = st.0.lock().unwrap();
         (guard.store.prefs.clone(), guard.store.prefs.position.clone())
     };
-    let (wx, wy, ww, wh, dpr) = monitor_work_area(&win, mode, saved.as_ref());
+    let viewport = pet_viewport(prefs.keyboard);
     let raw_scale = if prefs.scale.is_finite() {
         prefs.scale
     } else {
@@ -169,11 +387,12 @@ fn place_pet(app: &AppHandle, mode: &str) {
             _ => 1.0,
         }
     };
+    let (wx, wy, ww, wh, dpr) = monitor_work_area_for_pet(&win, mode, saved.as_ref(), viewport, raw_scale);
     let max_w = (ww as f64 / dpr) / PET_W;
     let max_h = (wh as f64 / dpr) / PET_H;
     let scale = raw_scale.min(max_w).min(max_h).max(0.5);
-    let phys_w = (PET_W * scale * dpr).round() as u32;
-    let phys_h = (PET_H * scale * dpr).round() as u32;
+    let phys_w = (viewport.2 * scale * dpr).round() as u32;
+    let phys_h = (viewport.3 * scale * dpr).round() as u32;
 
     let (x, y) = if mode == "center" {
         (
@@ -182,7 +401,10 @@ fn place_pet(app: &AppHandle, mode: &str) {
         )
     } else if mode == "restore" {
         if let Some(pos) = saved {
-            (pos.x, pos.y)
+            (
+                pos.x + (viewport.0 * scale * dpr).round() as i32,
+                pos.y + (viewport.1 * scale * dpr).round() as i32,
+            )
         } else {
             let pad_x = (8.0 * dpr).round() as i32;
             let pad_y = (4.0 * dpr).round() as i32;
@@ -275,12 +497,39 @@ fn stop_input(app: &AppHandle) {
 }
 
 fn apply_set(app: &AppHandle, key: &str, value: Value) {
+    if key == "launchAtStartup" {
+        if let Some(enabled) = value.as_bool() {
+            let _ = set_launch_at_startup(app, enabled);
+        }
+        return;
+    }
     if key == "standbyMode" && value.as_bool() == Some(true) {
         stop_input(app);
         let st = app.state::<AppState>();
         let mut guard = st.0.lock().unwrap();
         if guard.store.prefs.focus_mode {
             guard.store.set_value("focusMode", Value::Bool(false));
+        }
+    }
+    if key == "keyboard" {
+        let (keyboard_visible, has_position) = {
+            let st = app.state::<AppState>();
+            let guard = st.0.lock().unwrap();
+            (guard.store.prefs.keyboard, guard.store.prefs.position.is_some())
+        };
+        if keyboard_visible != value.as_bool().unwrap_or(keyboard_visible) && !has_position {
+            if let Some(win) = app.get_webview_window("pet") {
+                if let (Ok(pos), Ok(size)) = (win.outer_position(), win.inner_size()) {
+                    let origin = scene_origin_from_viewport(
+                        Position { x: pos.x, y: pos.y },
+                        size,
+                        pet_viewport(keyboard_visible),
+                    );
+                    if let Ok(mut guard) = app.state::<AppState>().0.lock() {
+                        guard.store.set_value("position", serde_json::json!({ "x": origin.x, "y": origin.y }));
+                    }
+                }
+            }
         }
     }
     let (changed, has_pos, top_val) = {
@@ -300,13 +549,31 @@ fn apply_set(app: &AppHandle, key: &str, value: Value) {
             let _ = win.set_always_on_top(top_val);
         }
     }
-    if key == "size" || key == "scale" {
+    if key == "size" || key == "scale" || key == "keyboard" {
         place_pet(app, if has_pos { "restore" } else { "dock" });
     }
     send_prefs(app);
 }
 
+fn set_launch_at_startup(app: &AppHandle, enabled: bool) -> Result<(), String> {
+    let manager = app.autolaunch();
+    if enabled {
+        manager.enable().map_err(|error| error.to_string())?;
+    } else {
+        manager.disable().map_err(|error| error.to_string())?;
+    }
+    {
+        let st = app.state::<AppState>();
+        let mut guard = st.0.lock().map_err(|error| error.to_string())?;
+        guard.store.set_value("launchAtStartup", Value::Bool(enabled));
+    }
+    send_prefs(app);
+    push_menu_state(app);
+    Ok(())
+}
+
 fn show_pet(app: &AppHandle) {
+    restore_edge_peek(app);
     if let Some(win) = app.get_webview_window("pet") {
         let top = app.state::<AppState>().0.lock().unwrap().store.prefs.top;
         let _ = win.unminimize();
@@ -318,6 +585,7 @@ fn show_pet(app: &AppHandle) {
 }
 
 fn hide_pet(app: &AppHandle) {
+    restore_edge_peek(app);
     if let Some(win) = app.get_webview_window("pet") {
         let _ = win.hide();
         let _ = win.set_ignore_cursor_events(true);
@@ -504,10 +772,15 @@ fn run_command(app: &AppHandle, cmd_type: &str, key: Option<&str>, value: Option
         "center" => {
             place_pet(app, "center");
             if let Some(win) = app.get_webview_window("pet") {
-                if let Ok(pos) = win.outer_position() {
+                if let (Ok(pos), Ok(size)) = (win.outer_position(), win.inner_size()) {
                     let st = app.state::<AppState>();
                     let mut g = st.0.lock().unwrap();
-                    g.store.set_value("position", serde_json::json!({ "x": pos.x, "y": pos.y }));
+                    let origin = scene_origin_from_viewport(
+                        Position { x: pos.x, y: pos.y },
+                        size,
+                        pet_viewport(g.store.prefs.keyboard),
+                    );
+                    g.store.set_value("position", serde_json::json!({ "x": origin.x, "y": origin.y }));
                 }
             }
             show_pet(app);
@@ -629,13 +902,22 @@ fn pet_drag_start(app: AppHandle, point: PointArg) {
     let Some(win) = app.get_webview_window("pet") else {
         return;
     };
+    let viewport = {
+        let st = app.state::<AppState>();
+        let Ok(g) = st.0.lock() else { return };
+        pet_viewport(g.store.prefs.keyboard)
+    };
+    if point.x < viewport.0 || point.x > viewport.0 + viewport.2
+        || point.y < viewport.1 || point.y > viewport.1 + viewport.3 {
+        return;
+    }
     if !win.is_visible().unwrap_or(false) {
         return;
     }
     let Ok(pos) = win.outer_position() else { return };
     let Ok(size) = win.inner_size() else { return };
-    let cursor_x = pos.x as f64 + point.x * size.width as f64 / PET_W;
-    let cursor_y = pos.y as f64 + point.y * size.height as f64 / PET_H;
+    let cursor_x = pos.x as f64 + (point.x - viewport.0) * size.width as f64 / viewport.2;
+    let cursor_y = pos.y as f64 + (point.y - viewport.1) * size.height as f64 / viewport.3;
     let _ = win.set_ignore_cursor_events(false);
     if let Ok(mut g) = app.state::<AppState>().0.lock() {
         g.ignored = false;
@@ -646,26 +928,164 @@ fn pet_drag_start(app: AppHandle, point: PointArg) {
             win_y: pos.y,
             win_w: size.width,
             win_h: size.height,
+            from_edge_peek: false,
         });
     }
 }
 
 #[tauri::command]
+fn pet_drag_start_from_edge_peek(app: AppHandle) {
+    let peek = {
+        let st = app.state::<AppState>();
+        st.0.lock().ok().and_then(|mut g| g.edge_peek.take())
+    };
+    let Some(peek) = peek else { return; };
+    let Some(win) = app.get_webview_window("pet") else { return; };
+    if !win.is_visible().unwrap_or(false) { return; }
+    let (Ok(cursor), Ok(size)) = (win.cursor_position(), win.inner_size()) else { return; };
+    let _ = win.set_position(TauriPos::Physical(PhysicalPosition::new(peek.restore.x, peek.restore.y)));
+    let _ = win.set_ignore_cursor_events(false);
+    if let Ok(mut g) = app.state::<AppState>().0.lock() {
+        g.ignored = false;
+        g.edge_peek_press_held = false;
+        g.last_cursor = None;
+        g.drag = Some(PetDrag {
+            cursor_x: cursor.x,
+            cursor_y: cursor.y,
+            win_x: peek.restore.x,
+            win_y: peek.restore.y,
+            win_w: size.width,
+            win_h: size.height,
+            from_edge_peek: true,
+        });
+    }
+    let _ = app.emit_to("pet", "pet:edge-peek", Value::Null);
+}
+
+#[tauri::command]
+fn pet_edge_peek_press(app: AppHandle, held: bool) {
+    let Some(win) = app.get_webview_window("pet") else { return; };
+    let needs_unignore = {
+        let st = app.state::<AppState>();
+        let Ok(mut g) = st.0.lock() else { return; };
+        if g.edge_peek.is_none() { return; }
+        g.edge_peek_press_held = held;
+        if !held { g.last_cursor = None; }
+        let needs_unignore = held && g.ignored;
+        if needs_unignore { g.ignored = false; }
+        needs_unignore
+    };
+    if needs_unignore {
+        let _ = win.set_ignore_cursor_events(false);
+    }
+}
+
+#[tauri::command]
 fn pet_drag_end(app: AppHandle) {
-    let was_dragging = {
+    let drag = {
         let st = app.state::<AppState>();
         let mut g = st.0.lock().unwrap();
-        g.drag.take().is_some()
+        g.drag.take()
     };
-    if was_dragging {
-        if let Some(win) = app.get_webview_window("pet") {
-            if let Ok(pos) = win.outer_position() {
-                let st = app.state::<AppState>();
-                let mut g = st.0.lock().unwrap();
-                g.store.set_value("position", serde_json::json!({ "x": pos.x, "y": pos.y }));
+    let Some(drag) = drag else { return; };
+    let Some(win) = app.get_webview_window("pet") else { return; };
+    let (Ok(pos), Ok(size)) = (win.outer_position(), win.inner_size()) else { return; };
+    if drag.from_edge_peek {
+        let cursor = win.cursor_position().ok();
+        if cursor.map_or(true, |point| (point.x - drag.cursor_x).hypot(point.y - drag.cursor_y) < 20.0) {
+            if let Ok(mut g) = app.state::<AppState>().0.lock() {
+                let origin = scene_origin_from_viewport(
+                    Position { x: pos.x, y: pos.y },
+                    size,
+                    pet_viewport(g.store.prefs.keyboard),
+                );
+                g.store.set_value("position", serde_json::json!({ "x": origin.x, "y": origin.y }));
+            }
+            return;
+        }
+    }
+    let (wx, wy, ww, wh, dpr) = monitor_work_area_for_rect(&win, pos.x, pos.y, size.width, size.height);
+    let actual = Position { x: pos.x, y: pos.y };
+    let viewport = {
+        let st = app.state::<AppState>();
+        let guard = st.0.lock().unwrap();
+        pet_viewport(guard.store.prefs.keyboard)
+    };
+    let restore = scene_origin_from_viewport(actual.clone(), size, viewport);
+    let threshold = (26.0 * dpr).round() as i32;
+    let left_gap = (pos.x - wx).abs();
+    let right_gap = (wx + ww - (pos.x + size.width as i32)).abs();
+    let side = match (left_gap <= threshold, right_gap <= threshold) {
+        (true, true) => Some(if left_gap <= right_gap { "left" } else { "right" }),
+        (true, false) => Some("left"),
+        (false, true) => Some("right"),
+        (false, false) => None,
+    };
+    {
+        let st = app.state::<AppState>();
+        if let Ok(mut g) = st.0.lock() {
+            g.store.set_value("position", serde_json::json!({ "x": restore.x, "y": restore.y }));
+            if let Some(side) = side {
+                g.edge_peek = Some(EdgePeek {
+                    side: side.to_string(),
+                    restore: actual.clone(),
+                    work_area: (wx, wy, ww, wh),
+                });
+                g.last_cursor = None;
             }
         }
     }
+    if let Some(side) = side {
+        let visible = scaled_peek_visible_width(size.width, side, viewport);
+        let target_x = if side == "left" { wx - size.width as i32 + visible } else { wx + ww - visible };
+        let target_y = actual.y.clamp(wy, wy + (wh - size.height as i32).max(0));
+        let target = Position { x: target_x, y: target_y };
+        let _ = app.emit_to("pet", "pet:edge-peek", side);
+        animate_pet_position(app, actual, target, side.to_string());
+    }
+}
+
+fn animate_pet_position(app: AppHandle, from: Position, to: Position, side: String) {
+    std::thread::spawn(move || {
+        const STEPS: i32 = 15;
+        for step in 1..=STEPS {
+            std::thread::sleep(Duration::from_millis(16));
+            let still_peeking = app.state::<AppState>().0.lock().ok()
+                .and_then(|g| g.edge_peek.as_ref().map(|peek| peek.side == side))
+                .unwrap_or(false);
+            if !still_peeking { return; }
+            let t = step as f64 / STEPS as f64;
+            let eased = t * t * (3.0 - 2.0 * t);
+            let x = (from.x as f64 + (to.x - from.x) as f64 * eased).round() as i32;
+            let y = (from.y as f64 + (to.y - from.y) as f64 * eased).round() as i32;
+            if let Some(win) = app.get_webview_window("pet") {
+                let _ = win.set_position(TauriPos::Physical(PhysicalPosition::new(x, y)));
+            }
+        }
+    });
+}
+
+fn restore_edge_peek(app: &AppHandle) {
+    let peek = {
+        let st = app.state::<AppState>();
+        st.0.lock().ok().and_then(|mut g| g.edge_peek.take())
+    };
+    let Some(peek) = peek else { return; };
+    if let Some(win) = app.get_webview_window("pet") {
+        let _ = win.set_position(TauriPos::Physical(PhysicalPosition::new(peek.restore.x, peek.restore.y)));
+        let _ = win.set_ignore_cursor_events(false);
+    }
+    if let Ok(mut g) = app.state::<AppState>().0.lock() {
+        g.ignored = false;
+        g.edge_peek_press_held = false;
+        g.last_cursor = None;
+    }
+    let _ = app.emit_to("pet", "pet:edge-peek", Value::Null);
+}
+
+#[tauri::command]
+fn pet_exit_edge_peek(app: AppHandle) {
+    restore_edge_peek(&app);
 }
 
 #[tauri::command]
@@ -734,6 +1154,11 @@ fn menu_get_state(app: AppHandle) -> MenuStateSnapshot {
 async fn menu_command(app: AppHandle, cmd: MenuCommand) {
     run_command(&app, &cmd.cmd_type, cmd.key.as_deref(), cmd.value);
     push_menu_state(&app);
+}
+
+#[tauri::command]
+fn menu_set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
+    set_launch_at_startup(&app, enabled)
 }
 
 #[tauri::command]
@@ -850,7 +1275,9 @@ fn start_poll_thread(app: AppHandle) {
 
         let pet_drag = app.state::<AppState>().0.lock().ok().and_then(|g| g.drag.clone());
         if let Some(d) = pet_drag {
-            let (wx, wy, ww, wh, _) = monitor_work_area(&pet_win, "current", None);
+            // Pick the display under the global cursor on every drag tick. Keeping
+            // the window's original display here traps it at that display's edge.
+            let (wx, wy, ww, wh, _) = monitor_work_area_at(&pet_win, cursor.x, cursor.y);
             let target_x = (d.win_x as f64 + cursor.x - d.cursor_x).round() as i32;
             let target_y = (d.win_y as f64 + cursor.y - d.cursor_y).round() as i32;
             let (nx, ny) = fit_position(target_x, target_y, d.win_w as i32, d.win_h as i32, wx, wy, ww, wh);
@@ -870,15 +1297,28 @@ fn start_poll_thread(app: AppHandle) {
             continue;
         }
 
+        let press_held = app.state::<AppState>().0.lock().ok()
+            .map(|g| g.edge_peek.is_some() && g.edge_peek_press_held)
+            .unwrap_or(false);
+        if press_held {
+            continue;
+        }
+
         let (Ok(pos), Ok(size)) = (pet_win.outer_position(), pet_win.inner_size()) else {
             continue;
         };
         if size.width == 0 || size.height == 0 {
             continue;
         }
-        let x = (cursor.x - pos.x as f64) * PET_W / size.width as f64;
-        let y = (cursor.y - pos.y as f64) * PET_H / size.height as f64;
-        let inside = x >= 0.0 && x < PET_W && y >= 0.0 && y < PET_H;
+        let viewport = app.state::<AppState>().0.lock().ok()
+            .map(|g| pet_viewport(g.store.prefs.keyboard))
+            .unwrap_or((0.0, 0.0, PET_W, PET_H));
+        let local_x = cursor.x - pos.x as f64;
+        let local_y = cursor.y - pos.y as f64;
+        let x = viewport.0 + local_x * viewport.2 / size.width as f64;
+        let y = viewport.1 + local_y * viewport.3 / size.height as f64;
+        let inside = local_x >= 0.0 && local_x < size.width as f64
+            && local_y >= 0.0 && local_y < size.height as f64;
 
         let (need_ignore_change, next_ignore, emit_cursor) = {
             let st = app.state::<AppState>();
@@ -891,7 +1331,14 @@ fn start_poll_thread(app: AppHandle) {
             } else {
                 false
             };
-            let next_ignore = g.store.prefs.click_through || !inside || !hit;
+            let on_occupied_display = g.edge_peek.as_ref().map_or(true, |peek| {
+                let (wx, _, ww, _, _) = peek.work_area;
+                let boundary = if peek.side == "right" { wx + ww - pos.x } else { wx - pos.x };
+                let logical_boundary = viewport.0 + boundary as f64 * viewport.2 / size.width as f64;
+                if peek.side == "right" { x < logical_boundary } else { x >= logical_boundary }
+            });
+            let inside_pet = inside && on_occupied_display;
+            let next_ignore = g.store.prefs.click_through || !inside_pet || !hit;
             let changed = g.ignored != next_ignore;
             if changed {
                 g.ignored = next_ignore;
@@ -917,7 +1364,7 @@ fn start_poll_thread(app: AppHandle) {
                 CursorPayload {
                     x,
                     y,
-                    inside,
+                    inside: inside_pet,
                     screen_x: cursor.x,
                     screen_y: cursor.y,
                 },
@@ -969,6 +1416,7 @@ fn start_pomodoro_thread(app: AppHandle) {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec![])))
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if app.get_webview_window("pet").is_some() {
                 show_pet(app);
@@ -996,13 +1444,17 @@ fn main() {
             pet_get_preferences,
             pet_set_mask,
             pet_drag_start,
+            pet_drag_start_from_edge_peek,
+            pet_edge_peek_press,
             pet_drag_end,
+            pet_exit_edge_peek,
             pet_open_menu,
             pet_count,
             pet_finish_focus,
             try_key,
             menu_get_state,
             menu_command,
+            menu_set_autostart,
             menu_drag_start,
             menu_drag_end,
             menu_close,
@@ -1012,7 +1464,10 @@ fn main() {
                 .path()
                 .app_data_dir()
                 .unwrap_or_else(|_| std::env::temp_dir().join("maotao-desktop-pet"));
-            let store = SettingsStore::load(&data_dir);
+            let mut store = SettingsStore::load(&data_dir);
+            if store.prefs.launch_at_startup && app.autolaunch().enable().is_err() {
+                store.set_value("launchAtStartup", Value::Bool(false));
+            }
             let focus_min = store.prefs.focus_minutes;
             let standby = store.prefs.standby_mode;
             let privacy = store.prefs.privacy_mode;
@@ -1024,6 +1479,8 @@ fn main() {
                 mask: None,
                 ignored: true,
                 drag: None,
+                edge_peek: None,
+                edge_peek_press_held: false,
                 menu_drag: None,
                 menu_positioned: false,
                 last_cursor: None,

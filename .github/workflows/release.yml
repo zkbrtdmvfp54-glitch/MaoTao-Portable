@@ -52,15 +52,50 @@ jobs:
           if ($installers.Count -ne 1) { throw 'Expected exactly one Windows installer.' }
           New-Item -ItemType Directory -Force -Path dist-release | Out-Null
           Copy-Item -LiteralPath $installers[0].FullName -Destination "dist-release/MAOTAO-Setup-$ver-x64.exe"
-      - name: Install and check that the pet window appears
+      - name: Upgrade from the previous Tauri release and check startup
         shell: pwsh
         run: |
-          $setup = Get-ChildItem dist-release/MAOTAO-Setup-*-x64.exe
+          $ErrorActionPreference = 'Stop'
+          $ver = (Get-Content package.json -Raw | ConvertFrom-Json).version
           $installDir = Join-Path $env:RUNNER_TEMP 'maotao-startup-check'
+          $oldSetup = Join-Path $env:RUNNER_TEMP 'MAOTAO-Setup-2.0.1-x64.exe'
+          Invoke-WebRequest `
+            -Uri 'https://github.com/zkbrtdmvfp54-glitch/MaoTao-Portable/releases/download/v2.0.1/MAOTAO-Setup-2.0.1-x64.exe' `
+            -OutFile $oldSetup
+
+          $legacyInstaller = Start-Process -FilePath $oldSetup -ArgumentList '/S', "/D=$installDir" -PassThru
+          if (!$legacyInstaller.WaitForExit(120000)) { throw 'Previous-version installer timed out.' }
+          if ($legacyInstaller.ExitCode -ne 0) { throw "Previous-version installer exited with code $($legacyInstaller.ExitCode)." }
+
+          $uninstallRoot = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall'
+          $getInstalledEntry = {
+            Get-ChildItem -Path $uninstallRoot -ErrorAction SilentlyContinue |
+              ForEach-Object { Get-ItemProperty -LiteralPath $_.PSPath } |
+              Where-Object { $_.DisplayName -eq 'MAOTAO Desktop Pet' } |
+              Select-Object -First 1
+          }
+          $beforeUpgrade = & $getInstalledEntry
+          if (!$beforeUpgrade -or $beforeUpgrade.DisplayVersion -ne '2.0.1') {
+            throw 'The previous Tauri release was not registered before upgrade.'
+          }
+
+          $setup = Get-ChildItem dist-release/MAOTAO-Setup-*-x64.exe | Select-Object -First 1
           $installer = Start-Process -FilePath $setup.FullName -ArgumentList '/S', "/D=$installDir" -PassThru
-          if (!$installer.WaitForExit(120000)) { throw 'Windows installer timed out.' }
-          if ($installer.ExitCode -ne 0) { throw "Windows installer exited with code $($installer.ExitCode)." }
-          ./scripts/check-windows-startup.ps1 -ExecutablePath (Join-Path $installDir 'MAOTAO.exe')
+          if (!$installer.WaitForExit(120000)) { throw 'Upgrade installer timed out.' }
+          if ($installer.ExitCode -ne 0) { throw "Upgrade installer exited with code $($installer.ExitCode)." }
+
+          $afterUpgrade = & $getInstalledEntry
+          if (!$afterUpgrade -or $afterUpgrade.DisplayVersion -ne $ver) {
+            throw "In-place upgrade did not update the registered version to $ver."
+          }
+          $registeredInstallDir = ([string]$afterUpgrade.InstallLocation).Trim('"').TrimEnd('\')
+          if ($registeredInstallDir -ne [IO.Path]::GetFullPath($installDir).TrimEnd('\')) {
+            throw "Upgrade moved to a different install directory: $registeredInstallDir"
+          }
+          $executablePath = Join-Path $installDir 'MAOTAO.exe'
+          if (!(Test-Path -LiteralPath $executablePath)) { throw 'Upgraded MAOTAO.exe is missing.' }
+          Write-Host "In-place upgrade verified: $($beforeUpgrade.DisplayVersion) -> $($afterUpgrade.DisplayVersion) at $installDir"
+          ./scripts/check-windows-startup.ps1 -ExecutablePath $executablePath
       - uses: actions/upload-artifact@v4
         with:
           name: dist-win-x64

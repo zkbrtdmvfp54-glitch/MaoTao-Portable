@@ -87,6 +87,16 @@ const volumeSlider = document.querySelector('#volume-slider');
 const volumeVal = document.querySelector('#volume-val');
 const chipTop = document.querySelector('#chip-top');
 const btnVisible = document.querySelector('#btn-visible');
+const keySwitchLabel = document.querySelector('#key-switch-label');
+
+const KEY_SWITCHES = [
+  { id: 'blue', label: '青轴' },
+  { id: 'brown', label: '茶轴' },
+  { id: 'red', label: '红轴' },
+  { id: 'silentRed', label: '静音红轴' },
+  { id: 'silver', label: '银轴' },
+  { id: 'starPink', label: '星粉轴' }
+];
 
 let current = null;
 
@@ -278,6 +288,12 @@ function render(state) {
     el.classList.toggle('active', on);
   }
 
+  const keySwitch = KEY_SWITCHES.find(item => item.id === prefs.keySwitch) || KEY_SWITCHES[1];
+  keySwitchLabel.textContent = keySwitch.label;
+  for (const el of document.querySelectorAll('[data-key-switch]')) {
+    el.classList.toggle('active', el.dataset.keySwitch === keySwitch.id);
+  }
+
   pillLink.classList.toggle('active', Boolean(listening));
   pillLink.disabled = Boolean(unavailableReason || prefs.standbyMode);
 
@@ -299,6 +315,9 @@ document.addEventListener('click', event => {
   }
   if (btn.id === 'btn-focus-skip') return api.menuCommand({ type: 'focusSkip' });
   if (btn.id === 'btn-focus-reset') return api.menuCommand({ type: 'focusReset' });
+  if (btn.dataset.keySwitch) {
+    return api.menuCommand({ type: 'set', key: 'keySwitch', value: btn.dataset.keySwitch });
+  }
   if (btn.dataset.rhythm) {
     const [f, b] = btn.dataset.rhythm.split(',').map(Number);
     api.menuCommand({ type: 'set', key: 'focusMinutes', value: f });
@@ -310,7 +329,16 @@ document.addEventListener('click', event => {
   }
   if (btn.dataset.toggle && current) {
     const key = btn.dataset.toggle;
-    return api.menuCommand({ type: 'set', key, value: !current.prefs[key] });
+    const value = !current.prefs[key];
+    if (key === 'launchAtStartup') {
+      return Promise.resolve(api.setAutostart?.(value)).then(result => {
+        if (result === false) throw new Error('autostart could not be changed');
+      }).catch(() => {
+        statusText.textContent = '开机启动设置未生效';
+        setTimeout(() => { if (current) render(current); }, 1800);
+      });
+    }
+    return api.menuCommand({ type: 'set', key, value });
   }
   if (btn.dataset.action) {
     const type = btn.dataset.action;

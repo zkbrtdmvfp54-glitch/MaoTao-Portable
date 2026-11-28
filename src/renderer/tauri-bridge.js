@@ -20,7 +20,10 @@
         invoke('pet_drag_start', { point }).catch(() => {});
       }
     },
+    dragStartFromEdgePeek: () => { invoke('pet_drag_start_from_edge_peek').catch(() => {}); },
+    edgePeekPress: held => { invoke('pet_edge_peek_press', { held: Boolean(held) }).catch(() => {}); },
     dragEnd: () => { invoke('pet_drag_end').catch(() => {}); },
+    exitEdgePeek: () => { invoke('pet_exit_edge_peek').catch(() => {}); },
     openMenu: () => { invoke('pet_open_menu').catch(() => {}); },
     count: kind => {
       if (kind === 'keys' || kind === 'clicks') {
@@ -34,6 +37,7 @@
       }
     },
     getMenuState: () => invoke('menu_get_state'),
+    setAutostart: enabled => invoke('menu_set_autostart', { enabled: Boolean(enabled) }),
     onMenuState: callback => on('menu:state', callback),
     menuCommand: cmd => {
       if (cmd && typeof cmd.type === 'string') {
@@ -46,6 +50,7 @@
     onPreferences: callback => on('pet:preferences', callback),
     onCursor: callback => on('pet:cursor', callback),
     onDragMove: callback => on('pet:drag-move', callback),
+    onEdgePeek: callback => on('pet:edge-peek', callback),
     onInput: callback => on('pet:input', callback),
     onAction: callback => on('pet:action', callback)
   });
