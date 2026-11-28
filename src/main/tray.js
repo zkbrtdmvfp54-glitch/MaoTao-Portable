@@ -58,6 +58,7 @@ function buildMenu(store, actions, listening, visible, unavailableReason = '') {
     { type: 'separator' },
     { label: '瞳色', submenu: eyeMenu },
     { label: '头部配饰', submenu: accessoryMenu },
+    toggle('圣诞场景', 'christmasDecor'),
     { type: 'separator' },
     { label: '大小', submenu: sizeMenu },
     { label: '位置', submenu: [

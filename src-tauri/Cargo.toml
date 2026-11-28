@@ -1,6 +1,6 @@
 [package]
 name = "maotao-desktop-pet"
-version = "2.0.1"
+version = "2.1.0"
 description = "毛桃桌面宠物"
 authors = ["MAOTAO Desktop Pet <maotao@example.com>"]
 license = "MIT"
