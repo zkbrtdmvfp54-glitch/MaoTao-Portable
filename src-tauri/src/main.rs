@@ -970,7 +970,9 @@ fn start_pomodoro_thread(app: AppHandle) {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            show_pet(app);
+            if app.get_webview_window("pet").is_some() {
+                show_pet(app);
+            }
         }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(
@@ -1030,6 +1032,12 @@ fn main() {
             })));
 
             input_hook::set_privacy(privacy);
+
+            // WebView2 can invoke frontend commands while a window is being created.
+            // Register AppState before creating either configured window.
+            for config in &app.config().app.windows {
+                WebviewWindowBuilder::from_config(app.handle(), config)?.build()?;
+            }
 
             // Init global input hook
             let hook_app = app.handle().clone();
